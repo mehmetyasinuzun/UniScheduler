@@ -1,15 +1,17 @@
--- UniScheduler SQL Migration: Storage Buckets
--- Run this AFTER 003_functions.sql
+-- ============================================================
+-- UniScheduler — 04: Storage Buckets
+-- 03_functions_triggers.sql ÇALIŞTIRILMADAN ÖNCE BU DOSYA ÇALIŞTIRILMAMALIDIR
+-- ============================================================
 
--- ============================================
--- 1. Create storage bucket for Excel files
--- ============================================
+-- ============================================================
+-- 1. Excel Uploads Bucket (import edilen dosyalar)
+-- ============================================================
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
-    'excel-files',
-    'excel-files',
+    'excel-uploads',
+    'excel-uploads',
     false,
-    10485760, -- 10MB limit
+    10485760, -- 10 MB limit
     ARRAY[
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'application/vnd.ms-excel',
@@ -17,54 +19,50 @@ VALUES (
     ]
 ) ON CONFLICT (id) DO NOTHING;
 
--- ============================================
--- 2. Storage policies for excel-files bucket
--- ============================================
-
--- Admins can do anything
-CREATE POLICY "Admins have full access to excel-files"
+-- Admin: excel-uploads bucket'ında tam yetki
+CREATE POLICY "excel_uploads_admin_all"
     ON storage.objects FOR ALL
     USING (
-        bucket_id = 'excel-files'
+        bucket_id = 'excel-uploads'
         AND public.get_user_role() = 'ADMIN'
     );
 
--- Dept heads can upload files to their department folder
-CREATE POLICY "Dept heads can upload excel files"
+-- Dept Head: kendi bölüm klasörüne yükleme
+CREATE POLICY "excel_uploads_dept_head_insert"
     ON storage.objects FOR INSERT
     WITH CHECK (
-        bucket_id = 'excel-files'
+        bucket_id = 'excel-uploads'
         AND public.get_user_role() = 'DEPT_HEAD'
         AND (storage.foldername(name))[1] = public.get_user_department_id()::text
     );
 
--- Dept heads can view their department files
-CREATE POLICY "Dept heads can view dept excel files"
+-- Dept Head: kendi bölüm klasöründen okuma
+CREATE POLICY "excel_uploads_dept_head_select"
     ON storage.objects FOR SELECT
     USING (
-        bucket_id = 'excel-files'
+        bucket_id = 'excel-uploads'
         AND public.get_user_role() = 'DEPT_HEAD'
         AND (storage.foldername(name))[1] = public.get_user_department_id()::text
     );
 
--- Dept heads can delete their department files
-CREATE POLICY "Dept heads can delete dept excel files"
+-- Dept Head: kendi bölüm klasöründen silme
+CREATE POLICY "excel_uploads_dept_head_delete"
     ON storage.objects FOR DELETE
     USING (
-        bucket_id = 'excel-files'
+        bucket_id = 'excel-uploads'
         AND public.get_user_role() = 'DEPT_HEAD'
         AND (storage.foldername(name))[1] = public.get_user_department_id()::text
     );
 
--- ============================================
--- 3. Create storage bucket for exports
--- ============================================
+-- ============================================================
+-- 2. Exports Bucket (Excel/PDF export dosyaları)
+-- ============================================================
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
     'exports',
     'exports',
     false,
-    20971520, -- 20MB limit
+    20971520, -- 20 MB limit
     ARRAY[
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'application/pdf',
@@ -72,24 +70,24 @@ VALUES (
     ]
 ) ON CONFLICT (id) DO NOTHING;
 
--- Authenticated users can read their own exports
-CREATE POLICY "Users can read own exports"
+-- Kullanıcı kendi export klasöründen okuma
+CREATE POLICY "exports_select_own"
     ON storage.objects FOR SELECT
     USING (
         bucket_id = 'exports'
         AND (storage.foldername(name))[1] = auth.uid()::text
     );
 
--- Authenticated users can upload their own exports
-CREATE POLICY "Users can upload own exports"
+-- Kullanıcı kendi export klasörüne yükleme
+CREATE POLICY "exports_insert_own"
     ON storage.objects FOR INSERT
     WITH CHECK (
         bucket_id = 'exports'
         AND (storage.foldername(name))[1] = auth.uid()::text
     );
 
--- Authenticated users can delete their own exports
-CREATE POLICY "Users can delete own exports"
+-- Kullanıcı kendi export klasöründen silme
+CREATE POLICY "exports_delete_own"
     ON storage.objects FOR DELETE
     USING (
         bucket_id = 'exports'
