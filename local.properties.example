@@ -1,0 +1,8 @@
+# Supabase Configuration
+# Bu dosyayı "local.properties" olarak kopyalayıp değerlerinizi girin
+# Android SDK yolunu da eklemeyi unutmayın
+
+# sdk.dir=C\:\\Users\\KULLANICI\\AppData\\Local\\Android\\Sdk
+
+SUPABASE_URL=https://YOUR-PROJECT-REF.supabase.co
+SUPABASE_ANON_KEY=YOUR-ANON-KEY-HERE

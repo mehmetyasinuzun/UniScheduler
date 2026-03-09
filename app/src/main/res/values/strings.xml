@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App -->
+    <string name="app_name">UniScheduler</string>
+
+    <!-- Auth -->
+    <string name="login_title">Giriş Yap</string>
+    <string name="email_label">E-posta</string>
+    <string name="password_label">Şifre</string>
+    <string name="login_button">Giriş Yap</string>
+    <string name="logging_in">Giriş yapılıyor…</string>
+    <string name="logout">Çıkış Yap</string>
+    <string name="logout_confirm">Çıkış yapmak istediğinize emin misiniz?</string>
+
+    <!-- Home -->
+    <string name="home_title">Ana Sayfa</string>
+    <string name="welcome_message">Hoş geldiniz, %1$s</string>
+    <string name="pending_drafts">Bekleyen Taslaklar</string>
+    <string name="pending_requests">Bekleyen Talepler</string>
+    <string name="total_courses">Toplam Ders</string>
+    <string name="total_lecturers">Toplam Öğretim Üyesi</string>
+
+    <!-- Bottom Navigation -->
+    <string name="nav_home">Ana Sayfa</string>
+    <string name="nav_calendar">Program</string>
+    <string name="nav_data">Veri</string>
+    <string name="nav_settings">Ayarlar</string>
+    <string name="nav_drafts">Taslaklar</string>
+    <string name="nav_requests">Talepler</string>
+
+    <!-- Calendar -->
+    <string name="schedule_title">Ders Programı</string>
+    <string name="availability_title">Müsaitlik</string>
+    <string name="schedule_config">Program Ayarları</string>
+    <string name="generate_schedule">Program Oluştur</string>
+    <string name="alternatives_title">Alternatifler</string>
+    <string name="select_alternative">Bu Alternatifi Seç</string>
+    <string name="soft_score">Kalite Puanı: %1$.1f</string>
+    <string name="slot_duration">Ders Süresi (dk)</string>
+    <string name="day_start_time">Başlangıç Saati</string>
+    <string name="day_end_time">Bitiş Saati</string>
+    <string name="active_days">Aktif Günler</string>
+    <string name="save_config">Ayarları Kaydet</string>
+    <string name="save_availability">Müsaitliği Kaydet</string>
+
+    <!-- Days -->
+    <string name="day_monday">Pazartesi</string>
+    <string name="day_tuesday">Salı</string>
+    <string name="day_wednesday">Çarşamba</string>
+    <string name="day_thursday">Perşembe</string>
+    <string name="day_friday">Cuma</string>
+    <string name="day_saturday">Cumartesi</string>
+    <string name="day_sunday">Pazar</string>
+    <string name="day_mon_short">Pzt</string>
+    <string name="day_tue_short">Sal</string>
+    <string name="day_wed_short">Çar</string>
+    <string name="day_thu_short">Per</string>
+    <string name="day_fri_short">Cum</string>
+    <string name="day_sat_short">Cmt</string>
+    <string name="day_sun_short">Paz</string>
+
+    <!-- Data -->
+    <string name="data_title">Veri Yönetimi</string>
+    <string name="import_excel">Excel İçe Aktar</string>
+    <string name="export_schedule">Programı Dışa Aktar</string>
+    <string name="export_credentials">Kimlik Bilgilerini Dışa Aktar</string>
+    <string name="select_file">Dosya Seç</string>
+    <string name="import_preview">İçe Aktarma Önizlemesi</string>
+    <string name="import_button">İçe Aktar</string>
+    <string name="importing">İçe aktarılıyor…</string>
+    <string name="import_success">%1$d satır başarıyla içe aktarıldı</string>
+    <string name="export_success">Dosya dışa aktarıldı: %1$s</string>
+    <string name="lecturers_title">Öğretim Üyeleri</string>
+    <string name="courses_title">Dersler</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Ayarlar</string>
+    <string name="user_info">Kullanıcı Bilgileri</string>
+    <string name="role_label">Rol</string>
+    <string name="department_permissions">Bölüm Yetkileri</string>
+    <string name="permission_full_access">Tam Erişim</string>
+    <string name="permission_approval_required">Onay Gerekli</string>
+    <string name="permission_view_only">Sadece Görüntüleme</string>
+
+    <!-- Drafts -->
+    <string name="drafts_title">Taslaklar</string>
+    <string name="draft_editor_title">Taslak Düzenle</string>
+    <string name="draft_review_title">Taslak İnceleme</string>
+    <string name="draft_title_label">Başlık</string>
+    <string name="save_draft">Taslağı Kaydet</string>
+    <string name="submit_draft">Onaya Gönder</string>
+    <string name="approve_draft">Onayla</string>
+    <string name="reject_draft">Reddet</string>
+    <string name="admin_note">Yönetici Notu</string>
+    <string name="draft_status_draft">Taslak</string>
+    <string name="draft_status_pending">Onay Bekliyor</string>
+    <string name="draft_status_approved">Onaylandı</string>
+    <string name="draft_status_rejected">Reddedildi</string>
+
+    <!-- Requests -->
+    <string name="requests_title">Değişiklik Talepleri</string>
+    <string name="create_request">Yeni Talep</string>
+    <string name="request_detail_title">Talep Detayı</string>
+    <string name="request_type">Talep Türü</string>
+    <string name="request_type_time">Zaman Değişikliği</string>
+    <string name="request_type_classroom">Sınıf Değişikliği</string>
+    <string name="request_type_course">Ders Değişikliği</string>
+    <string name="request_type_other">Diğer</string>
+    <string name="current_data">Mevcut Durum</string>
+    <string name="requested_data">Talep Edilen</string>
+    <string name="reason">Gerekçe</string>
+    <string name="approve">Onayla</string>
+    <string name="reject">Reddet</string>
+    <string name="dept_head_status">BB Durumu</string>
+    <string name="admin_status">Yönetici Durumu</string>
+
+    <!-- Common -->
+    <string name="loading">Yükleniyor…</string>
+    <string name="error_title">Hata</string>
+    <string name="retry">Tekrar Dene</string>
+    <string name="ok">Tamam</string>
+    <string name="cancel">İptal</string>
+    <string name="yes">Evet</string>
+    <string name="no">Hayır</string>
+    <string name="save">Kaydet</string>
+    <string name="delete">Sil</string>
+    <string name="edit">Düzenle</string>
+    <string name="refresh">Yenile</string>
+    <string name="no_data">Veri bulunamadı</string>
+    <string name="search">Ara</string>
+</resources>

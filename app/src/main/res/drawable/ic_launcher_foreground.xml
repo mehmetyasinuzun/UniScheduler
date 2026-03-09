@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108"
+    android:tint="#FFFFFF">
+    <!-- Calendar icon with clock overlay -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M30,26h48v4H30zM30,34h48v36c0,2.2 -1.8,4 -4,4H34c-2.2,0 -4,-1.8 -4,-4zM38,44h8v8h-8zM50,44h8v8h-8zM62,44h8v8h-8zM38,56h8v8h-8zM50,56h8v8h-8z"/>
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40,22v-4h4v4zM64,22v-4h4v4z"/>
+</vector>
