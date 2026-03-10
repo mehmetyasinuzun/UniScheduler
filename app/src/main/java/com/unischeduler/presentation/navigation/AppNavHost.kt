@@ -43,12 +43,13 @@ fun AppNavHost() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // FIX: User role'ü remember yerine state'den direkt olarak re-compose olacak şekilde dinle
-    val authVm: LoginViewModel = hiltViewModel()
-    val currentUser by authVm.currentUser.collectAsState()
+    // DİKKAT: Artık eski ve sıfırlanabilen LoginViewModel yerine, uygulamanın
+    // Ana gövdesine sahip HomeViewModel'i çağırıyoruz. Bu sayede veritabanındaki rol anında yansır.
+    val homeVm: HomeViewModel = hiltViewModel()
+    val homeState by homeVm.uiState.collectAsState()
 
-    // currentUser null ise STUDENT değil de, UI'da re-render yapacak doğru state akışını bekle
-    val userRole = currentUser?.role ?: UserRole.STUDENT
+    // Eğer Home (Ana ekran) verileri indirdiyse ve kullanıcı yüklendiyse ondan rolü al.
+    val userRole = homeState.user?.role ?: UserRole.STUDENT
 
     val showBottomBar = currentRoute != null &&
         currentRoute != Screen.Splash::class.qualifiedName &&
