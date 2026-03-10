@@ -93,6 +93,18 @@ fun ImportPreviewScreen(
                 }
             } else {
                 // Preview & Import
+                if (state.isParsing) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        CircularProgressIndicator(strokeWidth = 2.dp)
+                        Text("Excel dosyası analiz ediliyor...")
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+
                 Text(
                     text = "Dosya: ${state.fileName}",
                     style = MaterialTheme.typography.titleMedium,
@@ -162,7 +174,7 @@ fun ImportPreviewScreen(
                 Button(
                     onClick = { viewModel.executeImport() },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.isImporting && state.rows.isNotEmpty()
+                    enabled = !state.isImporting && !state.isParsing && state.rows.isNotEmpty()
                 ) {
                     if (state.isImporting) {
                         CircularProgressIndicator(
@@ -170,7 +182,13 @@ fun ImportPreviewScreen(
                             strokeWidth = 2.dp
                         )
                     }
-                    Text(if (state.isImporting) "İçe aktarılıyor..." else "İçe Aktar")
+                    Text(
+                        when {
+                            state.isParsing -> "Dosya analiz ediliyor..."
+                            state.isImporting -> "İçe aktarılıyor..."
+                            else -> "İçe Aktar"
+                        }
+                    )
                 }
             }
         }

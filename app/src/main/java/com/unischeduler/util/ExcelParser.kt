@@ -11,44 +11,45 @@ import javax.inject.Singleton
 class ExcelParser @Inject constructor() {
 
     fun parse(bytes: ByteArray): List<ImportRow> {
-        val rows = mutableListOf<ImportRow>()
-        val workbook = WorkbookFactory.create(ByteArrayInputStream(bytes))
-        val sheet = workbook.getSheetAt(0)
-
-        // Find header row
-        val headerRow = sheet.getRow(0) ?: return emptyList()
-        val headers = (0 until headerRow.lastCellNum).map { idx ->
-            getCellStringValue(headerRow, idx).trim().lowercase()
+        if (bytes.isEmpty()) {
+            throw IllegalArgumentException("Dosya boş")
         }
 
-        val codeIdx = headers.indexOfFirst { it.contains("kod") || it.contains("code") }
-        val nameIdx = headers.indexOfFirst { it.contains("ders") && it.contains("ad") || it.contains("name") }
-        val lecturerIdx = headers.indexOfFirst { it.contains("hoca") || it.contains("öğretim") || it.contains("lecturer") }
-
-        if (codeIdx < 0 || nameIdx < 0 || lecturerIdx < 0) {
-            // Fallback: assume columns are in order (code, name, lecturer)
-            for (i in 1..sheet.lastRowNum) {
-                val row = sheet.getRow(i) ?: continue
-                val code = getCellStringValue(row, 0)
-                val name = getCellStringValue(row, 1)
-                val lecturer = getCellStringValue(row, 2)
-                if (code.isNotBlank() || name.isNotBlank()) {
-                    rows.add(ImportRow(code, name, lecturer))
-                }
+        val rows = mutableListOf<ImportRow>()
+        val workbook = WorkbookFactory.create(ByteArrayInputStream(bytes))
+        workbook.use {
+            if (it.numberOfSheets <= 0) {
+                throw IllegalArgumentException("Excel içinde sayfa bulunamadı")
             }
-        } else {
+            val sheet = it.getSheetAt(0)
+
+            // Find header row
+            val headerRow = sheet.getRow(0) ?: throw IllegalArgumentException("Başlık satırı bulunamadı")
+            val headers = (0 until headerRow.lastCellNum).map { idx ->
+                getCellStringValue(headerRow, idx).trim().lowercase()
+            }
+
+            val codeIdx = headers.indexOfFirst { it.contains("kod") || it.contains("code") }
+            val nameIdx = headers.indexOfFirst { (it.contains("ders") && it.contains("ad")) || it.contains("name") }
+            val lecturerIdx = headers.indexOfFirst { it.contains("hoca") || it.contains("öğretim") || it.contains("lecturer") }
+
+            if (codeIdx < 0 || nameIdx < 0 || lecturerIdx < 0) {
+                throw IllegalArgumentException(
+                    "Başlıklar bulunamadı. Beklenen kolonlar: Ders Kodu, Ders Adı, Öğretim Üyesi"
+                )
+            }
+
             for (i in 1..sheet.lastRowNum) {
                 val row = sheet.getRow(i) ?: continue
                 val code = getCellStringValue(row, codeIdx)
                 val name = getCellStringValue(row, nameIdx)
                 val lecturer = getCellStringValue(row, lecturerIdx)
                 if (code.isNotBlank() || name.isNotBlank()) {
-                    rows.add(ImportRow(code, name, lecturer))
+                    rows.add(ImportRow(code.trim(), name.trim(), lecturer.trim()))
                 }
             }
         }
 
-        workbook.close()
         return rows
     }
 

@@ -20,10 +20,15 @@ import com.unischeduler.presentation.common.UiState
 import com.unischeduler.util.AppLogger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 data class DataUiState(
@@ -39,6 +44,7 @@ data class ImportPreviewState(
     val rows: List<ImportRow> = emptyList(),
     val fileBytes: ByteArray? = null,
     val fileName: String = "",
+    val isParsing: Boolean = false,
     val isImporting: Boolean = false,
     val importResult: ImportResult? = null,
     val error: String? = null
@@ -56,6 +62,11 @@ class DataViewModel @Inject constructor(
     private val exportCredentialsUseCase: ExportCredentialsUseCase
 ) : ViewModel() {
 
+    companion object {
+        // 20 MB is safe for mobile memory and typical academic Excel datasets.
+        private const val MAX_EXCEL_SIZE_BYTES = 20 * 1024 * 1024
+    }
+
     private fun resolveDepartmentId(user: User?, departments: List<Department>): Int? {
         return user?.departmentId ?: departments.firstOrNull()?.id
     }
@@ -65,6 +76,10 @@ class DataViewModel @Inject constructor(
 
     private val _importState = MutableStateFlow(ImportPreviewState())
     val importState: StateFlow<ImportPreviewState> = _importState.asStateFlow()
+
+    private val parseMutex = Mutex()
+    private val importMutex = Mutex()
+    private var parseJob: Job? = null
 
     init {
         loadData()
@@ -110,62 +125,116 @@ class DataViewModel @Inject constructor(
     }
 
     fun parseExcelFile(bytes: ByteArray, fileName: String) {
-        viewModelScope.launch {
-            try {
-                AppLogger.i("DataVM", "Excel parse başlatılıyor: $fileName (${bytes.size} byte)")
-                val rows = importExcelUseCase.parseExcel(bytes)
-                AppLogger.i("DataVM", "Excel parse tamamlandı: ${rows.size} satır bulundu")
+        parseJob?.cancel()
+        parseJob = viewModelScope.launch {
+            parseMutex.withLock {
+                if (bytes.isEmpty()) {
+                    _importState.value = ImportPreviewState(
+                        error = "Dosya boş görünüyor. Lütfen geçerli bir Excel seçin."
+                    )
+                    return@withLock
+                }
+
+                if (bytes.size > MAX_EXCEL_SIZE_BYTES) {
+                    _importState.value = ImportPreviewState(
+                        error = "Dosya çok büyük (${bytes.size / (1024 * 1024)} MB). En fazla 20 MB desteklenir."
+                    )
+                    return@withLock
+                }
+
                 _importState.value = ImportPreviewState(
-                    rows = rows,
-                    fileBytes = bytes,
-                    fileName = fileName
+                    fileName = fileName,
+                    isParsing = true
                 )
-            } catch (e: Exception) {
-                AppLogger.e("DataVM", "Excel parse hatası: ${e.message}", e)
-                _importState.value = _importState.value.copy(
-                    error = "Excel dosyası okunamadı: ${e.message}"
-                )
+
+                try {
+                    AppLogger.i("DataVM", "Excel parse başlatılıyor: $fileName (${bytes.size} byte)")
+                    val rows = withContext(Dispatchers.Default) {
+                        importExcelUseCase.parseExcel(bytes)
+                    }
+                    AppLogger.i("DataVM", "Excel parse tamamlandı: ${rows.size} satır bulundu")
+
+                    if (rows.isEmpty()) {
+                        _importState.value = ImportPreviewState(
+                            fileName = fileName,
+                            error = "Excel içinde aktarılacak satır bulunamadı. Başlık satırlarını kontrol edin."
+                        )
+                    } else {
+                        _importState.value = ImportPreviewState(
+                            rows = rows,
+                            fileBytes = bytes,
+                            fileName = fileName,
+                            isParsing = false,
+                            isImporting = false,
+                            importResult = null,
+                            error = null
+                        )
+                    }
+                } catch (e: Exception) {
+                    AppLogger.e("DataVM", "Excel parse hatası: ${e.message}", e)
+                    _importState.value = ImportPreviewState(
+                        fileName = fileName,
+                        error = "Excel dosyası okunamadı: ${e.message ?: "Bilinmeyen hata"}"
+                    )
+                }
             }
         }
     }
 
     fun executeImport() {
         viewModelScope.launch {
-            val state = _importState.value
-            val fileBytes = state.fileBytes ?: return@launch
+            importMutex.withLock {
+                val state = _importState.value
 
-            val role = _uiState.value.user?.role
-            val deptId = resolveDepartmentId(_uiState.value.user, _uiState.value.departments) ?: 0
+                if (state.isParsing) {
+                    _importState.value = state.copy(error = "Dosya hâlâ işleniyor. Lütfen birkaç saniye bekleyin.")
+                    return@withLock
+                }
 
-            if (role != com.unischeduler.domain.model.UserRole.ADMIN && deptId == 0) {
-                _importState.value = _importState.value.copy(
-                    isImporting = false,
-                    error = "Bölüm bilgisi bulunamadı. Lütfen yönetici ile iletişime geçin."
-                )
-                return@launch
-            }
+                val fileBytes = state.fileBytes
+                if (fileBytes == null || state.rows.isEmpty()) {
+                    _importState.value = state.copy(error = "Önce geçerli bir Excel dosyası seçin.")
+                    return@withLock
+                }
 
-            AppLogger.i("DataVM", "Import başlatılıyor: ${state.rows.size} satır, deptId=$deptId, role=$role")
-            _importState.value = _importState.value.copy(isImporting = true, error = null)
+                val role = _uiState.value.user?.role
+                val deptId = resolveDepartmentId(_uiState.value.user, _uiState.value.departments) ?: 0
 
-            importExcelUseCase(
-                rows = state.rows,
-                departmentId = deptId,
-                fileBytes = fileBytes,
-                fileName = state.fileName
-            ).onSuccess { result ->
-                AppLogger.i("DataVM", "Import başarılı: ${result.courses.size} ders, ${result.lecturers.size} hoca, ${result.errors.size} hata")
-                _importState.value = _importState.value.copy(
-                    isImporting = false,
-                    importResult = result
-                )
-                loadData()
-            }.onFailure { e ->
-                AppLogger.e("DataVM", "Import başarısız: ${e.message}", e)
-                _importState.value = _importState.value.copy(
-                    isImporting = false,
-                    error = e.message ?: "Import başarısız"
-                )
+                if (role != com.unischeduler.domain.model.UserRole.ADMIN && deptId == 0) {
+                    _importState.value = state.copy(
+                        isImporting = false,
+                        error = "Bölüm bilgisi bulunamadı. Lütfen yönetici ile iletişime geçin."
+                    )
+                    return@withLock
+                }
+
+                AppLogger.i("DataVM", "Import başlatılıyor: ${state.rows.size} satır, deptId=$deptId, role=$role")
+                _importState.value = state.copy(isImporting = true, error = null)
+
+                val result = withContext(Dispatchers.IO) {
+                    importExcelUseCase(
+                        rows = state.rows,
+                        departmentId = deptId,
+                        fileBytes = fileBytes,
+                        fileName = state.fileName
+                    )
+                }
+
+                result.onSuccess { importResult ->
+                    AppLogger.i("DataVM", "Import başarılı: ${importResult.courses.size} ders, ${importResult.lecturers.size} hoca, ${importResult.errors.size} hata")
+                    _importState.value = _importState.value.copy(
+                        isImporting = false,
+                        importResult = importResult,
+                        error = null
+                    )
+                    loadData()
+                }.onFailure { e ->
+                    AppLogger.e("DataVM", "Import başarısız: ${e.message}", e)
+                    _importState.value = _importState.value.copy(
+                        isImporting = false,
+                        error = e.message ?: "Import başarısız"
+                    )
+                }
             }
         }
     }

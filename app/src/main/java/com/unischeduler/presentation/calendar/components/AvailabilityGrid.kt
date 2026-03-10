@@ -1,9 +1,11 @@
 package com.unischeduler.presentation.calendar.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,13 +16,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.unischeduler.domain.model.AvailabilitySlot
@@ -38,38 +50,131 @@ fun AvailabilityGrid(
     config: ScheduleConfig,
     onToggle: (List<AvailabilitySlot>) -> Unit
 ) {
-    val cellWidth = 60.dp
-    val cellHeight = 44.dp
-    val timeColumnWidth = 56.dp
+    val cellWidth = 72.dp
+    val cellHeight = 52.dp
+    val timeColumnWidth = 78.dp
     val days = config.activeDays.sorted()
     val slotCount = config.totalSlotsPerDay
-    val slots = remember(availability) {
+    var saveMessage by remember { mutableStateOf<String?>(null) }
+    val slots = remember(availability, lecturerId, days, slotCount) {
         mutableStateListOf<AvailabilitySlot>().apply {
             addAll(buildFullSlotList(lecturerId, days, slotCount, availability))
         }
     }
 
+    val totalCells = slots.size
+    val availableCount = slots.count { it.isAvailable }
+    val busyCount = totalCells - availableCount
+
+    fun setAllAvailability(value: Boolean) {
+        for (i in slots.indices) {
+            val current = slots[i]
+            if (current.isAvailable != value) {
+                slots[i] = current.copy(isAvailable = value)
+            }
+        }
+    }
+
+    LaunchedEffect(availableCount, busyCount) {
+        if (saveMessage != null) saveMessage = null
+    }
+
     Column(modifier = Modifier.fillMaxWidth()) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+                Text(
+                    text = "Haftalik Musaitlik Plani",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Dokunarak saat hucrelerini Uygun/Meşgul olarak degistirebilirsiniz.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StatChip(
+                        title = "Uygun",
+                        value = availableCount,
+                        bg = MaterialTheme.colorScheme.primaryContainer,
+                        fg = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatChip(
+                        title = "Mesgul",
+                        value = busyCount,
+                        bg = MaterialTheme.colorScheme.errorContainer,
+                        fg = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatChip(
+                        title = "Toplam",
+                        value = totalCells,
+                        bg = MaterialTheme.colorScheme.secondaryContainer,
+                        fg = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(
+                onClick = { setAllAvailability(true) },
+                enabled = lecturerId > 0,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Tumunu Uygun")
+            }
+            OutlinedButton(
+                onClick = { setAllAvailability(false) },
+                enabled = lecturerId > 0,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Tumunu Mesgul")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
+                .clip(MaterialTheme.shapes.medium)
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                .padding(6.dp)
         ) {
             Box(
-                modifier = Modifier.width(timeColumnWidth).height(32.dp),
+                modifier = Modifier
+                    .width(timeColumnWidth)
+                    .height(36.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Saat", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Saat", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
             }
             days.forEach { day ->
                 Box(
                     modifier = Modifier
                         .width(cellWidth)
-                        .height(32.dp)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
+                        .height(36.dp)
+                        .padding(horizontal = 2.dp)
+                        .clip(MaterialTheme.shapes.small)
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(dayLabels[day] ?: "", fontSize = 11.sp)
+                    Text(dayLabels[day] ?: "", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -78,6 +183,9 @@ fun AvailabilityGrid(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
+                .clip(MaterialTheme.shapes.medium)
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
+                .padding(6.dp)
         ) {
             for (slot in 0 until slotCount) {
                 Row {
@@ -88,21 +196,34 @@ fun AvailabilityGrid(
                             .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(config.slotStartTime(slot), fontSize = 9.sp)
+                        Text(
+                            text = config.slotStartTime(slot),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     days.forEach { day ->
                         val idx = slots.indexOfFirst { it.dayOfWeek == day && it.slotIndex == slot }
                         val isAvailable = if (idx >= 0) slots[idx].isAvailable else true
 
                         val bgColor = if (isAvailable)
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
                         else
-                            MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
+                            MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.58f)
+
+                        val textColor = if (isAvailable) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onErrorContainer
+                        }
 
                         Box(
                             modifier = Modifier
                                 .width(cellWidth)
                                 .height(cellHeight)
+                                .padding(horizontal = 2.dp, vertical = 2.dp)
+                                .clip(MaterialTheme.shapes.small)
                                 .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
                                 .background(bgColor)
                                 .clickable {
@@ -112,14 +233,19 @@ fun AvailabilityGrid(
                                 },
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = if (isAvailable) "✓" else "✗",
-                                fontSize = 14.sp,
-                                color = if (isAvailable)
-                                    MaterialTheme.colorScheme.primary
-                                else
-                                    MaterialTheme.colorScheme.error
-                            )
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = if (isAvailable) "Uygun" else "Mesgul",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = textColor
+                                )
+                                Text(
+                                    text = if (isAvailable) "✓" else "✗",
+                                    fontSize = 13.sp,
+                                    color = textColor
+                                )
+                            }
                         }
                     }
                 }
@@ -128,14 +254,56 @@ fun AvailabilityGrid(
 
         Spacer(modifier = Modifier.height(12.dp))
 
+        if (saveMessage != null) {
+            Text(
+                text = saveMessage!!,
+                color = Color(0xFF2E7D32),
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+        }
+
         Button(
-            onClick = { onToggle(slots.toList()) },
+            onClick = {
+                onToggle(slots.toList())
+                saveMessage = "Musaitlik plani kaydetme istegi gonderildi"
+            },
             enabled = lecturerId > 0,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp)
         ) {
-            Text(if (lecturerId > 0) "Müsaitlik Kaydet" else "Önce hoca profili eşleşmeli")
+            Text(if (lecturerId > 0) "Musaitlik Planini Kaydet" else "Once hoca profili eslesmeli")
+        }
+    }
+}
+
+@Composable
+private fun StatChip(
+    title: String,
+    value: Int,
+    bg: Color,
+    fg: Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = bg),
+        border = BorderStroke(1.dp, fg.copy(alpha = 0.2f))
+    ) {
+        Column(modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp)) {
+            Text(
+                text = value.toString(),
+                fontWeight = FontWeight.Bold,
+                color = fg,
+                fontSize = 18.sp
+            )
+            Text(
+                text = title,
+                color = fg.copy(alpha = 0.92f),
+                fontSize = 11.sp
+            )
         }
     }
 }

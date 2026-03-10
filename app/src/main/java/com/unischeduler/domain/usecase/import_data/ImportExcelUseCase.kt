@@ -130,6 +130,11 @@ class ImportExcelUseCase @Inject constructor(
         fallbackDeptId: Int,
         errors: MutableList<String>
     ): Int {
+        if (fallbackDeptId > 0) {
+            // Admin'in aktif bölüm bağlamını koru; import sonrası veri aynı bölümde görünür kalır.
+            return fallbackDeptId
+        }
+
         val deptCodes = rows.mapNotNull { row ->
             val code = row.courseCode.trim()
             val parts = code.split(Regex("\\s+"))

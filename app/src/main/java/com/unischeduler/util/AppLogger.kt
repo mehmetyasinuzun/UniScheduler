@@ -126,6 +126,20 @@ object AppLogger {
 
     fun getAllLogs(): List<LogEntry> = buffer.toList()
 
+    fun getShareableLogs(maxEntries: Int = 300): String {
+        val entries = buffer.toList().takeLast(maxEntries)
+        if (entries.isEmpty()) return "[UniScheduler] Log kaydi bulunamadi"
+
+        val header = buildString {
+            append("UniScheduler Debug Logs\n")
+            append("Entries: ${entries.size}\n")
+            append("Generated: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())}\n")
+            append("----------------------------------------\n")
+        }
+
+        return header + entries.joinToString("\n") { it.toString() }
+    }
+
     fun getLogsByLevel(level: LogLevel): List<LogEntry> = buffer.filter { it.level == level }
 
     fun getLogsByTag(tag: String): List<LogEntry> = buffer.filter { it.tag == tag }

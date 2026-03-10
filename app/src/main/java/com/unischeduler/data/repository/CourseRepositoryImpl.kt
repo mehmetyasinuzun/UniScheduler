@@ -58,7 +58,9 @@ class CourseRepositoryImpl @Inject constructor(
 
     override suspend fun assignLecturerToCourse(courseId: Int, lecturerId: Int) {
         supabase.postgrest.from("course_lecturers")
-            .upsert(CourseLecturerDto(courseId = courseId, lecturerId = lecturerId))
+            .upsert(CourseLecturerDto(courseId = courseId, lecturerId = lecturerId)) {
+                onConflict = "course_id,lecturer_id"
+            }
     }
 
     override suspend fun getCoursesForLecturer(lecturerId: Int): List<Course> {

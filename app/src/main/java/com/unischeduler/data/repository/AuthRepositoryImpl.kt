@@ -88,10 +88,28 @@ class AuthRepositoryImpl @Inject constructor(
             throw IllegalStateException("Geçersiz veya kullanılmış davet kodu")
         }
 
-        // 1. Auth kaydı oluştur (anonim profil — trigger STUDENT olarak yaratır)
-        supabase.auth.signUpWith(Email) {
-            this.email = email
-            this.password = password
+        // 1. Auth hesabı oluştur. Hesap zaten varsa aynı bilgilerle giriş yap.
+        try {
+            supabase.auth.signUpWith(Email) {
+                this.email = email
+                this.password = password
+            }
+        } catch (e: Exception) {
+            val msg = e.message?.lowercase().orEmpty()
+            if (msg.contains("already") && msg.contains("registered")) {
+                try {
+                    supabase.auth.signInWith(Email) {
+                        this.email = email
+                        this.password = password
+                    }
+                } catch (_: Exception) {
+                    throw IllegalStateException(
+                        "Bu e-posta zaten kayıtlı. Lütfen aynı şifreyle giriş yapın veya şifrenizi sıfırlayın."
+                    )
+                }
+            } else {
+                throw e
+            }
         }
 
         // Signup sonrası oturum açık olmalı
@@ -111,7 +129,7 @@ class AuthRepositoryImpl @Inject constructor(
         val success = result["success"]?.toString()?.trim('"') == "true"
         if (!success) {
             val error = result["error"]?.toString()?.trim('"') ?: "Davet kodu geçersiz"
-            // Hesap oluşturuldu ama claim başarısız — oturumu kapat
+            // Claim başarısızsa oturumu kapat (hesap daha sonra tekrar claim edilebilir)
             supabase.auth.signOut()
             throw IllegalStateException(error)
         }

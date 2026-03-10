@@ -79,7 +79,8 @@ fun LecturerAccordion(
                     Text(
                         text = buildString {
                             append("${courses.size} ders")
-                            if (isRegistered) append(" · Kayıtlı") else append(" · Kayıt bekliyor")
+                            if (isRegistered) append(" · Davetle kayıt tamamlandı")
+                            else append(" · Davet kodu bekliyor")
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isRegistered)

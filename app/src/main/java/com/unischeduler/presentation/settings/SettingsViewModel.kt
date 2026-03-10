@@ -90,7 +90,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.setNotificationAdvanceMinutes(minutes) }
     }
 
-    fun updateDeptPermission(departmentId: Int, permission: DeptHeadPermission) {
+    fun updateDeptPermission(departmentId: Int) {
         viewModelScope.launch {
             try {
                 val dept = _uiState.value.departments.find { it.id == departmentId } ?: return@launch

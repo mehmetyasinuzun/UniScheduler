@@ -52,7 +52,12 @@ import com.unischeduler.domain.model.Lecturer
 import com.unischeduler.domain.model.UserRole
 import com.unischeduler.presentation.common.components.LoadingIndicator
 import com.unischeduler.presentation.data.components.LecturerAccordion
+import com.unischeduler.util.AppLogger
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+private const val MAX_EXCEL_SIZE_BYTES = 20L * 1024 * 1024
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,12 +78,47 @@ fun DataScreen(
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
-        uri?.let {
-            context.contentResolver.openInputStream(it)?.use { stream ->
-                val bytes = stream.readBytes()
-                val fileName = uri.lastPathSegment ?: "import.xlsx"
+        if (uri == null) return@rememberLauncherForActivityResult
+
+        scope.launch {
+            try {
+                val mime = context.contentResolver.getType(uri).orEmpty()
+                val isAllowedMime = mime == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+                    mime == "application/vnd.ms-excel" || mime.isBlank()
+                if (!isAllowedMime) {
+                    snackbarHostState.showSnackbar("Sadece Excel dosyaları (.xlsx/.xls) desteklenir")
+                    return@launch
+                }
+
+                val declaredSize = queryFileSize(context, uri)
+                if (declaredSize != null && declaredSize > MAX_EXCEL_SIZE_BYTES) {
+                    snackbarHostState.showSnackbar("Dosya çok büyük. En fazla 20 MB desteklenir.")
+                    return@launch
+                }
+
+                val bytes = withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.use { stream ->
+                        stream.readBytes()
+                    } ?: throw IllegalStateException("Dosya acilamadi")
+                }
+
+                if (bytes.isEmpty()) {
+                    snackbarHostState.showSnackbar("Dosya boş görünüyor")
+                    return@launch
+                }
+
+                if (bytes.size > MAX_EXCEL_SIZE_BYTES) {
+                    snackbarHostState.showSnackbar("Dosya çok büyük. En fazla 20 MB desteklenir.")
+                    return@launch
+                }
+
+                val fileName = queryFileName(context, uri) ?: uri.lastPathSegment ?: "import.xlsx"
+                AppLogger.i("DataScreen", "Excel dosyasi secildi: $fileName (${bytes.size} byte)")
                 viewModel.parseExcelFile(bytes, fileName)
                 onNavigateToImport()
+            } catch (e: Exception) {
+                AppLogger.e("DataScreen", "Excel dosyasi okunamadi: ${e.message}", e)
+                snackbarHostState.showSnackbar("Dosya acilamadi. Lutfen farkli bir Excel dosyasi secin.")
             }
         }
     }
@@ -296,6 +336,24 @@ fun DataScreen(
             }
         }
     }
+}
+
+private fun queryFileName(context: android.content.Context, uri: Uri): String? {
+    return runCatching {
+        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            val nameIdx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+            if (nameIdx >= 0 && cursor.moveToFirst()) cursor.getString(nameIdx) else null
+        }
+    }.getOrNull()
+}
+
+private fun queryFileSize(context: android.content.Context, uri: Uri): Long? {
+    return runCatching {
+        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            val sizeIdx = cursor.getColumnIndex(android.provider.OpenableColumns.SIZE)
+            if (sizeIdx >= 0 && cursor.moveToFirst()) cursor.getLong(sizeIdx) else null
+        }
+    }.getOrNull()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
