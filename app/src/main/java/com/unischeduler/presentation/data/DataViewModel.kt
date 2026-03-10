@@ -112,7 +112,10 @@ class DataViewModel @Inject constructor(
         viewModelScope.launch {
             val state = _importState.value
             val fileBytes = state.fileBytes ?: return@launch
-            val deptId = _uiState.value.user?.departmentId ?: return@launch
+
+            // FIX: Admin ise ve departmanı null ise iptal etme, varsayılan olarak "1" numaralı ortak havuza at
+            val role = _uiState.value.user?.role
+            val deptId = _uiState.value.user?.departmentId ?: if (role == com.unischeduler.domain.model.UserRole.ADMIN) 1 else return@launch
 
             _importState.value = _importState.value.copy(isImporting = true, error = null)
 
