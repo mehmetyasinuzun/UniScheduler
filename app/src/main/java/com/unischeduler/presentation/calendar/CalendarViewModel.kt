@@ -34,6 +34,7 @@ data class CalendarUiState(
     val lecturers: List<Lecturer> = emptyList(),
     val alternatives: List<ScheduleSolution> = emptyList(),
     val user: User? = null,
+    val activeDepartmentId: Int? = null,
     val isLoading: Boolean = true,
     val isSavingAvailability: Boolean = false,
     val infoMessage: String? = null,
@@ -66,7 +67,7 @@ class CalendarViewModel @Inject constructor(
             try {
                 val user = authRepository.getCurrentUser()
                     ?: throw IllegalStateException("Oturum bulunamadi")
-                val deptId = user.departmentId
+                val deptId = resolveDepartmentId(user)
                     ?: throw IllegalStateException("Bolum bilgisi bulunamadi")
 
                 val assignments = scheduleRepository.getAssignmentsByDepartment(deptId)
@@ -105,6 +106,7 @@ class CalendarViewModel @Inject constructor(
                     courses = courses,
                     lecturers = lecturers,
                     user = user,
+                    activeDepartmentId = deptId,
                     isLoading = false,
                     isSavingAvailability = false,
                     infoMessage = null,
@@ -201,17 +203,17 @@ class CalendarViewModel @Inject constructor(
                 infoMessage = null,
                 error = null
             )
-            try {
-                updateAvailabilityUseCase(slots)
+            val result = updateAvailabilityUseCase(slots)
+            result.onSuccess {
                 _uiState.value = _uiState.value.copy(
                     myAvailability = slots,
                     isSavingAvailability = false,
                     infoMessage = "Musaitlik plani kaydedildi. Bu islem icin admin onayi gerekmez."
                 )
-            } catch (e: Exception) {
+            }.onFailure { e ->
                 _uiState.value = _uiState.value.copy(
                     isSavingAvailability = false,
-                    error = e.message
+                    error = e.message ?: "Musaitlik kaydedilemedi"
                 )
             }
         }
@@ -269,5 +271,11 @@ class CalendarViewModel @Inject constructor(
     private fun toMinutes(value: String): Int {
         val parts = value.split(":")
         return (parts[0].toInt() * 60) + parts[1].toInt()
+    }
+
+    private suspend fun resolveDepartmentId(user: User): Int? {
+        if (user.departmentId != null) return user.departmentId
+        if (user.role != UserRole.ADMIN) return null
+        return lecturerRepository.getDepartments().firstOrNull()?.id
     }
 }

@@ -46,7 +46,7 @@ fun ScheduleConfigScreen(
     onSaved: () -> Unit
 ) {
     val calUiState by viewModel.uiState.collectAsState()
-    val departmentId = calUiState.user?.departmentId
+    val departmentId = calUiState.activeDepartmentId
 
     var slotDuration by rememberSaveable { mutableIntStateOf(60) }
     var dayStartTime by rememberSaveable { mutableStateOf("08:00") }

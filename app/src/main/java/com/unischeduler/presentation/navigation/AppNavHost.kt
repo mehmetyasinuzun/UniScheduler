@@ -52,6 +52,7 @@ fun AppNavHost() {
     // DataViewModel'i Data ve ImportPreview ekranları arasında paylaşıyoruz.
     // Ayrı hiltViewModel() çağrıları farklı instance oluşturur ve import state kaybolur.
     val dataVm: DataViewModel = hiltViewModel()
+    val calendarVm: CalendarViewModel = hiltViewModel()
 
     // Kullanıcı Home ekranına her geldiğinde (login/splash sonrası) verileri yeniden yükle.
     // Bu sayede oturum açıldıktan sonra rol bilgisi kesinlikle güncellenir.
@@ -141,9 +142,8 @@ fun AppNavHost() {
                 )
             }
             composable<Screen.Calendar> {
-                val vm: CalendarViewModel = hiltViewModel()
                 CalendarScreen(
-                    viewModel = vm,
+                    viewModel = calendarVm,
                     userRole = userRole,
                     onNavigateToConfig = { navController.navigate(Screen.ScheduleConfig) },
                     onNavigateToAlternatives = { navController.navigate(Screen.Alternatives) }
@@ -174,16 +174,14 @@ fun AppNavHost() {
                 )
             }
             composable<Screen.ScheduleConfig> {
-                val vm: CalendarViewModel = hiltViewModel()
                 ScheduleConfigScreen(
-                    viewModel = vm,
+                    viewModel = calendarVm,
                     onSaved = { navController.popBackStack() }
                 )
             }
             composable<Screen.Alternatives> {
-                val vm: CalendarViewModel = hiltViewModel()
                 AlternativesScreen(
-                    viewModel = vm,
+                    viewModel = calendarVm,
                     onSelect = { navController.popBackStack() }
                 )
             }

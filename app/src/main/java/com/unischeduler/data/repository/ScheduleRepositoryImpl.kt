@@ -75,14 +75,22 @@ class ScheduleRepositoryImpl @Inject constructor(
         return supabase.postgrest.from("availability_slots")
             .select { filter { eq("lecturer_id", lecturerId) } }
             .decodeList<AvailabilitySlotDto>()
-            .map { AvailabilitySlot(it.id, it.lecturerId, it.dayOfWeek, it.slotIndex, it.isAvailable) }
+            .map { AvailabilitySlot(it.id ?: 0, it.lecturerId, it.dayOfWeek, it.slotIndex, it.isAvailable) }
     }
 
     override suspend fun upsertAvailability(slots: List<AvailabilitySlot>) {
         val dtos = slots.map {
-            AvailabilitySlotDto(it.id, it.lecturerId, it.dayOfWeek, it.slotIndex, it.isAvailable)
+            AvailabilitySlotDto(
+                id = it.id.takeIf { value -> value > 0 },
+                lecturerId = it.lecturerId,
+                dayOfWeek = it.dayOfWeek,
+                slotIndex = it.slotIndex,
+                isAvailable = it.isAvailable
+            )
         }
-        supabase.postgrest.from("availability_slots").upsert(dtos)
+        supabase.postgrest.from("availability_slots").upsert(dtos) {
+            onConflict = "lecturer_id,day_of_week,slot_index"
+        }
     }
 
     override suspend fun getScheduleConfig(departmentId: Int): ScheduleConfig? {
