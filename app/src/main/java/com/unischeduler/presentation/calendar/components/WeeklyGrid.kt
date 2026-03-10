@@ -36,30 +36,32 @@ fun WeeklyGrid(
 ) {
     val cellWidth = 110.dp
     val cellHeight = 64.dp
-    val timeColumnWidth = 56.dp
+    val timeColumnWidth = 92.dp
     val days = config.activeDays.sorted()
     val slotCount = config.totalSlotsPerDay
+    val horizontalScroll = rememberScrollState()
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
     ) {
         // Header Row
-        Row {
+        Row(modifier = Modifier.horizontalScroll(horizontalScroll)) {
             Box(
                 modifier = Modifier
                     .width(timeColumnWidth)
-                    .height(36.dp),
+                    .height(36.dp)
+                    .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Saat", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Saat Araligi", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             days.forEach { day ->
                 Box(
                     modifier = Modifier
                         .width(cellWidth)
                         .height(36.dp)
+                        .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
                         .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center
                 ) {
@@ -73,33 +75,35 @@ fun WeeklyGrid(
         }
 
         // Slot Rows
-        for (slot in 0 until slotCount) {
-            Row {
-                Box(
-                    modifier = Modifier
-                        .width(timeColumnWidth)
-                        .height(cellHeight)
-                        .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = config.slotStartTime(slot),
-                        fontSize = 10.sp,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                days.forEach { day ->
-                    val cellAssignment = assignments.find { it.dayOfWeek == day && it.slotIndex == slot }
-
-                    TimeSlotCell(
-                        assignment = cellAssignment,
+        Column(modifier = Modifier.horizontalScroll(horizontalScroll)) {
+            for (slot in 0 until slotCount) {
+                Row {
+                    Box(
                         modifier = Modifier
-                            .width(cellWidth)
-                            .height(cellHeight),
-                        canEdit = canEdit,
-                        onToggleLock = onToggleLock
-                    )
+                            .width(timeColumnWidth)
+                            .height(cellHeight)
+                            .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "${config.slotStartTime(slot)}-${config.slotEndTime(slot)}",
+                            fontSize = 10.sp,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    days.forEach { day ->
+                        val cellAssignment = assignments.find { it.dayOfWeek == day && it.slotIndex == slot }
+
+                        TimeSlotCell(
+                            assignment = cellAssignment,
+                            modifier = Modifier
+                                .width(cellWidth)
+                                .height(cellHeight),
+                            canEdit = canEdit,
+                            onToggleLock = onToggleLock
+                        )
+                    }
                 }
             }
         }

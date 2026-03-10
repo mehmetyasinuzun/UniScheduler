@@ -35,6 +35,8 @@ data class CalendarUiState(
     val alternatives: List<ScheduleSolution> = emptyList(),
     val user: User? = null,
     val isLoading: Boolean = true,
+    val isSavingAvailability: Boolean = false,
+    val infoMessage: String? = null,
     val error: String? = null
 )
 
@@ -104,6 +106,8 @@ class CalendarViewModel @Inject constructor(
                     lecturers = lecturers,
                     user = user,
                     isLoading = false,
+                    isSavingAvailability = false,
+                    infoMessage = null,
                     error = warning
                 )
             } catch (e: Exception) {
@@ -192,11 +196,23 @@ class CalendarViewModel @Inject constructor(
 
     fun updateMyAvailability(slots: List<AvailabilitySlot>) {
         viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isSavingAvailability = true,
+                infoMessage = null,
+                error = null
+            )
             try {
                 updateAvailabilityUseCase(slots)
-                _uiState.value = _uiState.value.copy(myAvailability = slots)
+                _uiState.value = _uiState.value.copy(
+                    myAvailability = slots,
+                    isSavingAvailability = false,
+                    infoMessage = "Musaitlik plani kaydedildi. Bu islem icin admin onayi gerekmez."
+                )
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = e.message)
+                _uiState.value = _uiState.value.copy(
+                    isSavingAvailability = false,
+                    error = e.message
+                )
             }
         }
     }

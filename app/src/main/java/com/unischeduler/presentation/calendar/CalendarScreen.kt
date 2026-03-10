@@ -62,6 +62,10 @@ fun CalendarScreen(
         state.error?.let { snackbarHostState.showSnackbar(it) }
     }
 
+    LaunchedEffect(state.infoMessage) {
+        state.infoMessage?.let { snackbarHostState.showSnackbar(it) }
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -184,6 +188,7 @@ private fun AvailabilityTab(
                 availability = state.myAvailability,
                 lecturerId = state.myLecturerId ?: 0,
                 config = config,
+                isSaving = state.isSavingAvailability,
                 onToggle = { updatedSlots -> viewModel.updateMyAvailability(updatedSlots) }
             )
         }

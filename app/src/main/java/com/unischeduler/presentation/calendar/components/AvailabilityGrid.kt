@@ -21,13 +21,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,14 +44,15 @@ fun AvailabilityGrid(
     availability: List<AvailabilitySlot>,
     lecturerId: Int,
     config: ScheduleConfig,
+    isSaving: Boolean,
     onToggle: (List<AvailabilitySlot>) -> Unit
 ) {
     val cellWidth = 72.dp
     val cellHeight = 52.dp
-    val timeColumnWidth = 78.dp
+    val timeColumnWidth = 98.dp
     val days = config.activeDays.sorted()
     val slotCount = config.totalSlotsPerDay
-    var saveMessage by remember { mutableStateOf<String?>(null) }
+    val horizontalScroll = rememberScrollState()
     val slots = remember(availability, lecturerId, days, slotCount) {
         mutableStateListOf<AvailabilitySlot>().apply {
             addAll(buildFullSlotList(lecturerId, days, slotCount, availability))
@@ -73,10 +70,6 @@ fun AvailabilityGrid(
                 slots[i] = current.copy(isAvailable = value)
             }
         }
-    }
-
-    LaunchedEffect(availableCount, busyCount) {
-        if (saveMessage != null) saveMessage = null
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -151,7 +144,7 @@ fun AvailabilityGrid(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
+                .horizontalScroll(horizontalScroll)
                 .clip(MaterialTheme.shapes.medium)
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
                 .padding(6.dp)
@@ -162,7 +155,7 @@ fun AvailabilityGrid(
                     .height(36.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Saat", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+                Text("Saat Araligi", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
             }
             days.forEach { day ->
                 Box(
@@ -182,7 +175,7 @@ fun AvailabilityGrid(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
+                .horizontalScroll(horizontalScroll)
                 .clip(MaterialTheme.shapes.medium)
                 .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
                 .padding(6.dp)
@@ -197,7 +190,7 @@ fun AvailabilityGrid(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = config.slotStartTime(slot),
+                            text = "${config.slotStartTime(slot)}-${config.slotEndTime(slot)}",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -254,27 +247,22 @@ fun AvailabilityGrid(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        if (saveMessage != null) {
-            Text(
-                text = saveMessage!!,
-                color = Color(0xFF2E7D32),
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(horizontal = 8.dp)
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-        }
-
         Button(
             onClick = {
                 onToggle(slots.toList())
-                saveMessage = "Musaitlik plani kaydetme istegi gonderildi"
             },
-            enabled = lecturerId > 0,
+            enabled = lecturerId > 0 && !isSaving,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp)
         ) {
-            Text(if (lecturerId > 0) "Musaitlik Planini Kaydet" else "Once hoca profili eslesmeli")
+            Text(
+                when {
+                    lecturerId <= 0 -> "Once hoca profili eslesmeli"
+                    isSaving -> "Kaydediliyor..."
+                    else -> "Musaitlik Planini Kaydet"
+                }
+            )
         }
     }
 }
