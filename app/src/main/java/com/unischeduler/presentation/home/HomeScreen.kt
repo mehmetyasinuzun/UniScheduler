@@ -85,9 +85,9 @@ fun HomeScreen(
                 Text(
                     text = when (state.user?.role) {
                         UserRole.ADMIN -> "Sistem Yöneticisi"
-                        UserRole.DEPT_HEAD -> "Bölüm Başkanı"
+                        UserRole.ADMIN -> "Bölüm Başkanı"
                         UserRole.LECTURER -> "Öğretim Üyesi"
-                        UserRole.STUDENT -> "Öğrenci"
+                        UserRole.LECTURER -> "Öğrenci"
                         null -> ""
                     },
                     style = MaterialTheme.typography.bodyMedium,
@@ -97,7 +97,7 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // ADMIN / DEPT_HEAD: istatistik kartları
-                if (state.user?.role == UserRole.ADMIN || state.user?.role == UserRole.DEPT_HEAD) {
+                if (state.user?.role == UserRole.ADMIN || state.user?.role == UserRole.ADMIN) {
                     QuickStatCard(
                         icon = Icons.AutoMirrored.Filled.Assignment,
                         title = "Bekleyen Taslaklar",
@@ -129,7 +129,7 @@ fun HomeScreen(
                 }
 
                 // STUDENT: bilgi kartı
-                if (state.user?.role == UserRole.STUDENT) {
+                if (state.user?.role == UserRole.LECTURER) {
                     Card(
                         onClick = onNavigateToCalendar,
                         modifier = Modifier.fillMaxWidth(),

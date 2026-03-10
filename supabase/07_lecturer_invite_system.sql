@@ -14,6 +14,7 @@ COMMENT ON COLUMN public.lecturers.invite_code IS
     'Admin tarafından üretilen 8 haneli unique davet kodu — hoca bu kodla kayıt olur';
 
 -- Unique index (büyük/küçük harf duyarsız arama için)
+DROP INDEX IF EXISTS idx_lecturers_invite_code;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_lecturers_invite_code
     ON public.lecturers (UPPER(invite_code));
 

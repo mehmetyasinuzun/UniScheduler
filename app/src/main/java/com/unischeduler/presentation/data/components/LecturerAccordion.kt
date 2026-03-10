@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Key
@@ -24,7 +26,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -40,7 +41,9 @@ import com.unischeduler.domain.model.Lecturer
 @Composable
 fun LecturerAccordion(
     lecturer: Lecturer,
-    courses: List<Course>
+    courses: List<Course>,
+    onEdit: ((Lecturer) -> Unit)? = null,
+    onDelete: ((Int) -> Unit)? = null
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     val clipboard = LocalClipboardManager.current
@@ -84,6 +87,24 @@ fun LecturerAccordion(
                         else
                             MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+                if (onEdit != null) {
+                    IconButton(onClick = { onEdit(lecturer) }) {
+                        Icon(
+                            Icons.Filled.Edit,
+                            contentDescription = "Düzenle",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                if (onDelete != null) {
+                    IconButton(onClick = { onDelete(lecturer.id) }) {
+                        Icon(
+                            Icons.Filled.Delete,
+                            contentDescription = "Sil",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
                 Icon(
                     imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,

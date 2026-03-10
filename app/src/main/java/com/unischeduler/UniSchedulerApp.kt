@@ -6,6 +6,7 @@ import androidx.work.Configuration
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.unischeduler.util.AppLogger
 import com.unischeduler.util.NotificationHelper
 import com.unischeduler.worker.ScheduleReminderWorker
 import dagger.hilt.android.HiltAndroidApp
@@ -25,6 +26,8 @@ class UniSchedulerApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        AppLogger.init(this)
+        AppLogger.i("App", "UniScheduler başlatıldı")
         NotificationHelper.createNotificationChannel(this)
         scheduleReminderWorker()
     }

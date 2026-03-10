@@ -44,7 +44,6 @@ import androidx.compose.ui.unit.dp
 import com.unischeduler.R
 import com.unischeduler.domain.model.AppLanguage
 import com.unischeduler.domain.model.AppTheme
-import com.unischeduler.domain.model.DeptHeadPermission
 import com.unischeduler.domain.model.UserRole
 import com.unischeduler.presentation.common.components.LoadingIndicator
 
@@ -96,9 +95,7 @@ fun SettingsScreen(
                             "${stringResource(R.string.account_role)}: ${
                                 when (state.user?.role) {
                                     UserRole.ADMIN -> stringResource(R.string.role_admin)
-                                    UserRole.DEPT_HEAD -> stringResource(R.string.role_dept_head)
                                     UserRole.LECTURER -> stringResource(R.string.role_lecturer)
-                                    UserRole.STUDENT -> stringResource(R.string.role_student)
                                     null -> "-"
                                 }
                             }"
@@ -176,35 +173,6 @@ fun SettingsScreen(
                 }
 
                 // --- Admin: Bölüm Yetkileri ---
-                if (state.user?.role == UserRole.ADMIN && state.departments.isNotEmpty()) {
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = stringResource(R.string.department_permissions),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                stringResource(R.string.department_permissions_desc),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            state.departments.forEach { dept ->
-                                Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                                    Text("${dept.code} - ${dept.name}", style = MaterialTheme.typography.labelLarge)
-                                    PermissionDropdown(
-                                        selected = dept.deptHeadPermission,
-                                        onSelected = { viewModel.updateDeptPermission(dept.id, it) }
-                                    )
-                                }
-                                HorizontalDivider()
-                            }
-                        }
-                    }
-                }
-
                 // --- Çıkış ---
                 OutlinedButton(
                     onClick = { viewModel.logout(); onLogout() },
@@ -290,32 +258,6 @@ private fun AdvanceMinutesDropdown(selected: Int, onSelected: (Int) -> Unit) {
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { (minutes, text) ->
                 DropdownMenuItem(text = { Text(text) }, onClick = { onSelected(minutes); expanded = false })
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PermissionDropdown(selected: DeptHeadPermission, onSelected: (DeptHeadPermission) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    val labels = mapOf(
-        DeptHeadPermission.FULL_ACCESS to stringResource(R.string.permission_full_access),
-        DeptHeadPermission.APPROVAL_REQUIRED to stringResource(R.string.permission_approval_required),
-        DeptHeadPermission.READ_ONLY to stringResource(R.string.permission_view_only)
-    )
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-        OutlinedTextField(
-            value = labels[selected] ?: selected.name, onValueChange = {}, readOnly = true,
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable)
-        )
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DeptHeadPermission.entries.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(labels[option] ?: option.name) },
-                    onClick = { onSelected(option); expanded = false }
-                )
             }
         }
     }

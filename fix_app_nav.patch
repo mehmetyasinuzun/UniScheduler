@@ -1,0 +1,21 @@
+--- app/src/main/java/com/unischeduler/presentation/navigation/AppNavHost.kt
++++ app/src/main/java/com/unischeduler/presentation/navigation/AppNavHost.kt
+@@ -48,15 +48,11 @@
+     // Doğrudan collectAsState yerine ViewModel'den role bilgisini canli besle
+     val currentUser by authVm.currentUser.collectAsState()
+ 
+-    // UI'ın alt menüsünün kesin olarak yetkiyi okuduğundan emin olmak için
+-    // state değişikliklerini doğrudan barındıran mutable bir state oluşturuyoruz
+-    var userRole by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(UserRole.STUDENT) }
+-
+-    LaunchedEffect(currentUser) {
+-        if (currentUser != null) {
+-            userRole = currentUser!!.role
+-        }
+-    }
++    // currentUserState değiştiğinde BottomBar'ın da otomatik recompose olması için
++    // null kontrolünü güvenli bir derivedState olarak bırakıyoruz.
++    // Uygulamada "STUDENT" olan sahte ilk değeri atlamak için doğrudan akışı dinliyoruz.
++    val userRole = currentUser?.role ?: UserRole.STUDENT
+ 
+     val showBottomBar = currentRoute != null &&

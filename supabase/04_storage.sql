@@ -20,6 +20,7 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- Admin: excel-uploads bucket'ında tam yetki
+DROP POLICY IF EXISTS "excel_uploads_admin_all" ON storage.objects;
 CREATE POLICY "excel_uploads_admin_all"
     ON storage.objects FOR ALL
     USING (
@@ -27,32 +28,11 @@ CREATE POLICY "excel_uploads_admin_all"
         AND public.get_user_role() = 'ADMIN'
     );
 
--- Dept Head: kendi bölüm klasörüne yükleme
-CREATE POLICY "excel_uploads_dept_head_insert"
-    ON storage.objects FOR INSERT
-    WITH CHECK (
-        bucket_id = 'excel-uploads'
-        AND public.get_user_role() = 'DEPT_HEAD'
-        AND (storage.foldername(name))[1] = public.get_user_department_id()::text
-    );
 
--- Dept Head: kendi bölüm klasöründen okuma
-CREATE POLICY "excel_uploads_dept_head_select"
-    ON storage.objects FOR SELECT
-    USING (
-        bucket_id = 'excel-uploads'
-        AND public.get_user_role() = 'DEPT_HEAD'
-        AND (storage.foldername(name))[1] = public.get_user_department_id()::text
-    );
 
--- Dept Head: kendi bölüm klasöründen silme
-CREATE POLICY "excel_uploads_dept_head_delete"
-    ON storage.objects FOR DELETE
-    USING (
-        bucket_id = 'excel-uploads'
-        AND public.get_user_role() = 'DEPT_HEAD'
-        AND (storage.foldername(name))[1] = public.get_user_department_id()::text
-    );
+
+
+
 
 -- ============================================================
 -- 2. Exports Bucket (Excel/PDF export dosyaları)
@@ -71,6 +51,7 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- Kullanıcı kendi export klasöründen okuma
+DROP POLICY IF EXISTS "exports_select_own" ON storage.objects;
 CREATE POLICY "exports_select_own"
     ON storage.objects FOR SELECT
     USING (
@@ -79,6 +60,7 @@ CREATE POLICY "exports_select_own"
     );
 
 -- Kullanıcı kendi export klasörüne yükleme
+DROP POLICY IF EXISTS "exports_insert_own" ON storage.objects;
 CREATE POLICY "exports_insert_own"
     ON storage.objects FOR INSERT
     WITH CHECK (
@@ -87,6 +69,7 @@ CREATE POLICY "exports_insert_own"
     );
 
 -- Kullanıcı kendi export klasöründen silme
+DROP POLICY IF EXISTS "exports_delete_own" ON storage.objects;
 CREATE POLICY "exports_delete_own"
     ON storage.objects FOR DELETE
     USING (

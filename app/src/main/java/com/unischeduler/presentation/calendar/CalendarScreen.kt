@@ -71,7 +71,7 @@ fun CalendarScreen(
                     IconButton(onClick = { viewModel.refresh() }) {
                         Icon(Icons.Filled.Refresh, "Yenile")
                     }
-                    if (userRole == UserRole.ADMIN || userRole == UserRole.DEPT_HEAD) {
+                    if (userRole == UserRole.ADMIN || userRole == UserRole.ADMIN) {
                         IconButton(onClick = onNavigateToConfig) {
                             Icon(Icons.Filled.Settings, "Program Ayarları")
                         }
@@ -80,7 +80,7 @@ fun CalendarScreen(
             )
         },
         floatingActionButton = {
-            if ((userRole == UserRole.ADMIN || userRole == UserRole.DEPT_HEAD) && selectedTab == 0) {
+            if ((userRole == UserRole.ADMIN || userRole == UserRole.ADMIN) && selectedTab == 0) {
                 ExtendedFloatingActionButton(
                     onClick = {
                         viewModel.generateAlternatives()
@@ -149,7 +149,7 @@ private fun ScheduleTab(
             WeeklyGrid(
                 assignments = state.assignments,
                 config = config,
-                canEdit = userRole == UserRole.ADMIN || userRole == UserRole.DEPT_HEAD,
+                canEdit = userRole == UserRole.ADMIN || userRole == UserRole.ADMIN,
                 onToggleLock = { viewModel.toggleAssignmentLock(it) }
             )
         }

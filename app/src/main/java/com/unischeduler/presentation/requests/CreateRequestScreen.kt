@@ -125,7 +125,7 @@ fun CreateRequestScreen(
                         currentData = currentData,
                         requestedData = requestedData,
                         reason = reason,
-                        approvalMode = ApprovalMode.DUAL_APPROVAL
+                        /* no approval mode eq direct admin */
                     )
                     viewModel.createRequest(request)
                     onDone()

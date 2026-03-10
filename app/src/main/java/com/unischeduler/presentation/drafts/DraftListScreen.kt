@@ -49,7 +49,7 @@ fun DraftListScreen(
     Scaffold(
         topBar = { TopAppBar(title = { Text("Taslaklar") }) },
         floatingActionButton = {
-            if (userRole == UserRole.DEPT_HEAD) {
+            if (userRole == UserRole.ADMIN) {
                 ExtendedFloatingActionButton(
                     onClick = onCreateDraft,
                     icon = { Icon(Icons.Filled.Add, null) },
@@ -160,7 +160,7 @@ private fun DraftCard(
 
             Row {
                 when {
-                    draft.status == DraftStatus.DRAFT && userRole == UserRole.DEPT_HEAD -> {
+                    draft.status == DraftStatus.DRAFT && userRole == UserRole.ADMIN -> {
                         TextButton(onClick = onEdit) { Text("Düzenle") }
                         Spacer(modifier = Modifier.width(8.dp))
                         TextButton(onClick = onSubmit) { Text("Gönder") }

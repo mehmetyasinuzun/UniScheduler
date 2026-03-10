@@ -13,13 +13,7 @@ data class ScheduleConfigDto(
     @SerialName("active_days") val activeDays: List<Int> = listOf(1, 2, 3, 4, 5)
 )
 
-@Serializable
-data class DepartmentDto(
-    val id: Int = 0,
-    val name: String = "",
-    val code: String = "",
-    @SerialName("dept_head_permission") val deptHeadPermission: String = "approval_required"
-)
+
 
 @Serializable
 data class ImportLogDto(

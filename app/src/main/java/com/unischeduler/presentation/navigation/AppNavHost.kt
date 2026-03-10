@@ -35,6 +35,7 @@ import com.unischeduler.presentation.requests.RequestDetailScreen
 import com.unischeduler.presentation.requests.RequestListScreen
 import com.unischeduler.presentation.settings.SettingsScreen
 import com.unischeduler.presentation.settings.SettingsViewModel
+import com.unischeduler.presentation.debug.DebugConsoleScreen
 import com.unischeduler.presentation.splash.SplashScreen
 
 @Composable
@@ -43,13 +44,25 @@ fun AppNavHost() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // DİKKAT: Artık eski ve sıfırlanabilen LoginViewModel yerine, uygulamanın
-    // Ana gövdesine sahip HomeViewModel'i çağırıyoruz. Bu sayede veritabanındaki rol anında yansır.
+    // Kullanıcı rolünü tüm ekranlar boyunca paylaşmak için Compose-seviyesinde state tutuyoruz.
+    // HomeViewModel, hiltViewModel() ile Activity scope'unda tek bir instance olarak yaşar.
     val homeVm: HomeViewModel = hiltViewModel()
     val homeState by homeVm.uiState.collectAsState()
 
-    // Eğer Home (Ana ekran) verileri indirdiyse ve kullanıcı yüklendiyse ondan rolü al.
-    val userRole = homeState.user?.role ?: UserRole.STUDENT
+    // DataViewModel'i Data ve ImportPreview ekranları arasında paylaşıyoruz.
+    // Ayrı hiltViewModel() çağrıları farklı instance oluşturur ve import state kaybolur.
+    val dataVm: DataViewModel = hiltViewModel()
+
+    // Kullanıcı Home ekranına her geldiğinde (login/splash sonrası) verileri yeniden yükle.
+    // Bu sayede oturum açıldıktan sonra rol bilgisi kesinlikle güncellenir.
+    LaunchedEffect(currentRoute) {
+        if (currentRoute == Screen.Home::class.qualifiedName) {
+            homeVm.refresh()
+        }
+    }
+
+    val userRole = homeState.user?.role ?: UserRole.LECTURER
+    val showDebug = userRole == UserRole.ADMIN
 
     val showBottomBar = currentRoute != null &&
         currentRoute != Screen.Splash::class.qualifiedName &&
@@ -62,6 +75,7 @@ fun AppNavHost() {
                 BottomNavBar(
                     currentRoute = currentRoute,
                     role = userRole,
+                    showDebug = showDebug,
                     onNavigate = { screen ->
                         navController.navigate(screen) {
                             popUpTo(Screen.Home) { inclusive = false }
@@ -118,9 +132,8 @@ fun AppNavHost() {
                 )
             }
             composable<Screen.Home> {
-                val vm: HomeViewModel = hiltViewModel()
                 HomeScreen(
-                    viewModel = vm,
+                    viewModel = homeVm,
                     userRole = userRole,
                     onNavigateToCalendar = { navController.navigate(Screen.Calendar) },
                     onNavigateToRequests = { navController.navigate(Screen.Requests) },
@@ -137,17 +150,15 @@ fun AppNavHost() {
                 )
             }
             composable<Screen.Data> {
-                val vm: DataViewModel = hiltViewModel()
                 DataScreen(
-                    viewModel = vm,
+                    viewModel = dataVm,
                     onNavigateToImport = { navController.navigate(Screen.ImportPreview) },
                     onNavigateToCalendar = { navController.navigate(Screen.Calendar) }
                 )
             }
             composable<Screen.ImportPreview> {
-                val vm: DataViewModel = hiltViewModel()
                 ImportPreviewScreen(
-                    viewModel = vm,
+                    viewModel = dataVm,
                     onImportComplete = { navController.popBackStack() }
                 )
             }
@@ -223,6 +234,9 @@ fun AppNavHost() {
                     userRole = userRole,
                     onDone = { navController.popBackStack() }
                 )
+            }
+            composable<Screen.DebugConsole> {
+                DebugConsoleScreen()
             }
         }
     }

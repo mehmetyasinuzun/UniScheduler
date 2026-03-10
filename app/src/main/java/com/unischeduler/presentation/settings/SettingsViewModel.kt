@@ -6,7 +6,7 @@ import com.unischeduler.domain.model.AppLanguage
 import com.unischeduler.domain.model.AppSettings
 import com.unischeduler.domain.model.AppTheme
 import com.unischeduler.domain.model.Department
-import com.unischeduler.domain.model.DeptHeadPermission
+
 import com.unischeduler.domain.model.User
 import com.unischeduler.domain.model.UserRole
 import com.unischeduler.domain.repository.AuthRepository
@@ -94,10 +94,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val dept = _uiState.value.departments.find { it.id == departmentId } ?: return@launch
-                lecturerRepository.upsertDepartment(dept.copy(deptHeadPermission = permission))
+                lecturerRepository.upsertDepartment(dept.copy())
                 // Optimistic local update — önce local state'i güncelle, DB'ye gönder
                 val updated = _uiState.value.departments.map {
-                    if (it.id == departmentId) it.copy(deptHeadPermission = permission) else it
+                    if (it.id == departmentId) it.copy() else it
                 }
                 _uiState.value = _uiState.value.copy(
                     departments = updated,

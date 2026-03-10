@@ -17,6 +17,7 @@ import com.unischeduler.domain.usecase.import_data.ImportExcelUseCase
 import com.unischeduler.domain.usecase.import_data.ImportResult
 import com.unischeduler.domain.usecase.import_data.ImportRow
 import com.unischeduler.presentation.common.UiState
+import com.unischeduler.util.AppLogger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -67,14 +68,17 @@ class DataViewModel @Inject constructor(
 
     private fun loadData() {
         viewModelScope.launch {
+            AppLogger.d("DataVM", "Veri yükleme başlatılıyor...")
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val user = authRepository.getCurrentUser()
                 val deptId = user?.departmentId ?: 1
+                AppLogger.d("DataVM", "Kullanıcı: ${user?.email}, role=${user?.role}, deptId=$deptId")
                 val departments = lecturerRepository.getDepartments()
                 val courses = courseRepository.getCoursesByDepartment(deptId)
                 val lecturers = lecturerRepository.getLecturersByDepartment(deptId)
 
+                AppLogger.i("DataVM", "Veri yüklendi: ${departments.size} bölüm, ${courses.size} ders, ${lecturers.size} hoca")
                 _uiState.value = DataUiState(
                     user = user,
                     departments = departments,
@@ -83,6 +87,7 @@ class DataViewModel @Inject constructor(
                     isLoading = false
                 )
             } catch (e: Exception) {
+                AppLogger.e("DataVM", "Veri yüklenirken hata: ${e.message}", e)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = e.message ?: "Veri yüklenirken hata"
@@ -94,13 +99,16 @@ class DataViewModel @Inject constructor(
     fun parseExcelFile(bytes: ByteArray, fileName: String) {
         viewModelScope.launch {
             try {
+                AppLogger.i("DataVM", "Excel parse başlatılıyor: $fileName (${bytes.size} byte)")
                 val rows = importExcelUseCase.parseExcel(bytes)
+                AppLogger.i("DataVM", "Excel parse tamamlandı: ${rows.size} satır bulundu")
                 _importState.value = ImportPreviewState(
                     rows = rows,
                     fileBytes = bytes,
                     fileName = fileName
                 )
             } catch (e: Exception) {
+                AppLogger.e("DataVM", "Excel parse hatası: ${e.message}", e)
                 _importState.value = _importState.value.copy(
                     error = "Excel dosyası okunamadı: ${e.message}"
                 )
@@ -113,10 +121,10 @@ class DataViewModel @Inject constructor(
             val state = _importState.value
             val fileBytes = state.fileBytes ?: return@launch
 
-            // FIX: Admin ise ve departmanı null ise iptal etme, varsayılan olarak "1" numaralı ortak havuza at
             val role = _uiState.value.user?.role
             val deptId = _uiState.value.user?.departmentId ?: if (role == com.unischeduler.domain.model.UserRole.ADMIN) 1 else return@launch
 
+            AppLogger.i("DataVM", "Import başlatılıyor: ${state.rows.size} satır, deptId=$deptId, role=$role")
             _importState.value = _importState.value.copy(isImporting = true, error = null)
 
             importExcelUseCase(
@@ -125,12 +133,14 @@ class DataViewModel @Inject constructor(
                 fileBytes = fileBytes,
                 fileName = state.fileName
             ).onSuccess { result ->
+                AppLogger.i("DataVM", "Import başarılı: ${result.courses.size} ders, ${result.lecturers.size} hoca, ${result.errors.size} hata")
                 _importState.value = _importState.value.copy(
                     isImporting = false,
                     importResult = result
                 )
                 loadData()
             }.onFailure { e ->
+                AppLogger.e("DataVM", "Import başarısız: ${e.message}", e)
                 _importState.value = _importState.value.copy(
                     isImporting = false,
                     error = e.message ?: "Import başarısız"
@@ -177,5 +187,53 @@ class DataViewModel @Inject constructor(
 
     fun clearImportState() {
         _importState.value = ImportPreviewState()
+    }
+
+    fun addLecturer(fullName: String, title: String, departmentId: Int) {
+        viewModelScope.launch {
+            try {
+                AppLogger.i("DataVM", "Hoca ekleniyor: $fullName, title=$title, deptId=$departmentId")
+                val lecturer = lecturerRepository.upsertLecturer(
+                    Lecturer(
+                        fullName = fullName,
+                        title = title,
+                        departmentId = departmentId
+                    )
+                )
+                AppLogger.i("DataVM", "Hoca eklendi: ${lecturer.fullName} (id=${lecturer.id})")
+                loadData()
+            } catch (e: Exception) {
+                AppLogger.e("DataVM", "Hoca eklenemedi: ${e.message}", e)
+                _uiState.value = _uiState.value.copy(error = "Hoca eklenemedi: ${e.message}")
+            }
+        }
+    }
+
+    fun updateLecturer(lecturer: Lecturer) {
+        viewModelScope.launch {
+            try {
+                AppLogger.i("DataVM", "Hoca güncelleniyor: ${lecturer.fullName} (id=${lecturer.id})")
+                lecturerRepository.upsertLecturer(lecturer)
+                AppLogger.i("DataVM", "Hoca güncellendi: ${lecturer.fullName}")
+                loadData()
+            } catch (e: Exception) {
+                AppLogger.e("DataVM", "Hoca güncellenemedi: ${e.message}", e)
+                _uiState.value = _uiState.value.copy(error = "Hoca güncellenemedi: ${e.message}")
+            }
+        }
+    }
+
+    fun deleteLecturer(lecturerId: Int) {
+        viewModelScope.launch {
+            try {
+                AppLogger.i("DataVM", "Hoca siliniyor: id=$lecturerId")
+                lecturerRepository.deleteLecturer(lecturerId)
+                AppLogger.i("DataVM", "Hoca silindi: id=$lecturerId")
+                loadData()
+            } catch (e: Exception) {
+                AppLogger.e("DataVM", "Hoca silinemedi: ${e.message}", e)
+                _uiState.value = _uiState.value.copy(error = "Hoca silinemedi: ${e.message}")
+            }
+        }
     }
 }

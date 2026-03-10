@@ -5,7 +5,6 @@ import com.unischeduler.data.remote.dto.LecturerDto
 import com.unischeduler.data.remote.mapper.toDomain
 import com.unischeduler.data.remote.mapper.toDto
 import com.unischeduler.domain.model.Department
-import com.unischeduler.domain.model.DeptHeadPermission
 import com.unischeduler.domain.model.Lecturer
 import com.unischeduler.domain.repository.LecturerRepository
 import io.github.jan.supabase.SupabaseClient
@@ -72,8 +71,7 @@ class LecturerRepositoryImpl @Inject constructor(
         val dto = DepartmentDto(
             id = department.id,
             name = department.name,
-            code = department.code,
-            deptHeadPermission = department.deptHeadPermission.name.lowercase()
+            code = department.code
         )
         val result = supabase.postgrest.from("departments")
             .upsert(dto) { select() }
@@ -84,9 +82,6 @@ class LecturerRepositoryImpl @Inject constructor(
     private fun DepartmentDto.toDepartment() = Department(
         id = id,
         name = name,
-        code = code,
-        deptHeadPermission = DeptHeadPermission.entries.find {
-            it.name.equals(deptHeadPermission, ignoreCase = true)
-        } ?: DeptHeadPermission.APPROVAL_REQUIRED
+        code = code
     )
 }

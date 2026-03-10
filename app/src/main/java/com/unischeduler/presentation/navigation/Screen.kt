@@ -19,4 +19,5 @@ import kotlinx.serialization.Serializable
     @Serializable data object Requests : Screen
     @Serializable data object CreateRequest : Screen
     @Serializable data class RequestDetail(val requestId: Int) : Screen
+    @Serializable data object DebugConsole : Screen
 }

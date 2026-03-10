@@ -49,10 +49,6 @@ class RequestViewModel @Inject constructor(
                 val user = authRepository.getCurrentUser()
                 val requests = when (user?.role) {
                     UserRole.ADMIN -> requestRepository.getAllPendingRequests()
-                    UserRole.DEPT_HEAD -> {
-                        val deptId = user.departmentId ?: 1
-                        requestRepository.getPendingRequestsByDepartment(deptId)
-                    }
                     UserRole.LECTURER -> {
                         val lecturer = lecturerRepository.getLecturerByProfileId(user.id)
                         if (lecturer != null) requestRepository.getRequestsByLecturer(lecturer.id)
@@ -104,26 +100,10 @@ class RequestViewModel @Inject constructor(
         }
     }
 
-    fun approveAsDeptHead(requestId: Int, note: String?) {
-        viewModelScope.launch {
-            val user = authRepository.getCurrentUser()
-            approveRequestUseCase.approveAsDeptHead(requestId, note, user?.id ?: "")
-            loadRequests()
-        }
-    }
-
     fun rejectAsAdmin(requestId: Int, note: String) {
         viewModelScope.launch {
             val user = authRepository.getCurrentUser()
             rejectRequestUseCase.rejectAsAdmin(requestId, note, user?.id ?: "")
-            loadRequests()
-        }
-    }
-
-    fun rejectAsDeptHead(requestId: Int, note: String) {
-        viewModelScope.launch {
-            val user = authRepository.getCurrentUser()
-            rejectRequestUseCase.rejectAsDeptHead(requestId, note, user?.id ?: "")
             loadRequests()
         }
     }

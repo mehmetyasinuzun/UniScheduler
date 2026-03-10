@@ -144,12 +144,7 @@ private fun RequestCard(
             Spacer(modifier = Modifier.height(4.dp))
             Row {
                 Text(
-                    text = "BB: ${request.deptHeadStatus.name}",
-                    style = MaterialTheme.typography.labelSmall
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = "Admin: ${request.adminStatus.name}",
+                    text = "Durum: ${request.adminStatus.name}",
                     style = MaterialTheme.typography.labelSmall
                 )
             }

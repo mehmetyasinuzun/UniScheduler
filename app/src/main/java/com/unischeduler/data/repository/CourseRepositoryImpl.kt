@@ -29,9 +29,20 @@ class CourseRepositoryImpl @Inject constructor(
     }
 
     override suspend fun upsertCourse(course: Course): Course {
-        val result = supabase.postgrest.from("courses")
-            .upsert(course.toDto()) { select() }
-            .decodeSingle<CourseDto>()
+        val dto = course.toDto()
+        // id=0 ise yeni ders - code+department_id üzerinden conflict kontrolü yap
+        val result = if (dto.id == 0) {
+            supabase.postgrest.from("courses")
+                .upsert(dto) {
+                    onConflict = "code,department_id"
+                    select()
+                }
+                .decodeSingle<CourseDto>()
+        } else {
+            supabase.postgrest.from("courses")
+                .upsert(dto) { select() }
+                .decodeSingle<CourseDto>()
+        }
         return result.toDomain()
     }
 

@@ -82,18 +82,12 @@ fun RequestDetailScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Onay Durumu", fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(8.dp))
-                        StatusRow("Bölüm Başkanı", req.deptHeadStatus, req.deptHeadNote)
-                        Spacer(modifier = Modifier.height(4.dp))
                         StatusRow("Admin", req.adminStatus, req.adminNote)
                     }
                 }
 
-                // Admin/DeptHead Actions
-                val canReview = when {
-                    userRole == UserRole.ADMIN && req.adminStatus == RequestStatus.PENDING -> true
-                    userRole == UserRole.DEPT_HEAD && req.deptHeadStatus == RequestStatus.PENDING -> true
-                    else -> false
-                }
+                // Admin Actions
+                val canReview = userRole == UserRole.ADMIN && req.adminStatus == RequestStatus.PENDING
 
                 if (canReview) {
                     OutlinedTextField(
@@ -110,10 +104,8 @@ fun RequestDetailScreen(
                     ) {
                         Button(
                             onClick = {
-                                when (userRole) {
-                                    UserRole.ADMIN -> viewModel.approveAsAdmin(requestId, note.ifBlank { null })
-                                    UserRole.DEPT_HEAD -> viewModel.approveAsDeptHead(requestId, note.ifBlank { null })
-                                    else -> {}
+                                if (userRole == UserRole.ADMIN) {
+                                    viewModel.approveAsAdmin(requestId, note.ifBlank { null })
                                 }
                                 onDone()
                             },
@@ -123,10 +115,8 @@ fun RequestDetailScreen(
                         }
                         OutlinedButton(
                             onClick = {
-                                when (userRole) {
-                                    UserRole.ADMIN -> viewModel.rejectAsAdmin(requestId, note.ifBlank { "Reddedildi" })
-                                    UserRole.DEPT_HEAD -> viewModel.rejectAsDeptHead(requestId, note.ifBlank { "Reddedildi" })
-                                    else -> {}
+                                if (userRole == UserRole.ADMIN) {
+                                    viewModel.rejectAsAdmin(requestId, note.ifBlank { "Reddedildi" })
                                 }
                                 onDone()
                             },

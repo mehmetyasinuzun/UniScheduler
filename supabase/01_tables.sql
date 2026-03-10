@@ -13,8 +13,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     name        TEXT NOT NULL DEFAULT '',
     surname     TEXT NOT NULL DEFAULT '',
-    role        TEXT NOT NULL DEFAULT 'STUDENT'
-                    CHECK (role IN ('ADMIN', 'DEPT_HEAD', 'LECTURER', 'STUDENT')),
+    role        TEXT NOT NULL DEFAULT 'LECTURER'
+                    CHECK (role IN ('ADMIN', 'LECTURER')),
     department_id INT,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -28,8 +28,6 @@ CREATE TABLE IF NOT EXISTS public.departments (
     id                   SERIAL PRIMARY KEY,
     name                 TEXT NOT NULL,
     code                 TEXT NOT NULL UNIQUE,
-    dept_head_permission TEXT NOT NULL DEFAULT 'APPROVAL_REQUIRED'
-                            CHECK (dept_head_permission IN ('FULL_ACCESS', 'APPROVAL_REQUIRED', 'READ_ONLY')),
     created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -136,7 +134,22 @@ CREATE TABLE IF NOT EXISTS public.availability_slots (
     UNIQUE(lecturer_id, day_of_week, slot_index)
 );
 
-COMMENT ON TABLE public.availability_slots IS 'When2Meet-style hoca müsaitlik verileri';
+COMMENT ON TABLE public.availability_slots IS 'When2Meet-style hoca müsaitlik verileri - Supabase Frontend ile uyumlu';
+
+-- ============================================================
+-- 8.1. lecturer_availability (YENİ - Müsaitlik Matrisi)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.lecturer_availability (
+    id SERIAL PRIMARY KEY,
+    lecturer_id INTEGER NOT NULL REFERENCES lecturers(id) ON DELETE CASCADE,
+    day_index INTEGER NOT NULL CHECK (day_index >= 0 AND day_index <= 4), -- 0: Pzt, 4: Cum
+    hour_index INTEGER NOT NULL CHECK (hour_index >= 0 AND hour_index <= 8), -- 0: 09:00, 8: 17:00
+    is_available BOOLEAN DEFAULT TRUE,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    UNIQUE(lecturer_id, day_index, hour_index)
+);
+
+COMMENT ON TABLE public.lecturer_availability IS 'Yeni arayüz için oluşturulmuş modern saat/gün tabanlı müsaitlik matrisi';
 
 -- ============================================================
 -- 9. schedule_drafts (bölüm başkanı taslakları)
@@ -159,7 +172,7 @@ CREATE TABLE IF NOT EXISTS public.schedule_drafts (
 COMMENT ON TABLE public.schedule_drafts IS 'Dept Head taslak programları — admin onayı gerektirir';
 
 -- ============================================================
--- 10. change_requests (dual-routing istek sistemi)
+-- 10. change_requests (single-routing istek sistemi)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.change_requests (
     id                    SERIAL PRIMARY KEY,
@@ -170,13 +183,6 @@ CREATE TABLE IF NOT EXISTS public.change_requests (
     reason                TEXT NOT NULL DEFAULT '',
     status                TEXT NOT NULL DEFAULT 'PENDING'
                              CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
-    approval_mode         TEXT NOT NULL DEFAULT 'DUAL_APPROVAL'
-                             CHECK (approval_mode IN ('DUAL_APPROVAL', 'ADMIN_ONLY', 'DEPT_HEAD_ONLY')),
-    dept_head_status      TEXT NOT NULL DEFAULT 'PENDING'
-                             CHECK (dept_head_status IN ('PENDING', 'APPROVED', 'REJECTED')),
-    dept_head_reviewed_by UUID REFERENCES auth.users(id),
-    dept_head_note        TEXT,
-    dept_head_reviewed_at TIMESTAMPTZ,
     admin_status          TEXT NOT NULL DEFAULT 'PENDING'
                              CHECK (admin_status IN ('PENDING', 'APPROVED', 'REJECTED')),
     admin_reviewed_by     UUID REFERENCES auth.users(id),
@@ -185,7 +191,7 @@ CREATE TABLE IF NOT EXISTS public.change_requests (
     created_at            TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE public.change_requests IS 'Lecturer istekleri — dual-routing (Dept Head + Admin)';
+COMMENT ON TABLE public.change_requests IS 'Lecturer istekleri — single-routing (Admin)';
 
 -- ============================================================
 -- 11. import_logs (Excel import geçmişi)
@@ -218,4 +224,3 @@ CREATE INDEX IF NOT EXISTS idx_drafts_status        ON public.schedule_drafts(st
 CREATE INDEX IF NOT EXISTS idx_requests_lecturer    ON public.change_requests(lecturer_id);
 CREATE INDEX IF NOT EXISTS idx_requests_status      ON public.change_requests(status);
 CREATE INDEX IF NOT EXISTS idx_requests_admin_st    ON public.change_requests(admin_status);
-CREATE INDEX IF NOT EXISTS idx_requests_dh_st       ON public.change_requests(dept_head_status);

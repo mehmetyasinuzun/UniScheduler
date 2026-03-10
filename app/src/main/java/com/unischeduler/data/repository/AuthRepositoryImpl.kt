@@ -118,7 +118,7 @@ class AuthRepositoryImpl @Inject constructor(
             name = profile.name,
             surname = profile.surname,
             role = UserRole.entries.find { it.name.equals(profile.role, ignoreCase = true) }
-                ?: UserRole.STUDENT,
+                ?: UserRole.LECTURER,
             departmentId = profile.departmentId,
             email = authUser.email
         )

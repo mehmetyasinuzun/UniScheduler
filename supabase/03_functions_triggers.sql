@@ -14,7 +14,7 @@ BEGIN
         NEW.id,
         COALESCE(NEW.raw_user_meta_data->>'name', ''),
         COALESCE(NEW.raw_user_meta_data->>'surname', ''),
-        COALESCE(NEW.raw_user_meta_data->>'role', 'STUDENT')
+        COALESCE(NEW.raw_user_meta_data->>'role', 'LECTURER')
     )
     ON CONFLICT (id) DO NOTHING;
     RETURN NEW;
@@ -51,29 +51,11 @@ CREATE TRIGGER trigger_schedule_configs_updated
 CREATE OR REPLACE FUNCTION public.update_request_overall_status()
 RETURNS TRIGGER AS $$
 BEGIN
-    -- Herhangi biri reddetmişse → RED
-    IF NEW.admin_status = 'REJECTED' OR NEW.dept_head_status = 'REJECTED' THEN
+    IF NEW.admin_status = 'REJECTED' THEN
         NEW.status = 'REJECTED';
-
-    -- Dual approval: ikisi de onaylamalı
-    ELSIF NEW.approval_mode = 'DUAL_APPROVAL' THEN
-        IF NEW.admin_status = 'APPROVED' AND NEW.dept_head_status = 'APPROVED' THEN
-            NEW.status = 'APPROVED';
-        END IF;
-
-    -- Sadece Admin yeterli
-    ELSIF NEW.approval_mode = 'ADMIN_ONLY' THEN
-        IF NEW.admin_status = 'APPROVED' THEN
-            NEW.status = 'APPROVED';
-        END IF;
-
-    -- Sadece Dept Head yeterli
-    ELSIF NEW.approval_mode = 'DEPT_HEAD_ONLY' THEN
-        IF NEW.dept_head_status = 'APPROVED' THEN
-            NEW.status = 'APPROVED';
-        END IF;
+    ELSIF NEW.admin_status = 'APPROVED' THEN
+        NEW.status = 'APPROVED';
     END IF;
-
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
