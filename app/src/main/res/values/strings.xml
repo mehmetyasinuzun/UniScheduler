@@ -125,9 +125,6 @@
     <!-- Common Ek -->
     <string name="error_unknown">Beklenmeyen bir hata oluştu</string>
     <string name="error_network">Ağ hatası. Bağlantınızı kontrol edin.</string>
-    <string name="account_name">Ad</string>
-    <string name="account_email">E-posta</string>
-    <string name="account_role">Rol</string>
     <string name="no_drafts">Taslak bulunamadı</string>
     <string name="create_draft">Taslak Oluştur</string>
     <string name="no_requests">Talep bulunamadı</string>
