@@ -68,7 +68,11 @@ class CalendarViewModel @Inject constructor(
                     ?: throw IllegalStateException("Bolum bilgisi bulunamadi")
 
                 val assignments = scheduleRepository.getAssignmentsByDepartment(deptId)
-                val config = scheduleRepository.getScheduleConfig(deptId)
+                val config = sanitizeScheduleConfig(
+                    scheduleRepository.getScheduleConfig(deptId)
+                        ?: ScheduleConfig(departmentId = deptId),
+                    deptId
+                )
                 val courses = courseRepository.getCoursesByDepartment(deptId)
                 val lecturers = lecturerRepository.getLecturersByDepartment(deptId)
 
@@ -84,6 +88,12 @@ class CalendarViewModel @Inject constructor(
                     lecturer?.let { scheduleRepository.getAvailability(it.id) } ?: emptyList()
                 } else emptyList()
 
+                val warning = if (user.role == UserRole.LECTURER && myLecturerId == null) {
+                    "Hoca profil eslesmesi bulunamadi. Lutfen yoneticiye davet koduyla kayit baglantisini kontrol ettirin."
+                } else {
+                    null
+                }
+
                 _uiState.value = CalendarUiState(
                     assignments = assignments,
                     config = config,
@@ -93,7 +103,8 @@ class CalendarViewModel @Inject constructor(
                     courses = courses,
                     lecturers = lecturers,
                     user = user,
-                    isLoading = false
+                    isLoading = false,
+                    error = warning
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
@@ -206,4 +217,41 @@ class CalendarViewModel @Inject constructor(
     }
 
     fun refresh() = loadData()
+
+    private fun sanitizeScheduleConfig(config: ScheduleConfig, departmentId: Int): ScheduleConfig {
+        val validDays = config.activeDays
+            .filter { it in 1..7 }
+            .distinct()
+            .sorted()
+            .ifEmpty { listOf(1, 2, 3, 4, 5) }
+
+        val validDuration = config.slotDurationMinutes
+            .takeIf { it > 0 }
+            ?: 60
+
+        val start = config.dayStartTime.takeIf { isValidTime(it) } ?: "08:00"
+        val end = config.dayEndTime.takeIf { isValidTime(it) } ?: "17:00"
+        val normalizedEnd = if (toMinutes(end) <= toMinutes(start)) "17:00" else end
+
+        return config.copy(
+            departmentId = departmentId,
+            slotDurationMinutes = validDuration,
+            dayStartTime = start,
+            dayEndTime = normalizedEnd,
+            activeDays = validDays
+        )
+    }
+
+    private fun isValidTime(value: String): Boolean {
+        val parts = value.split(":")
+        if (parts.size != 2) return false
+        val h = parts[0].toIntOrNull() ?: return false
+        val m = parts[1].toIntOrNull() ?: return false
+        return h in 0..23 && m in 0..59
+    }
+
+    private fun toMinutes(value: String): Int {
+        val parts = value.split(":")
+        return (parts[0].toInt() * 60) + parts[1].toInt()
+    }
 }
