@@ -182,6 +182,7 @@ private fun AvailabilityTab(
             Spacer(modifier = Modifier.height(8.dp))
             AvailabilityGrid(
                 availability = state.myAvailability,
+                lecturerId = state.myLecturerId ?: 0,
                 config = config,
                 onToggle = { updatedSlots -> viewModel.updateMyAvailability(updatedSlots) }
             )

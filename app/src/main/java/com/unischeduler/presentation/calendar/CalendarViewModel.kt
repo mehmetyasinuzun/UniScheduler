@@ -29,6 +29,7 @@ data class CalendarUiState(
     val config: ScheduleConfig? = null,
     val availability: Map<Int, List<AvailabilitySlot>> = emptyMap(),
     val myAvailability: List<AvailabilitySlot> = emptyList(),
+    val myLecturerId: Int? = null,
     val courses: List<Course> = emptyList(),
     val lecturers: List<Lecturer> = emptyList(),
     val alternatives: List<ScheduleSolution> = emptyList(),
@@ -62,7 +63,9 @@ class CalendarViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val user = authRepository.getCurrentUser()
-                val deptId = user?.departmentId ?: 1
+                    ?: throw IllegalStateException("Oturum bulunamadi")
+                val deptId = user.departmentId
+                    ?: throw IllegalStateException("Bolum bilgisi bulunamadi")
 
                 val assignments = scheduleRepository.getAssignmentsByDepartment(deptId)
                 val config = scheduleRepository.getScheduleConfig(deptId)
@@ -74,8 +77,10 @@ class CalendarViewModel @Inject constructor(
                     availabilityMap[l.id] = scheduleRepository.getAvailability(l.id)
                 }
 
-                val myAvailability = if (user?.role == UserRole.LECTURER) {
+                var myLecturerId: Int? = null
+                val myAvailability = if (user.role == UserRole.LECTURER) {
                     val lecturer = lecturerRepository.getLecturerByProfileId(user.id)
+                    myLecturerId = lecturer?.id
                     lecturer?.let { scheduleRepository.getAvailability(it.id) } ?: emptyList()
                 } else emptyList()
 
@@ -84,6 +89,7 @@ class CalendarViewModel @Inject constructor(
                     config = config,
                     availability = availabilityMap,
                     myAvailability = myAvailability,
+                    myLecturerId = myLecturerId,
                     courses = courses,
                     lecturers = lecturers,
                     user = user,

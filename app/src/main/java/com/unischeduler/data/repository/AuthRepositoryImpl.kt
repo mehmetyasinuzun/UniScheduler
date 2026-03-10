@@ -18,6 +18,17 @@ class AuthRepositoryImpl @Inject constructor(
     private val supabase: SupabaseClient
 ) : AuthRepository {
 
+    private suspend fun isInviteCodeValid(inviteCode: String): Boolean {
+        val result = supabase.postgrest.rpc(
+            function = "validate_lecturer_invite_code",
+            parameters = buildJsonObject {
+                put("p_invite_code", inviteCode.uppercase().trim())
+            }
+        ).decodeAs<JsonObject>()
+
+        return result["valid"]?.toString()?.trim('"')?.equals("true", ignoreCase = true) == true
+    }
+
     override suspend fun signIn(email: String, password: String): User {
         supabase.auth.signInWith(Email) {
             this.email = email
@@ -72,6 +83,11 @@ class AuthRepositoryImpl @Inject constructor(
         surname: String,
         inviteCode: String
     ): User {
+        val normalizedCode = inviteCode.uppercase().trim()
+        if (!isInviteCodeValid(normalizedCode)) {
+            throw IllegalStateException("Geçersiz veya kullanılmış davet kodu")
+        }
+
         // 1. Auth kaydı oluştur (anonim profil — trigger STUDENT olarak yaratır)
         supabase.auth.signUpWith(Email) {
             this.email = email
@@ -86,7 +102,7 @@ class AuthRepositoryImpl @Inject constructor(
         val result = supabase.postgrest.rpc(
             function = "claim_lecturer_invite",
             parameters = buildJsonObject {
-                put("p_invite_code", inviteCode.uppercase().trim())
+                put("p_invite_code", normalizedCode)
                 put("p_name", name.trim())
                 put("p_surname", surname.trim())
             }
@@ -129,20 +145,9 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun createLecturerAccount(email: String, password: String): String {
-        val currentSession = supabase.auth.currentSessionOrNull()
-
-        supabase.auth.signUpWith(Email) {
-            this.email = email
-            this.password = password
-        }
-        val newUserId = supabase.auth.currentUserOrNull()?.id
-            ?: throw IllegalStateException("Öğretim üyesi hesabı oluşturulamadı")
-
-        if (currentSession != null) {
-            supabase.auth.importSession(currentSession)
-        }
-
-        return newUserId
+        throw UnsupportedOperationException(
+            "createLecturerAccount devre dışı. Hoca kaydı yalnızca davet kodu + self-signup akışı ile yapılmalıdır."
+        )
     }
 }
 

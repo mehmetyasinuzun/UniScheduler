@@ -37,6 +37,36 @@ class LecturerRepositoryImpl @Inject constructor(
     }
 
     override suspend fun upsertLecturer(lecturer: Lecturer): Lecturer {
+        if (lecturer.id == 0) {
+            val existing = supabase.postgrest.from("lecturers")
+                .select {
+                    filter {
+                        eq("department_id", lecturer.departmentId)
+                    }
+                }
+                .decodeList<LecturerDto>()
+                .firstOrNull { it.fullName.equals(lecturer.fullName.trim(), ignoreCase = true) }
+
+            if (existing != null) {
+                val merged = lecturer.copy(
+                    id = existing.id,
+                    profileId = existing.profileId,
+                    username = existing.username,
+                    password = existing.password,
+                    inviteCode = existing.inviteCode
+                )
+                val updated = supabase.postgrest.from("lecturers")
+                    .upsert(merged.toDto()) { select() }
+                    .decodeSingle<LecturerDto>()
+                return updated.toDomain()
+            }
+
+            val inserted = supabase.postgrest.from("lecturers")
+                .insert(lecturer.toDto()) { select() }
+                .decodeSingle<LecturerDto>()
+            return inserted.toDomain()
+        }
+
         val result = supabase.postgrest.from("lecturers")
             .upsert(lecturer.toDto()) { select() }
             .decodeSingle<LecturerDto>()

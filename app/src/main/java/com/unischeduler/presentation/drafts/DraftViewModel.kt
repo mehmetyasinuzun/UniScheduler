@@ -57,10 +57,13 @@ class DraftViewModel @Inject constructor(
             _listState.value = _listState.value.copy(isLoading = true, error = null)
             try {
                 val user = authRepository.getCurrentUser()
-                val deptId = user?.departmentId ?: 1
                 val drafts = when (user?.role) {
                     UserRole.ADMIN -> draftRepository.getPendingDrafts()
-                    else -> draftRepository.getDraftsByDepartment(deptId)
+                    else -> {
+                        val deptId = user?.departmentId
+                            ?: throw IllegalStateException("Bolum bilgisi bulunamadi")
+                        draftRepository.getDraftsByDepartment(deptId)
+                    }
                 }
                 _listState.value = DraftListUiState(
                     drafts = drafts,
@@ -79,7 +82,8 @@ class DraftViewModel @Inject constructor(
             try {
                 if (draftId == 0) {
                     val user = authRepository.getCurrentUser()
-                    val deptId = user?.departmentId ?: 1
+                    val deptId = user?.departmentId
+                        ?: throw IllegalStateException("Bolum bilgisi bulunamadi")
                     val assignments = scheduleRepository.getAssignmentsByDepartment(deptId)
                     _currentAssignments.value = assignments
                     _editState.value = UiState.Success(

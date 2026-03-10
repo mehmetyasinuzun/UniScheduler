@@ -46,7 +46,7 @@ fun ScheduleConfigScreen(
     onSaved: () -> Unit
 ) {
     val calUiState by viewModel.uiState.collectAsState()
-    val departmentId = calUiState.user?.departmentId ?: 1
+    val departmentId = calUiState.user?.departmentId
 
     var slotDuration by rememberSaveable { mutableIntStateOf(60) }
     var dayStartTime by rememberSaveable { mutableStateOf("08:00") }
@@ -56,7 +56,7 @@ fun ScheduleConfigScreen(
 
     val configState by viewModel.configState.collectAsState()
 
-    if (!initialized) {
+    if (!initialized && departmentId != null) {
         viewModel.loadConfig(departmentId)
         initialized = true
     }
@@ -87,6 +87,15 @@ fun ScheduleConfigScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                if (departmentId == null) {
+                    Text(
+                        text = "Bolum bilgisi bulunamadi. Program ayarlari yuklenemiyor.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    return@Column
+                }
+
                 Text("Ders Süresi", style = MaterialTheme.typography.titleSmall)
                 DurationDropdown(
                     selected = slotDuration,

@@ -34,6 +34,7 @@ private val dayLabels = mapOf(
 @Composable
 fun AvailabilityGrid(
     availability: List<AvailabilitySlot>,
+    lecturerId: Int,
     config: ScheduleConfig,
     onToggle: (List<AvailabilitySlot>) -> Unit
 ) {
@@ -42,8 +43,6 @@ fun AvailabilityGrid(
     val timeColumnWidth = 56.dp
     val days = config.activeDays.sorted()
     val slotCount = config.totalSlotsPerDay
-    val lecturerId = availability.firstOrNull()?.lecturerId ?: 0
-
     val slots = remember(availability) {
         mutableStateListOf<AvailabilitySlot>().apply {
             addAll(buildFullSlotList(lecturerId, days, slotCount, availability))
@@ -131,11 +130,12 @@ fun AvailabilityGrid(
 
         Button(
             onClick = { onToggle(slots.toList()) },
+            enabled = lecturerId > 0,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp)
         ) {
-            Text("Müsaitlik Kaydet")
+            Text(if (lecturerId > 0) "Müsaitlik Kaydet" else "Önce hoca profili eşleşmeli")
         }
     }
 }

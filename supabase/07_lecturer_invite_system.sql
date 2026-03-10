@@ -161,6 +161,30 @@ END;
 $$;
 
 -- ============================================================
+-- 5.1 Davet kodu doğrulama (signup oncesi on-kontrol)
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.validate_lecturer_invite_code(
+    p_invite_code TEXT
+)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_exists BOOLEAN;
+BEGIN
+    SELECT EXISTS (
+        SELECT 1
+        FROM public.lecturers
+        WHERE UPPER(invite_code) = UPPER(TRIM(p_invite_code))
+          AND profile_id IS NULL
+    ) INTO v_exists;
+
+    RETURN json_build_object('valid', v_exists);
+END;
+$$;
+
+-- ============================================================
 -- 6. Öğrenci sabit hesabı — email+şifre ile giriş
 --    NOT: auth.users'a elle ekleme yapılamaz SQL'den.
 --    Aşağıdaki komutları Supabase Dashboard → Auth → Users'dan
@@ -221,3 +245,6 @@ CREATE TRIGGER trg_protect_invite_code
 
 COMMENT ON FUNCTION public.claim_lecturer_invite IS
     'Davet koduyla hoca kaydını talep et — SECURITY DEFINER, client''dan güvenle çağrılabilir';
+
+COMMENT ON FUNCTION public.validate_lecturer_invite_code IS
+    'Signup oncesi davet kodunun claim edilebilir durumda olup olmadigini kontrol eder';

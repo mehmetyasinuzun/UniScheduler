@@ -56,6 +56,10 @@ class DataViewModel @Inject constructor(
     private val exportCredentialsUseCase: ExportCredentialsUseCase
 ) : ViewModel() {
 
+    private fun resolveDepartmentId(user: User?, departments: List<Department>): Int? {
+        return user?.departmentId ?: departments.firstOrNull()?.id
+    }
+
     private val _uiState = MutableStateFlow(DataUiState())
     val uiState: StateFlow<DataUiState> = _uiState.asStateFlow()
 
@@ -72,11 +76,20 @@ class DataViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val user = authRepository.getCurrentUser()
-                val deptId = user?.departmentId ?: 1
-                AppLogger.d("DataVM", "Kullanıcı: ${user?.email}, role=${user?.role}, deptId=$deptId")
                 val departments = lecturerRepository.getDepartments()
-                val courses = courseRepository.getCoursesByDepartment(deptId)
-                val lecturers = lecturerRepository.getLecturersByDepartment(deptId)
+                val deptId = resolveDepartmentId(user, departments)
+                AppLogger.d("DataVM", "Kullanıcı: ${user?.email}, role=${user?.role}, deptId=${deptId ?: -1}")
+
+                val courses = if (deptId != null) {
+                    courseRepository.getCoursesByDepartment(deptId)
+                } else {
+                    emptyList()
+                }
+                val lecturers = if (deptId != null) {
+                    lecturerRepository.getLecturersByDepartment(deptId)
+                } else {
+                    emptyList()
+                }
 
                 AppLogger.i("DataVM", "Veri yüklendi: ${departments.size} bölüm, ${courses.size} ders, ${lecturers.size} hoca")
                 _uiState.value = DataUiState(
@@ -122,7 +135,15 @@ class DataViewModel @Inject constructor(
             val fileBytes = state.fileBytes ?: return@launch
 
             val role = _uiState.value.user?.role
-            val deptId = _uiState.value.user?.departmentId ?: if (role == com.unischeduler.domain.model.UserRole.ADMIN) 1 else return@launch
+            val deptId = resolveDepartmentId(_uiState.value.user, _uiState.value.departments) ?: 0
+
+            if (role != com.unischeduler.domain.model.UserRole.ADMIN && deptId == 0) {
+                _importState.value = _importState.value.copy(
+                    isImporting = false,
+                    error = "Bölüm bilgisi bulunamadı. Lütfen yönetici ile iletişime geçin."
+                )
+                return@launch
+            }
 
             AppLogger.i("DataVM", "Import başlatılıyor: ${state.rows.size} satır, deptId=$deptId, role=$role")
             _importState.value = _importState.value.copy(isImporting = true, error = null)
@@ -152,7 +173,7 @@ class DataViewModel @Inject constructor(
     suspend fun exportSchedule(): String? {
         return try {
             val state = _uiState.value
-            val deptId = state.user?.departmentId ?: 1
+            val deptId = resolveDepartmentId(state.user, state.departments) ?: return null
             val assignments = scheduleRepository.getAssignmentsByDepartment(deptId)
             val config = scheduleRepository.getScheduleConfig(deptId) ?: return null
             exportScheduleUseCase(

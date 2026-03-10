@@ -54,6 +54,11 @@ class ImportExcelUseCase @Inject constructor(
         val grouped = rows.groupBy { it.lecturerName.trim() }
         AppLogger.i("Import", "${grouped.size} farklı öğretim üyesi tespit edildi")
 
+        val existingLecturersByName = lecturerRepository
+            .getLecturersByDepartment(actualDeptId)
+            .associateBy { normalizeLecturerName(it.fullName) }
+            .toMutableMap()
+
         for ((lecturerName, lecturerRows) in grouped) {
             if (lecturerName.isBlank()) {
                 val msg = "Boş hoca adı bulundu, ${lecturerRows.size} satır atlandı"
@@ -62,18 +67,23 @@ class ImportExcelUseCase @Inject constructor(
                 continue
             }
 
+            val normalizedLecturerName = normalizeLecturerName(lecturerName)
             AppLogger.d("Import", "Hoca işleniyor: $lecturerName (${lecturerRows.size} ders)")
 
             // Sadece lecturers tablosuna ekle - auth hesabı AÇMA
             // DB trigger otomatik olarak davet kodu üretecek
             try {
-                val lecturer = lecturerRepository.upsertLecturer(
+                val lecturer = existingLecturersByName[normalizedLecturerName] ?: lecturerRepository.upsertLecturer(
                     Lecturer(
                         fullName = lecturerName,
                         title = extractTitle(lecturerName),
-                        departmentId = actualDeptId
+                        departmentId = actualDeptId,
+                        username = "",
+                        password = ""
                     )
-                )
+                ).also {
+                    existingLecturersByName[normalizedLecturerName] = it
+                }
                 createdLecturers.add(lecturer)
                 AppLogger.i("Import", "Hoca eklendi: $lecturerName (id=${lecturer.id}, davet kodu=${lecturer.inviteCode})")
 
@@ -191,6 +201,10 @@ class ImportExcelUseCase @Inject constructor(
             "Assoc. Prof.", "Assist. Prof.", "Prof."
         )
         return titlePrefixes.find { fullName.startsWith(it, ignoreCase = true) } ?: ""
+    }
+
+    private fun normalizeLecturerName(fullName: String): String {
+        return fullName.trim().lowercase().replace(Regex("\\s+"), " ")
     }
 
     /** Hata mesajlarından hassas bilgileri (JWT token, URL) temizle */
