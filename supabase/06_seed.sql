@@ -1,12 +1,10 @@
 -- ============================================================
--- UniScheduler — 06: İlk Admin Kullanıcı Oluşturma (Seed)
+-- UniScheduler — 06: İlk Admin + Öğrenci Kullanıcı Oluşturma (Seed)
 -- TÜM önceki dosyalar çalıştırıldıktan SONRA kullanılır
 -- ============================================================
 
 -- ╔════════════════════════════════════════════════════════════╗
--- ║  BU DOSYAYI DOĞRUDAN ÇALIŞTIRMAYIN!                      ║
--- ║                                                            ║
--- ║  Aşağıdaki adımları TAKİP EDİN:                           ║
+-- ║  ADMIN HESABI OLUŞTURMA                                    ║
 -- ║                                                            ║
 -- ║  1. Supabase Dashboard → Authentication → Users            ║
 -- ║  2. "Add User" → Manual butonuna tıklayın                 ║
@@ -39,6 +37,32 @@ SELECT public.make_admin('admin@unischeduler.local');
 */
 
 -- ============================================================
+-- ÖĞRENCİ DEMO HESABI OLUŞTURMA
+-- ============================================================
+-- Öğrenciler sistemi görüntülemek için bu hesabı kullanır.
+-- Tek bir demo hesabı: tüm öğrenciler bu hesapla giriş yapar.
+--
+-- ADIMLAR:
+-- 1. Supabase Dashboard → Authentication → Users
+-- 2. "Add User" → Manual butonuna tıklayın
+-- 3. Email:    ogrenci@unischeduler.local
+--    Password: ogrenci123
+--    ✅ Auto Confirm User işaretli olsun
+-- 4. Create User'a tıklayın — trigger otomatik STUDENT profili yaratır
+-- 5. Öğrencinin bölüm ID'sini atamak için aşağıdaki SQL'i çalıştırın:
+/*
+UPDATE public.profiles
+SET
+    name          = 'Öğrenci',
+    surname       = 'Demo',
+    role          = 'STUDENT',
+    department_id = 1   -- ← Doğru bölüm ID'sini girin
+WHERE id = (
+    SELECT id FROM auth.users WHERE email = 'ogrenci@unischeduler.local'
+);
+*/
+
+-- ============================================================
 -- Opsiyonel: Test bölümü oluşturma
 -- ============================================================
 /*
@@ -50,3 +74,4 @@ INSERT INTO public.departments (name, code, dept_head_permission)
 VALUES ('Elektrik-Elektronik Mühendisliği', 'EEE', 'APPROVAL_REQUIRED')
 ON CONFLICT (code) DO NOTHING;
 */
+

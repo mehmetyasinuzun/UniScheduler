@@ -8,7 +8,10 @@ fun LecturerDto.toDomain() = Lecturer(
     profileId = profileId,
     fullName = fullName,
     title = title,
-    departmentId = departmentId
+    departmentId = departmentId,
+    username = username,
+    password = password,
+    inviteCode = inviteCode
 )
 
 fun Lecturer.toDto() = LecturerDto(
@@ -16,5 +19,8 @@ fun Lecturer.toDto() = LecturerDto(
     profileId = profileId,
     fullName = fullName,
     title = title,
-    departmentId = departmentId
+    departmentId = departmentId,
+    username = username,
+    password = password,
+    inviteCode = inviteCode
 )

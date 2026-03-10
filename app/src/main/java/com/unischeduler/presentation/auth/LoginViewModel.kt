@@ -23,6 +23,9 @@ class LoginViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<UiState<User>>(UiState.Empty)
     val uiState: StateFlow<UiState<User>> = _uiState.asStateFlow()
 
+    private val _registerState = MutableStateFlow<UiState<User>>(UiState.Empty)
+    val registerState: StateFlow<UiState<User>> = _registerState.asStateFlow()
+
     suspend fun checkSession(): Boolean {
         return try {
             val hasSession = authRepository.getSession()
@@ -46,6 +49,35 @@ class LoginViewModel @Inject constructor(
                 _uiState.value = UiState.Error(e.message ?: "Giriş başarısız")
             }
         }
+    }
+
+    fun registerWithInviteCode(
+        email: String,
+        password: String,
+        name: String,
+        surname: String,
+        inviteCode: String
+    ) {
+        viewModelScope.launch {
+            _registerState.value = UiState.Loading
+            try {
+                val user = authRepository.registerWithInviteCode(
+                    email = email,
+                    password = password,
+                    name = name,
+                    surname = surname,
+                    inviteCode = inviteCode
+                )
+                _currentUser.value = user
+                _registerState.value = UiState.Success(user)
+            } catch (e: Exception) {
+                _registerState.value = UiState.Error(e.message ?: "Kayıt başarısız")
+            }
+        }
+    }
+
+    fun resetRegisterState() {
+        _registerState.value = UiState.Empty
     }
 
     fun signOut() {

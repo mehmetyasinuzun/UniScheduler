@@ -55,6 +55,7 @@ fun CalendarScreen(
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
     val isLecturer = userRole == UserRole.LECTURER
+    // Student ve diğerleri sadece programı görür, müsaitlik sadece LECTURER'a açık
     val tabs = if (isLecturer) listOf("Program", "Müsaitlik") else listOf("Program")
 
     LaunchedEffect(state.error) {

@@ -8,5 +8,6 @@ data class Lecturer(
     val departmentId: Int,
     val courses: List<Course> = emptyList(),
     val username: String = "",
-    val password: String = ""
+    val password: String = "",
+    val inviteCode: String = ""
 )

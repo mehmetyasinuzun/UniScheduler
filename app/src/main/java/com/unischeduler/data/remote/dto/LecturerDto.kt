@@ -9,7 +9,10 @@ data class LecturerDto(
     @SerialName("profile_id") val profileId: String? = null,
     @SerialName("full_name") val fullName: String = "",
     val title: String = "",
-    @SerialName("department_id") val departmentId: Int = 0
+    @SerialName("department_id") val departmentId: Int = 0,
+    val username: String = "",
+    val password: String = "",
+    @SerialName("invite_code") val inviteCode: String = ""
 )
 
 @Serializable

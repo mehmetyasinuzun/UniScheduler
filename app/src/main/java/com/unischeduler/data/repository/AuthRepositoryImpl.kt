@@ -8,6 +8,10 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.rpc
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import javax.inject.Inject
 
 class AuthRepositoryImpl @Inject constructor(
@@ -41,7 +45,7 @@ class AuthRepositoryImpl @Inject constructor(
             id = userId,
             name = name,
             surname = surname,
-            role = role.name,           // FIX: UPPERCASE — matches DB CHECK constraint
+            role = role.name,
             departmentId = departmentId
         )
         supabase.postgrest.from("profiles").upsert(profile)
@@ -54,6 +58,49 @@ class AuthRepositoryImpl @Inject constructor(
             departmentId = departmentId,
             email = email
         )
+    }
+
+    /**
+     * Davet koduyla öğretim üyesi kaydı:
+     * 1. Supabase Auth'a normal signup
+     * 2. DB fonksiyonu claim_lecturer_invite: profili LECTURER yapar + lecturer.profile_id bağlar
+     */
+    override suspend fun registerWithInviteCode(
+        email: String,
+        password: String,
+        name: String,
+        surname: String,
+        inviteCode: String
+    ): User {
+        // 1. Auth kaydı oluştur (anonim profil — trigger STUDENT olarak yaratır)
+        supabase.auth.signUpWith(Email) {
+            this.email = email
+            this.password = password
+        }
+
+        // Signup sonrası oturum açık olmalı
+        supabase.auth.currentUserOrNull()
+            ?: throw IllegalStateException("Kayıt başarısız, lütfen tekrar deneyin")
+
+        // 2. DB fonksiyonu: davet kodunu talep et + profili LECTURER yap
+        val result = supabase.postgrest.rpc(
+            function = "claim_lecturer_invite",
+            parameters = buildJsonObject {
+                put("p_invite_code", inviteCode.uppercase().trim())
+                put("p_name", name.trim())
+                put("p_surname", surname.trim())
+            }
+        ).decodeAs<JsonObject>()
+
+        val success = result["success"]?.toString()?.trim('"') == "true"
+        if (!success) {
+            val error = result["error"]?.toString()?.trim('"') ?: "Davet kodu geçersiz"
+            // Hesap oluşturuldu ama claim başarısız — oturumu kapat
+            supabase.auth.signOut()
+            throw IllegalStateException(error)
+        }
+
+        return getCurrentUser() ?: throw IllegalStateException("Profil yüklenemedi")
     }
 
     override suspend fun signOut() {
@@ -82,10 +129,8 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun createLecturerAccount(email: String, password: String): String {
-        // Mevcut oturumu sakla
         val currentSession = supabase.auth.currentSessionOrNull()
 
-        // Yeni kullanıcı oluştur
         supabase.auth.signUpWith(Email) {
             this.email = email
             this.password = password
@@ -93,7 +138,6 @@ class AuthRepositoryImpl @Inject constructor(
         val newUserId = supabase.auth.currentUserOrNull()?.id
             ?: throw IllegalStateException("Öğretim üyesi hesabı oluşturulamadı")
 
-        // Önceki oturumu geri yükle
         if (currentSession != null) {
             supabase.auth.importSession(currentSession)
         }
@@ -101,3 +145,4 @@ class AuthRepositoryImpl @Inject constructor(
         return newUserId
     }
 }
+

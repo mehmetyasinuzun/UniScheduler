@@ -16,6 +16,7 @@ import androidx.navigation.toRoute
 import com.unischeduler.domain.model.UserRole
 import com.unischeduler.presentation.auth.LoginScreen
 import com.unischeduler.presentation.auth.LoginViewModel
+import com.unischeduler.presentation.auth.RegisterWithCodeScreen
 import com.unischeduler.presentation.calendar.AlternativesScreen
 import com.unischeduler.presentation.calendar.CalendarScreen
 import com.unischeduler.presentation.calendar.CalendarViewModel
@@ -49,7 +50,8 @@ fun AppNavHost() {
 
     val showBottomBar = currentRoute != null &&
         currentRoute != Screen.Splash::class.qualifiedName &&
-        currentRoute != Screen.Login::class.qualifiedName
+        currentRoute != Screen.Login::class.qualifiedName &&
+        currentRoute != Screen.RegisterWithCode::class.qualifiedName
 
     Scaffold(
         bottomBar = {
@@ -94,7 +96,22 @@ fun AppNavHost() {
                         navController.navigate(Screen.Home) {
                             popUpTo(Screen.Login) { inclusive = true }
                         }
+                    },
+                    onNavigateToRegister = {
+                        navController.navigate(Screen.RegisterWithCode)
                     }
+                )
+            }
+            composable<Screen.RegisterWithCode> {
+                val vm: LoginViewModel = hiltViewModel()
+                RegisterWithCodeScreen(
+                    viewModel = vm,
+                    onRegisterSuccess = {
+                        navController.navigate(Screen.Home) {
+                            popUpTo(Screen.Login) { inclusive = true }
+                        }
+                    },
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
             composable<Screen.Home> {
@@ -102,6 +119,7 @@ fun AppNavHost() {
                 HomeScreen(
                     viewModel = vm,
                     userRole = userRole,
+                    onNavigateToCalendar = { navController.navigate(Screen.Calendar) },
                     onNavigateToRequests = { navController.navigate(Screen.Requests) },
                     onNavigateToSettings = { navController.navigate(Screen.Settings) }
                 )

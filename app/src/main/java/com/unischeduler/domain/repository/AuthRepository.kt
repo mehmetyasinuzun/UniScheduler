@@ -10,4 +10,6 @@ interface AuthRepository {
     suspend fun getCurrentUser(): User?
     suspend fun getSession(): Boolean
     suspend fun createLecturerAccount(email: String, password: String): String
+    /** Davet koduyla öğretim üyesi kaydı: signup + DB claim */
+    suspend fun registerWithInviteCode(email: String, password: String, name: String, surname: String, inviteCode: String): User
 }

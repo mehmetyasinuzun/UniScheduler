@@ -42,6 +42,7 @@ import com.unischeduler.presentation.common.components.LoadingIndicator
 fun HomeScreen(
     viewModel: HomeViewModel,
     userRole: UserRole,
+    onNavigateToCalendar: () -> Unit,
     onNavigateToRequests: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
@@ -95,7 +96,7 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Quick Stats Cards
+                // ADMIN / DEPT_HEAD: istatistik kartları
                 if (state.user?.role == UserRole.ADMIN || state.user?.role == UserRole.DEPT_HEAD) {
                     QuickStatCard(
                         icon = Icons.AutoMirrored.Filled.Assignment,
@@ -111,12 +112,13 @@ fun HomeScreen(
                     )
                 }
 
+                // LECTURER: ders programı + talepler
                 if (state.user?.role == UserRole.LECTURER) {
                     QuickStatCard(
                         icon = Icons.Filled.CalendarMonth,
-                        title = "Ders Programı",
+                        title = "Ders Programım",
                         count = null,
-                        onClick = {}
+                        onClick = onNavigateToCalendar
                     )
                     QuickStatCard(
                         icon = Icons.Filled.SwapHoriz,
@@ -126,8 +128,10 @@ fun HomeScreen(
                     )
                 }
 
+                // STUDENT: bilgi kartı
                 if (state.user?.role == UserRole.STUDENT) {
                     Card(
+                        onClick = onNavigateToCalendar,
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer
@@ -136,11 +140,12 @@ fun HomeScreen(
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
                                 text = "Bölüm Ders Programı",
-                                style = MaterialTheme.typography.titleMedium
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Takvim sekmesinden ders programınızı görüntüleyebilirsiniz.",
+                                text = "Açık dersleri Takvim sekmesinden görüntüleyebilirsiniz.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
