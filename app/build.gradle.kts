@@ -116,4 +116,12 @@ dependencies {
 
     // Coil
     implementation(libs.coil.compose)
+
+    // DataStore (dil + tema + bildirim tercihleri)
+    implementation(libs.datastore.preferences)
+
+    // WorkManager (bildirim scheduler)
+    implementation(libs.work.runtime.ktx)
+    implementation(libs.hilt.work)
+    ksp(libs.hilt.work.compiler)
 }

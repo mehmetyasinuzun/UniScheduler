@@ -42,8 +42,9 @@ fun AppNavHost() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val splashVm: LoginViewModel = hiltViewModel()
-    val currentUser by splashVm.currentUser.collectAsState()
+    // FIX: splashVm yerine açık isimli authVm kullanılıyor, stale state riski yok
+    val authVm: LoginViewModel = hiltViewModel()
+    val currentUser by authVm.currentUser.collectAsState()
     val userRole = currentUser?.role ?: UserRole.STUDENT
 
     val showBottomBar = currentRoute != null &&
@@ -100,6 +101,7 @@ fun AppNavHost() {
                 val vm: HomeViewModel = hiltViewModel()
                 HomeScreen(
                     viewModel = vm,
+                    userRole = userRole,
                     onNavigateToRequests = { navController.navigate(Screen.Requests) },
                     onNavigateToSettings = { navController.navigate(Screen.Settings) }
                 )

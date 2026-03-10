@@ -41,6 +41,7 @@ import com.unischeduler.presentation.common.components.LoadingIndicator
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
+    userRole: UserRole,
     onNavigateToRequests: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {

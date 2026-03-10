@@ -6,12 +6,14 @@ import com.unischeduler.data.repository.DraftRepositoryImpl
 import com.unischeduler.data.repository.LecturerRepositoryImpl
 import com.unischeduler.data.repository.RequestRepositoryImpl
 import com.unischeduler.data.repository.ScheduleRepositoryImpl
+import com.unischeduler.data.repository.SettingsRepositoryImpl
 import com.unischeduler.domain.repository.AuthRepository
 import com.unischeduler.domain.repository.CourseRepository
 import com.unischeduler.domain.repository.DraftRepository
 import com.unischeduler.domain.repository.LecturerRepository
 import com.unischeduler.domain.repository.RequestRepository
 import com.unischeduler.domain.repository.ScheduleRepository
+import com.unischeduler.domain.repository.SettingsRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -45,4 +47,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindRequestRepository(impl: RequestRepositoryImpl): RequestRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSettingsRepository(impl: SettingsRepositoryImpl): SettingsRepository
 }

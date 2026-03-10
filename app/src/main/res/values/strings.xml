@@ -75,12 +75,62 @@
 
     <!-- Settings -->
     <string name="settings_title">Ayarlar</string>
-    <string name="user_info">Kullanıcı Bilgileri</string>
+    <string name="user_info">Hesap Bilgileri</string>
+    <string name="account_name">Ad</string>
+    <string name="account_email">E-posta</string>
+    <string name="account_role">Rol</string>
     <string name="role_label">Rol</string>
     <string name="department_permissions">Bölüm Yetkileri</string>
+    <string name="department_permissions_desc">Bölüm başkanlarının onay sürecindeki yetkilerini belirleyin.</string>
     <string name="permission_full_access">Tam Erişim</string>
     <string name="permission_approval_required">Onay Gerekli</string>
     <string name="permission_view_only">Sadece Görüntüleme</string>
+    <string name="permission_updated">İzin güncellendi</string>
+
+    <!-- Settings — Görünüm -->
+    <string name="appearance_section">Görünüm</string>
+    <string name="theme_label">Tema</string>
+    <string name="theme_system">Sistem Varsayılanı</string>
+    <string name="theme_light">Açık</string>
+    <string name="theme_dark">Koyu</string>
+
+    <!-- Settings — Dil -->
+    <string name="language_section">Dil</string>
+    <string name="language_label">Dil</string>
+    <string name="language_turkish">Türkçe</string>
+    <string name="language_english">English</string>
+
+    <!-- Settings — Bildirimler -->
+    <string name="notifications_section">Bildirimler</string>
+    <string name="notifications_enabled">Bildirimleri Etkinleştir</string>
+    <string name="notifications_enabled_desc">Ders başlamadan önce hatırlatma al</string>
+    <string name="notification_advance_minutes">Hatırlatma Süresi</string>
+    <string name="notification_advance_5">5 dakika önce</string>
+    <string name="notification_advance_10">10 dakika önce</string>
+    <string name="notification_advance_15">15 dakika önce</string>
+    <string name="notification_advance_30">30 dakika önce</string>
+    <string name="notification_title">Yaklaşan Ders</string>
+    <string name="notification_body">%1$s %2$d dakika sonra başlıyor — %3$s</string>
+
+    <!-- Roller -->
+    <string name="role_admin">Sistem Yöneticisi</string>
+    <string name="role_dept_head">Bölüm Başkanı</string>
+    <string name="role_lecturer">Öğretim Üyesi</string>
+    <string name="role_student">Öğrenci</string>
+
+    <!-- Öğrenci -->
+    <string name="my_schedule">Ders Programım</string>
+    <string name="my_department_schedule">Bölüm Programı</string>
+
+    <!-- Common Ek -->
+    <string name="error_unknown">Beklenmeyen bir hata oluştu</string>
+    <string name="error_network">Ağ hatası. Bağlantınızı kontrol edin.</string>
+    <string name="account_name">Ad</string>
+    <string name="account_email">E-posta</string>
+    <string name="account_role">Rol</string>
+    <string name="no_drafts">Taslak bulunamadı</string>
+    <string name="create_draft">Taslak Oluştur</string>
+    <string name="no_requests">Talep bulunamadı</string>
 
     <!-- Drafts -->
     <string name="drafts_title">Taslaklar</string>

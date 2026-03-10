@@ -16,6 +16,9 @@ coroutines = "1.9.0"
 apachePoi = "5.3.0"
 coil = "3.0.4"
 coreSplashscreen = "1.0.1"
+datastore = "1.1.1"
+workManager = "2.10.0"
+hiltWork = "1.2.0"
 
 [libraries]
 # AndroidX
@@ -61,6 +64,14 @@ apache-poi-ooxml = { group = "org.apache.poi", name = "poi-ooxml", version.ref =
 
 # Coil (Image loading)
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+
+# DataStore
+datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
+
+# WorkManager
+work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workManager" }
+hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltWork" }
+hilt-work-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "hiltWork" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
