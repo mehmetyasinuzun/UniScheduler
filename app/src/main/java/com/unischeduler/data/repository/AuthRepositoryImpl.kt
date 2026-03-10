@@ -41,7 +41,7 @@ class AuthRepositoryImpl @Inject constructor(
             id = userId,
             name = name,
             surname = surname,
-            role = role.name.lowercase(),
+            role = role.name,           // FIX: UPPERCASE — matches DB CHECK constraint
             departmentId = departmentId
         )
         supabase.postgrest.from("profiles").upsert(profile)

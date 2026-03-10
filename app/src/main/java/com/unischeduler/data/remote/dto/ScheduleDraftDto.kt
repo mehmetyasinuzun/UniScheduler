@@ -11,7 +11,7 @@ data class ScheduleDraftDto(
     val title: String = "",
     val assignments: String = "[]",
     @SerialName("soft_score") val softScore: Float = 0f,
-    val status: String = "draft",
+    val status: String = "DRAFT",   // FIX: DB CHECK constraint expects UPPERCASE
     @SerialName("admin_note") val adminNote: String? = null,
     @SerialName("reviewed_by") val reviewedBy: String? = null,
     @SerialName("created_at") val createdAt: String = "",

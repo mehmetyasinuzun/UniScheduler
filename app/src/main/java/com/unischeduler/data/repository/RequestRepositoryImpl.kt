@@ -40,7 +40,7 @@ class RequestRepositoryImpl @Inject constructor(
             .select {
                 filter {
                     isIn("lecturer_id", lecturerIds)
-                    eq("dept_head_status", "pending")
+                    eq("dept_head_status", "PENDING")   // FIX: DB uses UPPERCASE
                 }
             }
             .decodeList<ChangeRequestDto>()
@@ -49,7 +49,7 @@ class RequestRepositoryImpl @Inject constructor(
 
     override suspend fun getAllPendingRequests(): List<ChangeRequest> {
         return supabase.postgrest.from("change_requests")
-            .select { filter { eq("admin_status", "pending") } }
+            .select { filter { eq("admin_status", "PENDING") } }  // FIX: DB uses UPPERCASE
             .decodeList<ChangeRequestDto>()
             .map { it.toDomain() }
     }
@@ -59,11 +59,10 @@ class RequestRepositoryImpl @Inject constructor(
     ) {
         supabase.postgrest.from("change_requests")
             .update({
-                set("dept_head_status", status.name.lowercase())
+                set("dept_head_status", status.name)   // FIX: UPPERCASE
                 set("dept_head_reviewed_by", reviewedBy)
                 if (note != null) set("dept_head_note", note)
-                set("dept_head_reviewed_at", "now()")
-                updateOverallStatus(status, isAdmin = false)
+                set("dept_head_reviewed_at", kotlinx.datetime.Clock.System.now().toString())
             }) { filter { eq("id", requestId) } }
     }
 
@@ -72,10 +71,13 @@ class RequestRepositoryImpl @Inject constructor(
     ) {
         supabase.postgrest.from("change_requests")
             .update({
-                set("admin_status", status.name.lowercase())
+                set("admin_status", status.name)        // FIX: UPPERCASE
                 set("admin_reviewed_by", reviewedBy)
                 if (note != null) set("admin_note", note)
-                set("admin_reviewed_at", "now()")
+                set("admin_reviewed_at", kotlinx.datetime.Clock.System.now().toString())
+                // Update overall status when both reviews done
+                if (status == RequestStatus.APPROVED) set("status", "APPROVED")
+                if (status == RequestStatus.REJECTED) set("status", "REJECTED")
             }) { filter { eq("id", requestId) } }
     }
 
@@ -92,8 +94,8 @@ class RequestRepositoryImpl @Inject constructor(
         currentData = currentData,
         requestedData = requestedData,
         reason = reason,
-        status = status.name.lowercase(),
-        approvalMode = approvalMode.name.lowercase()
+        status = status.name,           // FIX: UPPERCASE — matches DB CHECK constraint
+        approvalMode = approvalMode.name // FIX: UPPERCASE
     )
 
     private fun ChangeRequestDto.toDomain() = ChangeRequest(

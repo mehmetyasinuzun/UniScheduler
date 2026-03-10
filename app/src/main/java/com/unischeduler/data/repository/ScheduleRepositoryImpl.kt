@@ -116,13 +116,17 @@ class ScheduleRepositoryImpl @Inject constructor(
     }
 
     private fun ScheduleAssignmentDto.toDomain() = ScheduleAssignment(
-        id = id, courseId = courseId, lecturerId = lecturerId,
+        id = id, courseId = courseId,
+        courseCode = courseCode, courseName = courseName,
+        lecturerId = lecturerId, lecturerName = lecturerName,
         dayOfWeek = dayOfWeek, slotIndex = slotIndex,
         classroom = classroom, semester = semester, isLocked = isLocked
     )
 
     private fun ScheduleAssignment.toDto() = ScheduleAssignmentDto(
-        id = id, courseId = courseId, lecturerId = lecturerId,
+        id = id, courseId = courseId,
+        courseCode = courseCode, courseName = courseName,
+        lecturerId = lecturerId, lecturerName = lecturerName,
         dayOfWeek = dayOfWeek, slotIndex = slotIndex,
         classroom = classroom, semester = semester, isLocked = isLocked
     )
