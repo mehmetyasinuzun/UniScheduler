@@ -237,10 +237,7 @@ fun DebugConsoleScreen() {
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(1.dp)
                 ) {
-                    itemsIndexed(
-                        items = visibleLogs,
-                        key = { index, entry -> "${index}_${entry.timestamp}_${entry.tag}_${entry.level}" }
-                    ) { _, entry ->
+                    itemsIndexed(items = visibleLogs) { _, entry ->
                         LogEntryRow(entry)
                     }
                 }
