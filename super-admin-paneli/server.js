@@ -327,6 +327,17 @@ app.post('/api/courses', async (req, res) => {
     res.json(data);
 });
 
+app.put('/api/courses/:id', async (req, res) => {
+    const { code, name, theoryHours = 0, labHours = 0, credits = 0, departmentId } = req.body;
+    if (!code || !name) return res.status(400).json({ error: 'code and name are required.' });
+    const { data, error } = await supabase.from('courses').update({
+        code, name, theory_hours: parseInt(theoryHours), lab_hours: parseInt(labHours),
+        credits: parseInt(credits), department_id: departmentId || null
+    }).eq('id', req.params.id).select().single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+});
+
 // ═══ Classrooms ══════════════════════════════════════════════════════
 app.get('/api/classrooms/:orgId', async (req, res) => {
     const { data, error } = await supabase
@@ -354,6 +365,17 @@ app.delete('/api/classrooms/:id', async (req, res) => {
     const { error } = await supabase.from('classrooms').delete().eq('id', req.params.id);
     if (error) return res.status(400).json({ error: error.message });
     res.json({ ok: true });
+});
+
+app.put('/api/classrooms/:id', async (req, res) => {
+    const { roomCode, capacity, type, departmentId } = req.body;
+    if (!roomCode || !capacity) return res.status(400).json({ error: 'roomCode and capacity required.' });
+    const { data, error } = await supabase.from('classrooms').update({
+        room_code: roomCode, capacity: parseInt(capacity),
+        type: type || 'theory', department_id: departmentId || null
+    }).eq('id', req.params.id).select().single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
 });
 
 // ═══ Lecturers CRUD ══════════════════════════════════════════════════
@@ -397,6 +419,17 @@ app.delete('/api/lecturers/:id', async (req, res) => {
         if (error) return res.status(400).json({ error: error.message });
         res.json({ ok: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/lecturers/:id', async (req, res) => {
+    const { title, firstName, lastName, email, departmentId } = req.body;
+    if (!firstName || !lastName) return res.status(400).json({ error: 'firstName and lastName required.' });
+    const { data, error } = await supabase.from('lecturers').update({
+        title: title || '', first_name: firstName, last_name: lastName,
+        email: email || null, department_id: departmentId || null
+    }).eq('id', req.params.id).select().single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
 });
 
 // ═══ Excel Import ════════════════════════════════════════════════════

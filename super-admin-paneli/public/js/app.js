@@ -3,6 +3,8 @@ let orgs = [];
 let allSchedule = [];
 let currentAvailability = [];
 let authToken = localStorage.getItem('adminToken') || '';
+let currentEditType = null;
+let currentEditId = null;
 
 const dayNames = { Monday: 'Pazartesi', Tuesday: 'Salı', Wednesday: 'Çarşamba', Thursday: 'Perşembe', Friday: 'Cuma' };
 
@@ -203,24 +205,36 @@ async function loadDashboard() {
     var lecs = await results[2].json();
     if (lecs.length === 0) { document.getElementById('lecturerList').innerHTML = '<div class="empty-state">Akademisyen yok.</div>'; }
     else {
-        var html = '<table><tr><th>Ad Soyad</th><th>Bölüm</th><th>Kullanıcı</th><th>E-posta</th><th></th></tr>';
-        lecs.forEach(function(l) { html += '<tr><td>' + l.title + ' ' + l.first_name + ' ' + l.last_name + '</td><td>' + (l.departments ? l.departments.name : '—') + '</td><td><span class="badge badge-blue">@' + (l.users ? l.users.username : '—') + '</span></td><td>' + (l.email || '—') + '</td><td><button class="btn btn-danger btn-sm btn-del-lec" data-id="' + l.id + '">Sil</button></td></tr>'; });
+        var html = '<table><tr><th>Ad Soyad</th><th>Bölüm</th><th>Kullanıcı</th><th>E-posta</th><th>İşlemler</th></tr>';
+        lecs.forEach(function(l) { 
+            var deptName = l.departments ? l.departments.name : '—';
+            var encodedData = encodeURIComponent(JSON.stringify(l));
+            html += '<tr><td>' + l.title + ' ' + l.first_name + ' ' + l.last_name + '</td><td>' + deptName + '</td><td><span class="badge badge-blue">@' + (l.users ? l.users.username : '—') + '</span></td><td>' + (l.email || '—') + '</td><td><button class="btn btn-warning btn-sm btn-edit-lec me-1" data-data="' + encodedData + '">Düzenle</button><button class="btn btn-danger btn-sm btn-del-lec" data-id="' + l.id + '">Sil</button></td></tr>'; 
+        });
         document.getElementById('lecturerList').innerHTML = html + '</table>';
     }
 
     var courses = await results[3].json();
     if (courses.length === 0) { document.getElementById('courseList').innerHTML = '<div class="empty-state">Ders yok.</div>'; }
     else {
-        var html2 = '<table><tr><th>Kod</th><th>Ad</th><th>Teori/Lab</th><th>Kredi</th><th>Bölüm</th></tr>';
-        courses.forEach(function(c) { html2 += '<tr><td><strong>' + c.code + '</strong></td><td>' + c.name + '</td><td>' + c.theory_hours + 'T / ' + c.lab_hours + 'L</td><td>' + c.credits + '</td><td>' + (c.departments ? c.departments.name : '—') + '</td></tr>'; });
+        var html2 = '<table><tr><th>Kod</th><th>Ad</th><th>Teori/Lab</th><th>Kredi</th><th>Bölüm</th><th>İşlemler</th></tr>';
+        courses.forEach(function(c) { 
+            var deptName = c.departments ? c.departments.name : '—';
+            var encodedData = encodeURIComponent(JSON.stringify(c));
+            html2 += '<tr><td><strong>' + c.code + '</strong></td><td>' + c.name + '</td><td>' + c.theory_hours + 'T / ' + c.lab_hours + 'L</td><td>' + c.credits + '</td><td>' + deptName + '</td><td><button class="btn btn-warning btn-sm btn-edit-course me-1" data-data="' + encodedData + '">Düzenle</button><button class="btn btn-danger btn-sm btn-del-course" data-id="' + c.id + '">Sil</button></td></tr>'; 
+        });
         document.getElementById('courseList').innerHTML = html2 + '</table>';
     }
 
     var classrooms = await results[4].json();
     if (classrooms.length === 0) { document.getElementById('classroomList').innerHTML = '<div class="empty-state">Sınıf yok.</div>'; }
     else {
-        var html3 = '<table><tr><th>Oda Kodu</th><th>Kapasite</th><th>Tür</th><th>Bölüm</th><th></th></tr>';
-        classrooms.forEach(function(c) { html3 += '<tr><td><strong>' + c.room_code + '</strong></td><td>' + c.capacity + '</td><td><span class="badge ' + (c.type === 'lab' ? 'badge-purple' : 'badge-blue') + '">' + c.type + '</span></td><td>' + (c.departments ? c.departments.name : '—') + '</td><td><button class="btn btn-danger btn-sm btn-del-classroom" data-id="' + c.id + '">Sil</button></td></tr>'; });
+        var html3 = '<table><tr><th>Oda Kodu</th><th>Kapasite</th><th>Tür</th><th>Bölüm</th><th>İşlemler</th></tr>';
+        classrooms.forEach(function(c) { 
+            var deptName = c.departments ? c.departments.name : '—';
+            var encodedData = encodeURIComponent(JSON.stringify(c));
+            html3 += '<tr><td><strong>' + c.room_code + '</strong></td><td>' + c.capacity + '</td><td><span class="badge ' + (c.type === 'lab' ? 'badge-purple' : 'badge-blue') + '">' + c.type + '</span></td><td>' + deptName + '</td><td><button class="btn btn-warning btn-sm btn-edit-classroom me-1" data-data="' + encodedData + '">Düzenle</button><button class="btn btn-danger btn-sm btn-del-classroom" data-id="' + c.id + '">Sil</button></td></tr>'; 
+        });
         document.getElementById('classroomList').innerHTML = html3 + '</table>';
     }
 }
@@ -296,6 +310,12 @@ async function addLecturer() {
 async function deleteLecturer(id) {
     if (!confirm('Bu akademisyeni silmek istediğinize emin misiniz?')) return;
     await apiFetch('/api/lecturers/' + id, { method: 'DELETE' });
+    loadDashboard();
+}
+
+async function deleteCourse(id) {
+    if (!confirm('Bu dersi silmek istediğinize emin misiniz?')) return;
+    await apiFetch('/api/courses/' + id, { method: 'DELETE' });
     loadDashboard();
 }
 
@@ -485,6 +505,72 @@ function renderErrorLogs(logs) {
     document.getElementById('logList').innerHTML = html + '</table>';
 }
 
+// ── Edit Logic ────────────────────────────────────────────────────
+function openEditModal(type, data) {
+    currentEditType = type;
+    currentEditId = data.id;
+    var body = document.getElementById('editModalBody');
+    var html = '';
+
+    if (type === 'lecturer') {
+        html = '<label class="form-label">Unvan</label><input type="text" id="editLecTitle" class="form-control mb-2" value="' + (data.title || '') + '">' +
+               '<label class="form-label">Ad</label><input type="text" id="editLecFirst" class="form-control mb-2" value="' + data.first_name + '">' +
+               '<label class="form-label">Soyad</label><input type="text" id="editLecLast" class="form-control mb-2" value="' + data.last_name + '">' +
+               '<label class="form-label">E-posta</label><input type="text" id="editLecEmail" class="form-control mb-2" value="' + (data.email || '') + '">';
+    } else if (type === 'course') {
+        html = '<label class="form-label">Kod</label><input type="text" id="editCourseCode" class="form-control mb-2" value="' + data.code + '">' +
+               '<label class="form-label">Ad</label><input type="text" id="editCourseName" class="form-control mb-2" value="' + data.name + '">' +
+               '<label class="form-label">Teori</label><input type="number" id="editCourseTheory" class="form-control mb-2" value="' + data.theory_hours + '">' +
+               '<label class="form-label">Lab</label><input type="number" id="editCourseLab" class="form-control mb-2" value="' + data.lab_hours + '">' +
+               '<label class="form-label">Kredi</label><input type="number" id="editCourseCredits" class="form-control mb-2" value="' + data.credits + '">';
+    } else if (type === 'classroom') {
+        html = '<label class="form-label">Oda Kodu</label><input type="text" id="editRoomCode" class="form-control mb-2" value="' + data.room_code + '">' +
+               '<label class="form-label">Kapasite</label><input type="number" id="editRoomCap" class="form-control mb-2" value="' + data.capacity + '">';
+    }
+    
+    body.innerHTML = html;
+    var myModal = new bootstrap.Modal(document.getElementById('editModal'));
+    myModal.show();
+}
+
+document.getElementById('btnSaveEdit').addEventListener('click', async function() {
+    var endpoint = '';
+    var payload = {};
+
+    if (currentEditType === 'lecturer') {
+        endpoint = '/api/lecturers/' + currentEditId;
+        payload = {
+            title: document.getElementById('editLecTitle').value,
+            firstName: document.getElementById('editLecFirst').value,
+            lastName: document.getElementById('editLecLast').value,
+            email: document.getElementById('editLecEmail').value
+        };
+    } else if (currentEditType === 'course') {
+        endpoint = '/api/courses/' + currentEditId;
+        payload = {
+            code: document.getElementById('editCourseCode').value,
+            name: document.getElementById('editCourseName').value,
+            theoryHours: document.getElementById('editCourseTheory').value,
+            labHours: document.getElementById('editCourseLab').value,
+            credits: document.getElementById('editCourseCredits').value
+        };
+    } else if (currentEditType === 'classroom') {
+        endpoint = '/api/classrooms/' + currentEditId;
+        payload = {
+            roomCode: document.getElementById('editRoomCode').value,
+            capacity: document.getElementById('editRoomCap').value
+        };
+    }
+
+    try {
+        await apiFetch(endpoint, { method: 'PUT', body: JSON.stringify(payload) });
+        bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+        loadDashboard();
+    } catch (e) {
+        alert('Kaydetme hatası: ' + e.message);
+    }
+});
+
 // ── Helpers ──────────────────────────────────────────────────────
 function showAlert(elementId, message, type) {
     var el = document.getElementById(elementId);
@@ -552,7 +638,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if ((btn = e.target.closest('.btn-del-sched'))) deleteScheduleEntry(btn.getAttribute('data-id'));
         if ((btn = e.target.closest('.btn-del-avail'))) deleteAvailability(btn.getAttribute('data-id'));
         if ((btn = e.target.closest('.btn-del-lec'))) deleteLecturer(btn.getAttribute('data-id'));
+        if ((btn = e.target.closest('.btn-del-course'))) deleteCourse(btn.getAttribute('data-id'));
         if ((btn = e.target.closest('.btn-del-classroom'))) deleteClassroom(btn.getAttribute('data-id'));
+        
+        // Edit actions
+        if ((btn = e.target.closest('.btn-edit-lec'))) openEditModal('lecturer', JSON.parse(decodeURIComponent(btn.getAttribute('data-data'))));
+        if ((btn = e.target.closest('.btn-edit-course'))) openEditModal('course', JSON.parse(decodeURIComponent(btn.getAttribute('data-data'))));
+        if ((btn = e.target.closest('.btn-edit-classroom'))) openEditModal('classroom', JSON.parse(decodeURIComponent(btn.getAttribute('data-data'))));
     });
 
     // Start
