@@ -223,6 +223,8 @@ CREATE POLICY users_select ON users
     FOR SELECT USING (
         id = auth.uid() OR (public.is_admin() AND org_id = public.current_org_id())
     );
+CREATE POLICY users_insert ON users
+    FOR INSERT WITH CHECK (id = auth.uid());
 CREATE POLICY users_update_self ON users
     FOR UPDATE USING (id = auth.uid())
     WITH CHECK (id = auth.uid());

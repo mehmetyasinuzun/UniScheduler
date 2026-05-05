@@ -1,4 +1,5 @@
-// Availability repository — CRUD for lecturer free-time blocks.
+// Availability repository — CRUD for lecturer BUSY time blocks.
+// Default: all lecturers are available. Entries mark times they are NOT available.
 package com.unischeduler.data.repository
 
 import com.unischeduler.data.model.LecturerAvailability
@@ -35,7 +36,11 @@ class AvailabilityRepository {
             .delete { filter { eq("id", id); eq("org_id", orgId) } }
     }
 
-    /** Check if lecturer is available at a given day+time range. */
+    /**
+     * Check if lecturer is available at a given day+time range.
+     * Default = available (no entries). Entries mark BUSY times.
+     * Returns false if any busy block overlaps the requested range.
+     */
     suspend fun isAvailable(
         lecturerId: Int,
         day: String,
@@ -43,14 +48,13 @@ class AvailabilityRepository {
         endTime: String,
         orgId: Int
     ): Boolean {
-        val slots = getForLecturer(lecturerId, orgId)
+        val busySlots = getForLecturer(lecturerId, orgId)
             .filter { it.day == day }
-        if (slots.isEmpty()) return false // no availability marked = not available
+        if (busySlots.isEmpty()) return true
         val startMin = toMinutes(startTime)
         val endMin   = toMinutes(endTime)
-        // Check if the requested range is fully covered by at least one availability block
-        return slots.any { slot ->
-            toMinutes(slot.startTime) <= startMin && toMinutes(slot.endTime) >= endMin
+        return busySlots.none { slot ->
+            toMinutes(slot.startTime) < endMin && startMin < toMinutes(slot.endTime)
         }
     }
 

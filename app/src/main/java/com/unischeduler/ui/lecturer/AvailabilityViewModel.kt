@@ -1,4 +1,4 @@
-// AvailabilityViewModel — manages lecturer's free-time blocks.
+// AvailabilityViewModel — manages lecturer's BUSY time blocks (default = available).
 package com.unischeduler.ui.lecturer
 
 import android.app.Application

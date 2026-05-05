@@ -11,6 +11,7 @@ import com.unischeduler.data.model.Lecturer
 import com.unischeduler.data.repository.ClassroomRepository
 import com.unischeduler.data.repository.CourseRepository
 import com.unischeduler.data.repository.LecturerRepository
+import com.unischeduler.data.repository.OrgSettingsRepository
 import com.unischeduler.util.ErrorReporter
 import com.unischeduler.util.SessionManager
 import com.unischeduler.util.ErrorMessages
@@ -31,11 +32,12 @@ data class AdminDashboard(
 
 class AdminHomeViewModel(app: Application) : AndroidViewModel(app) {
 
-    private val lecturerRepo  = LecturerRepository()
-    private val courseRepo    = CourseRepository()
-    private val classroomRepo = ClassroomRepository()
-    private val session       = SessionManager(app)
-    private val errorReporter = ErrorReporter(app)
+    private val lecturerRepo    = LecturerRepository()
+    private val courseRepo      = CourseRepository()
+    private val classroomRepo   = ClassroomRepository()
+    private val orgSettingsRepo = OrgSettingsRepository()
+    private val session         = SessionManager(app)
+    private val errorReporter   = ErrorReporter(app)
 
     private val _state = MutableStateFlow<UiState<AdminDashboard>>(UiState.Idle)
     val state: StateFlow<UiState<AdminDashboard>> = _state
@@ -48,10 +50,10 @@ class AdminHomeViewModel(app: Application) : AndroidViewModel(app) {
                     coroutineScope {
                         val orgId = session.orgId
                         if (orgId <= 0) throw IllegalStateException("Organization is missing for this account.")
-                        // Run all three queries in parallel (Task 5 pattern)
                         val lecturers  = async { lecturerRepo.getUnassignedLecturers(orgId) }
                         val courses    = async { courseRepo.getUnassignedCourses(orgId) }
-                        val classrooms = async { classroomRepo.getAllClassrooms(orgId) }
+                        val settings   = async { orgSettingsRepo.getSettings(orgId) }
+                        val classrooms = async { classroomRepo.getAvailableClassrooms(orgId, settings.await()) }
                         AdminDashboard(
                             unassignedLecturers = lecturers.await(),
                             unassignedCourses   = courses.await(),

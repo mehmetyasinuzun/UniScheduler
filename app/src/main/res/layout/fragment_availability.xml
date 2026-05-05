@@ -9,7 +9,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="My Availability"
+        android:text="My Busy Times"
         android:textSize="22sp"
         android:textStyle="bold"
         android:layout_marginBottom="4dp" />
@@ -17,7 +17,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Mark the time blocks when you are free for lectures."
+        android:text="Mark the time blocks when you are NOT available."
         android:textColor="@color/colorOnSurfaceVariant"
         android:layout_marginBottom="12dp" />
 
@@ -94,7 +94,7 @@
                 android:id="@+id/btnAdd"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Add Available Slot"
+                android:text="Add Busy Slot"
                 android:layout_marginTop="8dp" />
 
         </LinearLayout>

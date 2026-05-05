@@ -46,15 +46,16 @@ const supabase = createClient(supabaseUrl, serviceKey, {
 
 // ── Auth Endpoints ───────────────────────────────────────────────────
 app.post('/api/auth/login', (req, res) => {
+    const ip = req.ip || req.connection.remoteAddress;
+    if (!checkRateLimit(ip)) {
+        return res.status(429).json({ error: 'Too many login attempts. Try again later.' });
+    }
     const { username, password } = req.body;
-    console.log('Login attempt:', username, password);
     if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-        console.log('Login successful');
         const token = crypto.randomBytes(32).toString('hex');
         activeSessions.set(token, { createdAt: Date.now() });
         return res.json({ token });
     }
-    console.log('Login failed. Expected:', ADMIN_USERNAME, ADMIN_PASSWORD);
     return res.status(401).json({ error: 'Invalid credentials.' });
 });
 
@@ -501,38 +502,48 @@ app.post('/api/import/:type/:orgId', upload.single('file'), async (req, res) => 
 
         const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
         const sheet = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet);
-        if (rows.length === 0) return res.status(400).json({ error: 'Dosya boş.' });
+        const rawRows = XLSX.utils.sheet_to_json(sheet);
+        if (rawRows.length === 0) return res.status(400).json({ error: 'Dosya boş.' });
+
+        // Normalize all column names to lowercase + replace spaces/dashes with underscores
+        function normalizeRow(row) {
+            const out = {};
+            for (const key of Object.keys(row)) {
+                out[key.toLowerCase().replace(/[\s\-]+/g, '_')] = row[key];
+            }
+            return out;
+        }
+        const rows = rawRows.map(normalizeRow);
 
         let inserted = 0;
         let errors = [];
 
         if (type === 'lecturers') {
-            for (const row of rows) {
+            for (const r of rows) {
                 try {
-                    const firstName = (row.first_name || row.ad || '').toString();
-                    const lastName = (row.last_name || row.soyad || '').toString();
+                    const firstName = (r.first_name || r.ad || r.firstname || r.name || '').toString().trim();
+                    const lastName = (r.last_name || r.soyad || r.lastname || r.surname || '').toString().trim();
+                    if (!firstName || !lastName) { errors.push('Ad veya soyad boş — satır atlandı.'); continue; }
                     
-                    let uname = (row.username || row.kullanici_adi || '').toString().trim().toLowerCase();
-                    if (!uname && firstName && lastName) uname = await generateUniqueUsername(firstName, lastName);
-                    if (!uname) uname = `lec_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
+                    let uname = (r.username || r.kullanici_adi || r.kullanici || '').toString().trim().toLowerCase();
+                    if (!uname) uname = await generateUniqueUsername(firstName, lastName);
                     
-                    let pwd = (row.password || row.sifre || '').toString();
+                    let pwd = (r.password || r.sifre || '').toString();
                     if (!pwd) pwd = generatePassword();
                     
                     const emailAddr = `${uname}@unischeduler.app`;
 
                     const { data: authUser, error: authErr } = await supabase.auth.admin.createUser({ email: emailAddr, password: pwd, email_confirm: true });
-                    if (authErr) { errors.push(`${firstName}: ${authErr.message}`); continue; }
+                    if (authErr) { errors.push(`${firstName} ${lastName}: ${authErr.message}`); continue; }
 
                     await supabase.from('users').insert({ id: authUser.user.id, org_id: parseInt(orgId), username: uname, role: 'lecturer', must_change_password: true });
 
                     await supabase.from('lecturers').insert({
                         org_id: parseInt(orgId), user_id: authUser.user.id,
-                        title: (row.title || row.unvan || '').toString(),
+                        title: (r.title || r.unvan || '').toString(),
                         first_name: firstName,
                         last_name: lastName,
-                        email: (row.email || row.eposta || '').toString() || null
+                        email: (r.email || r.eposta || r.e_posta || '').toString() || null
                     });
                     inserted++;
                 } catch (e) { errors.push(`Satır hatası: ${e.message}`); }
@@ -540,22 +551,24 @@ app.post('/api/import/:type/:orgId', upload.single('file'), async (req, res) => 
         } else if (type === 'courses') {
             const records = rows.map(r => ({
                 org_id: parseInt(orgId),
-                code: (r.code || r.kod || '').toString(),
-                name: (r.name || r.ad || r.ders_adi || '').toString(),
-                theory_hours: parseInt(r.theory_hours || r.teori || 0) || 0,
-                lab_hours: parseInt(r.lab_hours || r.lab || 0) || 0,
-                credits: parseInt(r.credits || r.kredi || 0) || 0
+                code: (r.code || r.kod || r.ders_kodu || '').toString().trim(),
+                name: (r.name || r.ad || r.ders_adi || r.ders || '').toString().trim(),
+                theory_hours: parseInt(r.theory_hours || r.teori || r.theory || 0) || 0,
+                lab_hours: parseInt(r.lab_hours || r.lab || r.laboratory || 0) || 0,
+                credits: parseInt(r.credits || r.kredi || r.credit || 0) || 0
             })).filter(r => r.code && r.name);
+            if (records.length === 0) return res.status(400).json({ error: 'Geçerli ders kaydı bulunamadı. Sütunlarda en az "Kod" ve "Ad" olmalı.' });
             const { error } = await supabase.from('courses').insert(records);
             if (error) return res.status(400).json({ error: error.message });
             inserted = records.length;
         } else if (type === 'classrooms') {
             const records = rows.map(r => ({
                 org_id: parseInt(orgId),
-                room_code: (r.room_code || r.oda_kodu || r.code || '').toString(),
+                room_code: (r.room_code || r.oda_kodu || r.code || r.kod || r.sinif || '').toString().trim(),
                 capacity: parseInt(r.capacity || r.kapasite || 30) || 30,
-                type: (r.type || r.tur || 'theory').toString().toLowerCase()
+                type: (r.type || r.tur || r.tip || 'theory').toString().toLowerCase().trim()
             })).filter(r => r.room_code);
+            if (records.length === 0) return res.status(400).json({ error: 'Geçerli sınıf kaydı bulunamadı. Sütunlarda en az "Oda_Kodu" olmalı.' });
             const { error } = await supabase.from('classrooms').insert(records);
             if (error) return res.status(400).json({ error: error.message });
             inserted = records.length;

@@ -38,11 +38,11 @@ class LecturerRepository {
      * Returns generated (username, plainPassword) so Admin can display/export them.
      *
      * Flow:
-     * 1. Generate unique username
-     * 2. Sign up via Supabase Auth (creates auth.users entry)
-     * 3. Save current admin session, re-login as admin after signup
-     * 4. Insert public.users profile with the auth user's UUID
-     * 5. Insert lecturers row
+     * 1. Generate unique username + password
+     * 2. Save admin session, sign up new auth user (switches session)
+     * 3. Insert public.users profile while session is new user (RLS: id = auth.uid())
+     * 4. Restore admin session via importSession
+     * 5. Insert lecturers row as admin (RLS: is_admin())
      */
     suspend fun insertLecturerWithUser(
         title: String,
@@ -57,10 +57,9 @@ class LecturerRepository {
         val plainPassword = CredentialGenerator.generatePassword()
         val syntheticEmail = AuthRepository.usernameToEmail(username)
 
-        // Save current admin session info
-        val currentSession = client.auth.currentSessionOrNull()
+        val adminSession = client.auth.currentSessionOrNull()
+            ?: throw IllegalStateException("No active admin session.")
 
-        // Create auth user via sign-up
         val signUpResult = client.auth.signUpWith(Email) {
             this.email = syntheticEmail
             this.password = plainPassword
@@ -69,16 +68,7 @@ class LecturerRepository {
         val authUserId = signUpResult?.id
             ?: throw IllegalStateException("Failed to create auth user for lecturer.")
 
-        // Re-authenticate as admin (signUp may switch session)
-        if (currentSession != null) {
-            try {
-                client.auth.refreshCurrentSession()
-            } catch (e: Exception) {
-                // If refresh fails, the admin needs to re-login
-            }
-        }
-
-        // Insert public.users profile
+        // Session is now the new lecturer — insert users row while RLS allows (id = auth.uid())
         try {
             client.postgrest["users"].insert(
                 UserInsert(
@@ -90,11 +80,12 @@ class LecturerRepository {
                 )
             )
         } catch (e: Exception) {
-            // Rollback: can't easily delete auth user from client side
             throw e
         }
 
-        // Insert lecturer
+        // Restore admin session for subsequent operations
+        client.auth.importSession(adminSession)
+
         try {
             client.postgrest["lecturers"].insert(
                 LecturerInsert(
@@ -108,7 +99,6 @@ class LecturerRepository {
                 )
             )
         } catch (e: Exception) {
-            // Best-effort rollback if lecturer insert fails
             runCatching {
                 client.postgrest["users"].delete { filter { eq("id", authUserId) } }
             }

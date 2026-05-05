@@ -1,4 +1,4 @@
-// AvailabilityFragment — Lecturer marks free-time blocks.
+// AvailabilityFragment — Lecturer marks BUSY time blocks (default = available).
 package com.unischeduler.ui.lecturer
 
 import android.os.Bundle
@@ -73,7 +73,7 @@ class AvailabilityFragment : Fragment() {
                     binding.tvSaveError.visibility = View.GONE
                     binding.etStartTime.text?.clear()
                     binding.etEndTime.text?.clear()
-                    Toast.makeText(requireContext(), "Slot added.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Busy slot added.", Toast.LENGTH_SHORT).show()
                     viewModel.resetSaveState()
                 }
             }
@@ -130,8 +130,8 @@ class AvailabilityAdapter(
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         if (items.isEmpty()) {
-            holder.binding.tvDay.text  = "No availability set yet."
-            holder.binding.tvTime.text = "Add your free time blocks above."
+            holder.binding.tvDay.text  = "No busy times set."
+            holder.binding.tvTime.text = "You are available for all time slots by default."
             holder.binding.btnDelete.visibility = View.GONE
             return
         }
