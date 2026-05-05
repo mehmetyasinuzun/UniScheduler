@@ -209,7 +209,7 @@ async function loadDashboard() {
         lecs.forEach(function(l) { 
             var deptName = l.departments ? l.departments.name : '—';
             var encodedData = encodeURIComponent(JSON.stringify(l));
-            html += '<tr><td>' + l.title + ' ' + l.first_name + ' ' + l.last_name + '</td><td>' + deptName + '</td><td><span class="badge badge-blue">@' + (l.users ? l.users.username : '—') + '</span></td><td>' + (l.email || '—') + '</td><td><button class="btn btn-warning btn-sm btn-edit-lec me-1" data-data="' + encodedData + '">Düzenle</button><button class="btn btn-danger btn-sm btn-del-lec" data-id="' + l.id + '">Sil</button></td></tr>'; 
+            html += '<tr><td>' + l.title + ' ' + l.first_name + ' ' + l.last_name + '</td><td>' + deptName + '</td><td><span class="badge badge-blue">@' + (l.users ? l.users.username : '—') + '</span></td><td>' + (l.email || '—') + '</td><td><button class="btn btn-warning btn-sm btn-edit-lec me-1" data-data="' + encodedData + '">Düzenle</button><button class="btn btn-secondary btn-sm btn-reset-lec-pw me-1" data-id="' + l.id + '">Şifre Sıfırla</button><button class="btn btn-danger btn-sm btn-del-lec" data-id="' + l.id + '">Sil</button></td></tr>'; 
         });
         document.getElementById('lecturerList').innerHTML = html + '</table>';
     }
@@ -288,23 +288,36 @@ async function saveSettings() {
 async function addLecturer() {
     var orgId = document.getElementById('dashOrg').value;
     var title = document.getElementById('lecTitle').value.trim();
-    var firstName = document.getElementById('lecFirstName').value.trim();
-    var lastName = document.getElementById('lecLastName').value.trim();
-    var username = document.getElementById('lecUsername').value.trim();
-    var password = document.getElementById('lecPassword').value.trim();
+    var firstName = document.getElementById('lecFirst').value.trim();
+    var lastName = document.getElementById('lecLast').value.trim();
+    var email = document.getElementById('lecEmail').value.trim();
     var departmentId = document.getElementById('lecDept').value;
-    if (!firstName || !lastName || !username || !password) return showAlert('lecAlert', 'Ad, soyad, kullanıcı adı ve şifre gereklidir.', 'error');
-    if (password.length < 6) return showAlert('lecAlert', 'Şifre en az 6 karakter olmalıdır.', 'error');
-    var res = await apiFetch('/api/lecturers', { method: 'POST', body: JSON.stringify({ orgId: orgId, title: title, firstName: firstName, lastName: lastName, username: username, password: password, departmentId: departmentId || null }) });
+    if (!firstName || !lastName) return showAlert('lecAlert', 'Ad ve soyad gereklidir.', 'error');
+    
+    var res = await apiFetch('/api/lecturers', { 
+        method: 'POST', 
+        body: JSON.stringify({ orgId: orgId, title: title, firstName: firstName, lastName: lastName, email: email, departmentId: departmentId || null }) 
+    });
     var data = await res.json();
     if (data.error) return showAlert('lecAlert', data.error, 'error');
-    showAlert('lecAlert', firstName + ' ' + lastName + ' eklendi!', 'success');
+    
     document.getElementById('lecTitle').value = '';
-    document.getElementById('lecFirstName').value = '';
-    document.getElementById('lecLastName').value = '';
-    document.getElementById('lecUsername').value = '';
-    document.getElementById('lecPassword').value = '';
+    document.getElementById('lecFirst').value = '';
+    document.getElementById('lecLast').value = '';
+    document.getElementById('lecEmail').value = '';
+    
+    if (data.generatedCredentials) {
+        alert('Akademisyen başarıyla eklendi!\n\nKullanıcı Adı: ' + data.generatedCredentials.username + '\nŞifre: ' + data.generatedCredentials.password + '\n\nLütfen bu bilgileri hocayla paylaşın. İlk girişte şifre değiştirmesi istenecektir.');
+    }
     loadDashboard();
+}
+
+async function resetLecturerPassword(id) {
+    if (!confirm('Bu akademisyenin şifresini sıfırlamak istediğinize emin misiniz?')) return;
+    var res = await apiFetch('/api/lecturers/' + id + '/reset-password', { method: 'POST' });
+    var data = await res.json();
+    if (data.error) return alert('Hata: ' + data.error);
+    alert('Şifre başarıyla sıfırlandı!\n\nKullanıcı Adı: ' + data.generatedCredentials.username + '\nYeni Şifre: ' + data.generatedCredentials.password + '\n\nLütfen bu bilgileri hocayla paylaşın.');
 }
 
 async function deleteLecturer(id) {
@@ -638,6 +651,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if ((btn = e.target.closest('.btn-del-sched'))) deleteScheduleEntry(btn.getAttribute('data-id'));
         if ((btn = e.target.closest('.btn-del-avail'))) deleteAvailability(btn.getAttribute('data-id'));
         if ((btn = e.target.closest('.btn-del-lec'))) deleteLecturer(btn.getAttribute('data-id'));
+        if ((btn = e.target.closest('.btn-reset-lec-pw'))) resetLecturerPassword(btn.getAttribute('data-id'));
         if ((btn = e.target.closest('.btn-del-course'))) deleteCourse(btn.getAttribute('data-id'));
         if ((btn = e.target.closest('.btn-del-classroom'))) deleteClassroom(btn.getAttribute('data-id'));
         

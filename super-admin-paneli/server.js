@@ -378,15 +378,61 @@ app.put('/api/classrooms/:id', async (req, res) => {
     res.json(data);
 });
 
+// ═══ Lecturer Credential Utilities ═════════════════════════════════════
+const TURKISH_MAP = {
+    'ş': 's', 'Ş': 's', 'ç': 'c', 'Ç': 'c', 'ğ': 'g', 'Ğ': 'g',
+    'ü': 'u', 'Ü': 'u', 'ö': 'o', 'Ö': 'o', 'ı': 'i', 'İ': 'i'
+};
+
+function normalizeText(text) {
+    if (!text) return '';
+    return text.split('').map(c => TURKISH_MAP[c] || c).join('').toLowerCase().replace(/[^a-z0-9_]/g, '');
+}
+
+function stripTitle(name) {
+    let result = name.trim();
+    const titles = ["prof. dr.", "prof.", "doç. dr.", "doç.", "dr. öğr. üyesi", "dr.", "arş. gör.", "öğr. gör.", "assoc. prof.", "assist. prof.", "res. asst.", "lect."];
+    for (const t of titles) {
+        if (result.toLowerCase().startsWith(t)) {
+            result = result.substring(t.length).trim();
+            break;
+        }
+    }
+    return result;
+}
+
+async function generateUniqueUsername(firstName, lastName) {
+    const first = normalizeText(stripTitle(firstName));
+    const last = normalizeText(stripTitle(lastName));
+    const base = `${first}_${last}`;
+    let username = base;
+    let counter = 1;
+    while (true) {
+        const { data } = await supabase.from('users').select('id').eq('username', username).single();
+        if (!data) return username; // unique!
+        username = `${base}${counter}`;
+        counter++;
+    }
+}
+
+function generatePassword() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let pass = '';
+    for (let i = 0; i < 6; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    return pass;
+}
+
 // ═══ Lecturers CRUD ══════════════════════════════════════════════════
 app.post('/api/lecturers', async (req, res) => {
-    const { orgId, title, firstName, lastName, email, departmentId, username, password } = req.body;
-    if (!orgId || !firstName || !lastName || !username || !password)
-        return res.status(400).json({ error: 'orgId, firstName, lastName, username and password required.' });
-    if (password.length < 6) return res.status(400).json({ error: 'Password min 6 chars.' });
+    const { orgId, title, firstName, lastName, email, departmentId } = req.body;
+    if (!orgId || !firstName || !lastName)
+        return res.status(400).json({ error: 'orgId, firstName and lastName required.' });
 
     try {
-        const emailAddr = `${username.trim().toLowerCase()}@unischeduler.app`;
+        const username = await generateUniqueUsername(firstName, lastName);
+        const password = generatePassword();
+        const emailAddr = `${username}@unischeduler.app`;
+        
         const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
             email: emailAddr, password, email_confirm: true
         });
@@ -394,7 +440,7 @@ app.post('/api/lecturers', async (req, res) => {
 
         const { data: userRow, error: userErr } = await supabase.from('users').insert({
             id: authUser.user.id, org_id: parseInt(orgId),
-            username: username.trim(), role: 'lecturer', must_change_password: true
+            username: username, role: 'lecturer', must_change_password: true
         }).select().single();
         if (userErr) { await supabase.auth.admin.deleteUser(authUser.user.id); return res.status(400).json({ error: userErr.message }); }
 
@@ -405,7 +451,22 @@ app.post('/api/lecturers', async (req, res) => {
         }).select().single();
         if (error) { await supabase.auth.admin.deleteUser(authUser.user.id); return res.status(400).json({ error: error.message }); }
 
-        res.json(data);
+        res.json({ ...data, generatedCredentials: { username, password } });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/lecturers/:id/reset-password', async (req, res) => {
+    try {
+        const { data: lec } = await supabase.from('lecturers').select('user_id, users(username)').eq('id', req.params.id).single();
+        if (!lec || !lec.user_id) return res.status(404).json({ error: 'Lecturer user not found.' });
+
+        const newPassword = generatePassword();
+        const { error: updateAuthErr } = await supabase.auth.admin.updateUserById(lec.user_id, { password: newPassword });
+        if (updateAuthErr) return res.status(400).json({ error: updateAuthErr.message });
+
+        await supabase.from('users').update({ must_change_password: true }).eq('id', lec.user_id);
+        
+        res.json({ ok: true, generatedCredentials: { username: lec.users.username, password: newPassword } });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -449,20 +510,28 @@ app.post('/api/import/:type/:orgId', upload.single('file'), async (req, res) => 
         if (type === 'lecturers') {
             for (const row of rows) {
                 try {
-                    const uname = (row.username || row.kullanici_adi || `lec_${Date.now()}_${Math.random().toString(36).slice(2,6)}`).toString().trim().toLowerCase();
-                    const pwd = (row.password || row.sifre || 'Temp1234').toString();
+                    const firstName = (row.first_name || row.ad || '').toString();
+                    const lastName = (row.last_name || row.soyad || '').toString();
+                    
+                    let uname = (row.username || row.kullanici_adi || '').toString().trim().toLowerCase();
+                    if (!uname && firstName && lastName) uname = await generateUniqueUsername(firstName, lastName);
+                    if (!uname) uname = `lec_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
+                    
+                    let pwd = (row.password || row.sifre || '').toString();
+                    if (!pwd) pwd = generatePassword();
+                    
                     const emailAddr = `${uname}@unischeduler.app`;
 
                     const { data: authUser, error: authErr } = await supabase.auth.admin.createUser({ email: emailAddr, password: pwd, email_confirm: true });
-                    if (authErr) { errors.push(`${row.first_name || row.ad}: ${authErr.message}`); continue; }
+                    if (authErr) { errors.push(`${firstName}: ${authErr.message}`); continue; }
 
                     await supabase.from('users').insert({ id: authUser.user.id, org_id: parseInt(orgId), username: uname, role: 'lecturer', must_change_password: true });
 
                     await supabase.from('lecturers').insert({
                         org_id: parseInt(orgId), user_id: authUser.user.id,
                         title: (row.title || row.unvan || '').toString(),
-                        first_name: (row.first_name || row.ad || '').toString(),
-                        last_name: (row.last_name || row.soyad || '').toString(),
+                        first_name: firstName,
+                        last_name: lastName,
                         email: (row.email || row.eposta || '').toString() || null
                     });
                     inserted++;
