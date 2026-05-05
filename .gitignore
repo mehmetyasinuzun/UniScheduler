@@ -1,0 +1,11 @@
+local.properties
+*.iml
+.gradle/
+.idea/
+build/
+captures/
+*.keystore
+node_modules/
+.env
+.env.local
+.env.*

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/adminHomeFragment"     android:title="Home"       android:icon="@drawable/ic_home" />
+    <item android:id="@+id/adminCalendarFragment"  android:title="Calendar"   android:icon="@drawable/ic_calendar" />
+    <item android:id="@+id/dataFragment"           android:title="Data"       android:icon="@drawable/ic_data" />
+    <item android:id="@+id/classroomsFragment"     android:title="Classrooms" android:icon="@drawable/ic_classroom" />
+    <item android:id="@+id/assignmentFragment"     android:title="Assign"     android:icon="@drawable/ic_assignment" />
+</menu>

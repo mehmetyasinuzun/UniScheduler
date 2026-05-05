@@ -1,0 +1,7 @@
+# Copy this file to local.properties and fill in your Supabase keys.
+# local.properties is gitignored — never commit API keys.
+
+sdk.dir=C\:\\Users\\YourName\\AppData\\Local\\Android\\Sdk
+
+SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...

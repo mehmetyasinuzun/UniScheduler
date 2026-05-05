@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniScheduler — Süper Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Login Overlay -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-box">
+            <h2>UniScheduler</h2>
+            <p>Super Admin Panel — Giriş Gerekli</p>
+            <div id="loginError" class="login-error"></div>
+            <form id="loginForm">
+                <div class="mb-3"><label class="form-label">Kullanıcı Adı</label><input type="text" class="form-control" id="loginUser" placeholder="superadmin" autocomplete="username"></div>
+                <div class="mb-3"><label class="form-label">Şifre</label><input type="password" class="form-control" id="loginPass" placeholder="••••••••" autocomplete="current-password"></div>
+                <button type="submit" class="btn btn-primary w-100">Giriş Yap</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="appSidebar">
+        <div class="sidebar-header">
+            <h2>UniScheduler</h2>
+            <small>Süper Admin Panel</small>
+        </div>
+        <div class="section-title">Yönetim</div>
+        <a href="#" data-page="organizations" class="active" id="nav-organizations"><i class="bi bi-building"></i> Organizasyonlar</a>
+        <a href="#" data-page="admins" id="nav-admins"><i class="bi bi-people"></i> Admin Kullanıcılar</a>
+        <div class="section-title">Veri Görüntüleme</div>
+        <a href="#" data-page="dashboard" id="nav-dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a href="#" data-page="availability" id="nav-availability"><i class="bi bi-calendar-check"></i> Müsaitlik Yönetimi</a>
+        <a href="#" data-page="schedule" id="nav-schedule"><i class="bi bi-table"></i> Ders Programı</a>
+        <div class="section-title">İzleme</div>
+        <a href="#" data-page="logs" id="nav-logs"><i class="bi bi-exclamation-triangle"></i> Hata Logları</a>
+        <div class="sidebar-footer">
+            <button class="btn btn-outline-danger btn-sm w-100" id="btnLogout"><i class="bi bi-box-arrow-left"></i> Çıkış Yap</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main" id="appMain">
+        <!-- ═══ Organizations ═══ -->
+        <div id="page-organizations" class="page-content">
+            <div class="page-header">
+                <div><h1 class="page-title">Organizasyonlar</h1><p class="page-subtitle">Üniversiteleri yönetin</p></div>
+            </div>
+            <div class="card">
+                <h3>Yeni Organizasyon Ekle</h3>
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-4"><label class="form-label">Üniversite Adı</label><input type="text" class="form-control" id="orgName" placeholder="ör. Marmara Üniversitesi"></div>
+                    <div class="col-md-4"><label class="form-label">Kod (benzersiz)</label><input type="text" class="form-control" id="orgCode" placeholder="ör. marmara"></div>
+                    <div class="col-auto"><button class="btn btn-primary" id="btnAddOrg">Ekle</button></div>
+                </div>
+                <div id="orgAlert" class="mt-2"></div>
+            </div>
+            <div class="card">
+                <h3>Mevcut Organizasyonlar</h3>
+                <div id="orgList"><div class="loading">Yükleniyor...</div></div>
+            </div>
+        </div>
+
+        <!-- ═══ Admins ═══ -->
+        <div id="page-admins" class="page-content d-none">
+            <div class="page-header">
+                <div><h1 class="page-title">Admin Kullanıcılar</h1><p class="page-subtitle">Her organizasyon için admin hesabı oluşturun</p></div>
+            </div>
+            <div class="card">
+                <h3>Yeni Admin Oluştur</h3>
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-3"><label class="form-label">Organizasyon</label><select class="form-select" id="adminOrg"></select></div>
+                    <div class="col-md-3"><label class="form-label">Kullanıcı Adı</label><input type="text" class="form-control" id="adminUsername" placeholder="ör. admin"></div>
+                    <div class="col-md-3"><label class="form-label">Şifre (min 6 karakter)</label><input type="text" class="form-control" id="adminPassword" placeholder="ör. Admin123"></div>
+                    <div class="col-auto"><button class="btn btn-primary" id="btnAddAdmin">Oluştur</button></div>
+                </div>
+                <div id="adminAlert" class="mt-2"></div>
+            </div>
+            <div class="card">
+                <h3>Tüm Adminler</h3>
+                <div id="adminList"><div class="loading">Yükleniyor...</div></div>
+            </div>
+        </div>
+
+        <!-- ═══ Dashboard ═══ -->
+        <div id="page-dashboard" class="page-content d-none">
+            <div class="page-header">
+                <div><h1 class="page-title">Dashboard</h1><p class="page-subtitle">Organizasyon verileri genel görünüm</p></div>
+            </div>
+            <div class="org-selector"><label>Organizasyon:</label><select class="form-select" id="dashOrg"></select></div>
+            <div id="dashStats" class="stats-grid"></div>
+            <div class="card">
+                <h3>Bölümler</h3>
+                <div class="row g-2 align-items-end mb-3">
+                    <div class="col-md-4"><input type="text" class="form-control" id="newDeptName" placeholder="Yeni bölüm adı..."></div>
+                    <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddDept">Ekle</button></div>
+                </div>
+                <div id="deptList"></div>
+            </div>
+            <div class="card">
+                <h3>Akademisyenler</h3>
+                <div class="row g-2 align-items-end mb-3">
+                    <div class="col-md-1"><label class="form-label">Unvan</label><input type="text" class="form-control" id="lecTitle" placeholder="Prof."></div>
+                    <div class="col-md-2"><label class="form-label">Ad</label><input type="text" class="form-control" id="lecFirstName" placeholder="Ad"></div>
+                    <div class="col-md-2"><label class="form-label">Soyad</label><input type="text" class="form-control" id="lecLastName" placeholder="Soyad"></div>
+                    <div class="col-md-2"><label class="form-label">Kullanıcı Adı</label><input type="text" class="form-control" id="lecUsername" placeholder="kullanici"></div>
+                    <div class="col-md-2"><label class="form-label">Şifre</label><input type="text" class="form-control" id="lecPassword" placeholder="min 6 kar."></div>
+                    <div class="col-md-2"><label class="form-label">Bölüm</label><select class="form-select" id="lecDept"></select></div>
+                    <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddLec">Ekle</button></div>
+                </div>
+                <div id="lecAlert" class="mt-2"></div>
+                <div class="d-flex gap-2 mb-3">
+                    <label class="btn btn-outline-success btn-sm mb-0"><i class="bi bi-upload"></i> Excel İçe Aktar <input type="file" accept=".xlsx,.xls" id="importLecturers" hidden></label>
+                    <button class="btn btn-outline-primary btn-sm" id="btnExportLecturers"><i class="bi bi-download"></i> Excel Dışa Aktar</button>
+                </div>
+                <div id="importLecAlert"></div>
+                <div id="lecturerList"><div class="loading">Yükleniyor...</div></div>
+            </div>
+            <div class="card">
+                <h3>Dersler</h3>
+                <div class="row g-2 align-items-end mb-3">
+                    <div class="col-md-2"><label class="form-label">Kod</label><input type="text" class="form-control" id="courseCode" placeholder="CS101"></div>
+                    <div class="col-md-3"><label class="form-label">Ad</label><input type="text" class="form-control" id="courseName" placeholder="Ders adı"></div>
+                    <div class="col-md-2"><label class="form-label">Bölüm</label><select class="form-select" id="courseDept"></select></div>
+                    <div class="col-md-1"><label class="form-label">Teori</label><input type="number" class="form-control" id="courseTheory" min="0" value="0"></div>
+                    <div class="col-md-1"><label class="form-label">Lab</label><input type="number" class="form-control" id="courseLab" min="0" value="0"></div>
+                    <div class="col-md-1"><label class="form-label">Kredi</label><input type="number" class="form-control" id="courseCredits" min="0" value="0"></div>
+                    <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddCourse">Ekle</button></div>
+                </div>
+                <div id="courseAlert" class="mt-2"></div>
+                <div class="d-flex gap-2 mb-3">
+                    <label class="btn btn-outline-success btn-sm mb-0"><i class="bi bi-upload"></i> Excel İçe Aktar <input type="file" accept=".xlsx,.xls" id="importCourses" hidden></label>
+                    <button class="btn btn-outline-primary btn-sm" id="btnExportCourses"><i class="bi bi-download"></i> Excel Dışa Aktar</button>
+                </div>
+                <div id="importCourseAlert"></div>
+                <div id="courseList"><div class="loading">Yükleniyor...</div></div>
+            </div>
+            <div class="card">
+                <h3>Sınıflar</h3>
+                <div class="row g-2 align-items-end mb-3">
+                    <div class="col-md-2"><label class="form-label">Oda Kodu</label><input type="text" class="form-control" id="classroomCode" placeholder="A-101"></div>
+                    <div class="col-md-2"><label class="form-label">Kapasite</label><input type="number" class="form-control" id="classroomCapacity" min="1" value="30"></div>
+                    <div class="col-md-2"><label class="form-label">Tür</label><select class="form-select" id="classroomType"><option value="theory">Teori</option><option value="lab">Lab</option></select></div>
+                    <div class="col-md-2"><label class="form-label">Bölüm</label><select class="form-select" id="classroomDept"></select></div>
+                    <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddClassroom">Ekle</button></div>
+                </div>
+                <div id="classroomAlert" class="mt-2"></div>
+                <div class="d-flex gap-2 mb-3">
+                    <label class="btn btn-outline-success btn-sm mb-0"><i class="bi bi-upload"></i> Excel İçe Aktar <input type="file" accept=".xlsx,.xls" id="importClassrooms" hidden></label>
+                    <button class="btn btn-outline-primary btn-sm" id="btnExportClassrooms"><i class="bi bi-download"></i> Excel Dışa Aktar</button>
+                </div>
+                <div id="importClassroomAlert"></div>
+                <div id="classroomList"><div class="loading">Yükleniyor...</div></div>
+            </div>
+        </div>
+
+        <!-- ═══ Availability ═══ -->
+        <div id="page-availability" class="page-content d-none">
+            <div class="page-header">
+                <div><h1 class="page-title">Müsaitlik Yönetimi</h1><p class="page-subtitle">Akademisyenlerin uygunluk saatlerini görüntüleyin ve düzenleyin</p></div>
+            </div>
+            <div class="org-selector"><label>Organizasyon:</label><select class="form-select" id="availOrg"></select></div>
+            <div class="card">
+                <h3>Akademisyen Seçin</h3>
+                <div class="row g-2">
+                    <div class="col-md-4"><select class="form-select" id="availLecturer"><option value="">— Akademisyen seçin —</option></select></div>
+                </div>
+            </div>
+            <div id="availabilityContent" style="display:none;">
+                <div class="card">
+                    <h3>Yeni Müsaitlik Ekle</h3>
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-3"><label class="form-label">Gün</label>
+                            <select class="form-select" id="availDay">
+                                <option value="Monday">Pazartesi</option>
+                                <option value="Tuesday">Salı</option>
+                                <option value="Wednesday">Çarşamba</option>
+                                <option value="Thursday">Perşembe</option>
+                                <option value="Friday">Cuma</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2"><label class="form-label">Başlangıç</label><input type="time" class="form-control" id="availStart" value="09:00"></div>
+                        <div class="col-md-2"><label class="form-label">Bitiş</label><input type="time" class="form-control" id="availEnd" value="17:00"></div>
+                        <div class="col-auto"><button class="btn btn-success" id="btnAddAvail">Ekle</button></div>
+                    </div>
+                    <div id="availAlert" class="mt-2"></div>
+                </div>
+                <div class="card">
+                    <h3>Mevcut Müsaitlik Blokları</h3>
+                    <div id="availList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ Schedule ═══ -->
+        <div id="page-schedule" class="page-content d-none">
+            <div class="page-header">
+                <div><h1 class="page-title">Ders Programı</h1><p class="page-subtitle">Haftalık program görüntüleme</p></div>
+            </div>
+            <div class="org-selector"><label>Organizasyon:</label><select class="form-select" id="schedOrg"></select></div>
+            <div class="day-tabs" id="dayTabs">
+                <div class="day-tab active" data-day="all">Tümü</div>
+                <div class="day-tab" data-day="Monday">Pazartesi</div>
+                <div class="day-tab" data-day="Tuesday">Salı</div>
+                <div class="day-tab" data-day="Wednesday">Çarşamba</div>
+                <div class="day-tab" data-day="Thursday">Perşembe</div>
+                <div class="day-tab" data-day="Friday">Cuma</div>
+            </div>
+            <div class="card">
+                <div id="scheduleTable"><div class="empty-state">Organizasyon seçerek ders programını görüntüleyin.</div></div>
+            </div>
+        </div>
+
+        <!-- ═══ Error Logs ═══ -->
+        <div id="page-logs" class="page-content d-none">
+            <div class="page-header">
+                <div><h1 class="page-title">Hata Logları</h1><p class="page-subtitle">Uygulama hata kayıtları</p></div>
+            </div>
+            <div class="org-selector"><label>Organizasyon:</label><select class="form-select" id="logOrg"></select></div>
+            <div class="card">
+                <h3>Son Loglar</h3>
+                <div id="logList"><div class="loading">Yükleniyor...</div></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

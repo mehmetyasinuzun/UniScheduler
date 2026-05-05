@@ -1,0 +1,250 @@
+package com.unischeduler.ui.admin
+
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.timepicker.MaterialTimePicker
+import com.google.android.material.timepicker.TimeFormat
+import com.unischeduler.data.model.Classroom
+import com.unischeduler.data.model.Lecturer
+import com.unischeduler.data.model.Offering
+import com.unischeduler.data.model.ScheduleEntry
+import com.unischeduler.databinding.FragmentAssignmentBinding
+import com.unischeduler.databinding.ItemScheduleEntryBinding
+import com.unischeduler.util.UiState
+import com.unischeduler.util.collectFlow
+
+class AssignmentFragment : Fragment() {
+
+    private var _binding: FragmentAssignmentBinding? = null
+    private val binding get() = _binding!!
+    private val viewModel: AssignmentViewModel by viewModels()
+
+    private var offerings: List<Offering>   = emptyList()
+    private var lecturers: List<Lecturer>   = emptyList()
+    private var classrooms: List<Classroom> = emptyList()
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        _binding = FragmentAssignmentBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        binding.rvEntries.layoutManager = LinearLayoutManager(requireContext())
+        binding.btnRetry.setOnClickListener { viewModel.loadForm() }
+        binding.btnAssign.setOnClickListener { onAssignClicked(force = false) }
+
+        binding.etStartTime.setOnClickListener {
+            showTimePicker { binding.etStartTime.setText(it) }
+        }
+        binding.etEndTime.setOnClickListener {
+            showTimePicker { binding.etEndTime.setText(it) }
+        }
+
+        collectFlow(viewModel.formState) { state ->
+            when (state) {
+                is UiState.Idle    -> viewModel.loadForm()
+                is UiState.Loading -> showLoading(true)
+                is UiState.Error   -> showError(state.message, state.retryable)
+                is UiState.Success -> {
+                    showLoading(false)
+                    populateForm(state.data)
+                }
+            }
+        }
+
+        collectFlow(viewModel.saveState) { state ->
+            when (state) {
+                is UiState.Idle    -> Unit
+                is UiState.Loading -> binding.btnAssign.isEnabled = false
+                is UiState.Error   -> {
+                    binding.btnAssign.isEnabled    = true
+                    binding.tvSaveError.text       = state.message
+                    binding.tvSaveError.visibility = View.VISIBLE
+                }
+                is UiState.Success -> {
+                    binding.btnAssign.isEnabled    = true
+                    binding.tvSaveError.visibility = View.GONE
+                    Toast.makeText(requireContext(), "Assigned successfully!", Toast.LENGTH_SHORT).show()
+                    viewModel.resetSaveState()
+                }
+            }
+        }
+
+        collectFlow(viewModel.warningState) { warnings ->
+            if (warnings != null && warnings.hasIssues) {
+                showWarningDialog(warnings)
+            }
+        }
+    }
+
+    private fun populateForm(data: AssignmentFormData) {
+        offerings  = data.offerings
+        lecturers  = data.lecturers
+        classrooms = data.classrooms
+
+        val offeringNames  = offerings.map { it.displayName }
+        val lecturerNames  = lecturers.map { it.fullName }
+        val classroomNames = classrooms.map { it.roomCode }
+
+        binding.actvOffering.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, offeringNames))
+        binding.actvLecturer.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, lecturerNames))
+        binding.actvClassroom.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, classroomNames))
+        binding.spinnerDay.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, data.days)
+
+        // Set threshold to show all items on click
+        binding.actvOffering.threshold = 1
+        binding.actvLecturer.threshold = 1
+        binding.actvClassroom.threshold = 1
+
+        binding.rvEntries.adapter = ScheduleEntryAdapter(data.entries) { entry ->
+            showDeleteConfirmation(entry)
+        }
+    }
+
+    private fun onAssignClicked(force: Boolean) {
+        if (offerings.isEmpty() || lecturers.isEmpty() || classrooms.isEmpty()) return
+
+        val offeringText  = binding.actvOffering.text.toString()
+        val lecturerText  = binding.actvLecturer.text.toString()
+        val classroomText = binding.actvClassroom.text.toString()
+
+        val offeringIdx  = offerings.indexOfFirst { it.displayName == offeringText }
+        val lecturerIdx  = lecturers.indexOfFirst { it.fullName == lecturerText }
+        val classroomIdx = classrooms.indexOfFirst { it.roomCode == classroomText }
+
+        if (offeringIdx < 0 || lecturerIdx < 0 || classroomIdx < 0) {
+            binding.tvSaveError.text = "Please select valid options from the dropdowns."
+            binding.tvSaveError.visibility = View.VISIBLE
+            return
+        }
+
+        viewModel.assign(
+            offeringId = offerings[offeringIdx].id,
+            lecturerId = lecturers[lecturerIdx].id,
+            classroomId = classrooms[classroomIdx].id,
+            day = binding.spinnerDay.selectedItem.toString(),
+            startTime = binding.etStartTime.text?.toString().orEmpty(),
+            endTime = binding.etEndTime.text?.toString().orEmpty(),
+            force = force
+        )
+    }
+
+    private fun showDeleteConfirmation(entry: ScheduleEntry) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Delete Assignment")
+            .setMessage("Remove ${entry.courseCode} (${entry.day} ${entry.timeRange})?")
+            .setPositiveButton("Delete") { _, _ -> viewModel.deleteEntry(entry.id) }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showLoading(loading: Boolean) {
+        binding.progressBar.visibility = if (loading) View.VISIBLE else View.GONE
+        binding.tvError.visibility     = View.GONE
+        binding.btnRetry.visibility    = View.GONE
+    }
+
+    private fun showError(msg: String, retryable: Boolean) {
+        binding.progressBar.visibility = View.GONE
+        binding.tvError.text           = msg
+        binding.tvError.visibility     = View.VISIBLE
+        binding.btnRetry.visibility    = if (retryable) View.VISIBLE else View.GONE
+    }
+
+    private fun showTimePicker(onTimeSelected: (String) -> Unit) {
+        val picker = MaterialTimePicker.Builder()
+            .setTimeFormat(TimeFormat.CLOCK_24H)
+            .setHour(9)
+            .setMinute(0)
+            .setTitleText("Select time")
+            .build()
+
+        picker.addOnPositiveButtonClickListener {
+            val time = String.format("%02d:%02d", picker.hour, picker.minute)
+            onTimeSelected(time)
+        }
+
+        picker.show(parentFragmentManager, "timePicker")
+    }
+
+    private fun showWarningDialog(warnings: AssignmentWarnings) {
+        val messages = mutableListOf<String>()
+
+        // Availability warning
+        if (warnings.availabilityWarning != null) {
+            messages.add("⚠ ${warnings.availabilityWarning}")
+            messages.add("")
+        }
+
+        // Schedule conflicts
+        val conflicts = warnings.conflicts
+        if (conflicts != null) {
+            if (conflicts.lecturerConflicts.isNotEmpty()) {
+                messages.add("Lecturer conflicts:")
+                conflicts.lecturerConflicts.forEach {
+                    messages.add("- ${it.courseCode} ${it.timeRange} (${it.classroomCode})")
+                }
+            }
+            if (conflicts.classroomConflicts.isNotEmpty()) {
+                if (messages.isNotEmpty()) messages.add("")
+                messages.add("Classroom conflicts:")
+                conflicts.classroomConflicts.forEach {
+                    messages.add("- ${it.courseCode} ${it.timeRange} (${it.lecturerName})")
+                }
+            }
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Warnings")
+            .setMessage(messages.joinToString("\n"))
+            .setPositiveButton("Continue Anyway") { _, _ ->
+                viewModel.clearWarnings()
+                onAssignClicked(force = true)
+            }
+            .setNegativeButton("Cancel") { _, _ -> viewModel.clearWarnings() }
+            .show()
+    }
+
+    override fun onDestroyView() { super.onDestroyView(); _binding = null }
+}
+
+class ScheduleEntryAdapter(
+    private val items: List<ScheduleEntry>,
+    private val onDeleteClick: (ScheduleEntry) -> Unit
+) : RecyclerView.Adapter<ScheduleEntryAdapter.VH>() {
+
+    inner class VH(val binding: ItemScheduleEntryBinding) :
+        RecyclerView.ViewHolder(binding.root)
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
+        VH(ItemScheduleEntryBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+
+    override fun getItemCount() = maxOf(items.size, 1)
+
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        if (items.isEmpty()) {
+            holder.binding.tvCourse.text   = "No assignments yet."
+            holder.binding.tvLecturer.text = ""
+            holder.binding.tvSlot.text     = ""
+            holder.binding.btnDelete.visibility = View.GONE
+            return
+        }
+        val e = items[position]
+        holder.binding.tvCourse.text        = "${e.courseCode} — ${e.courseName}"
+        holder.binding.tvLecturer.text      = e.lecturerName
+        holder.binding.tvSlot.text          = "${e.day} ${e.timeRange} • ${e.classroomCode}"
+        holder.binding.btnDelete.visibility = View.VISIBLE
+        holder.binding.btnDelete.setOnClickListener { onDeleteClick(e) }
+    }
+}

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/loginFragment">
+
+    <!-- ── Auth ─────────────────────────────────────────────────────── -->
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="com.unischeduler.ui.auth.LoginFragment"
+        android:label="Login">
+        <action
+            android:id="@+id/action_login_to_adminHome"
+            app:destination="@id/adminHomeFragment"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_login_to_lecturerHome"
+            app:destination="@id/lecturerHomeFragment"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_login_to_passwordChange"
+            app:destination="@id/passwordChangeFragment"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/passwordChangeFragment"
+        android:name="com.unischeduler.ui.auth.PasswordChangeFragment"
+        android:label="Change Password">
+        <action
+            android:id="@+id/action_passwordChange_to_lecturerHome"
+            app:destination="@id/lecturerHomeFragment"
+            app:popUpTo="@id/passwordChangeFragment"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_passwordChange_to_adminHome"
+            app:destination="@id/adminHomeFragment"
+            app:popUpTo="@id/passwordChangeFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <!-- ── Admin ─────────────────────────────────────────────────────── -->
+    <fragment
+        android:id="@+id/adminHomeFragment"
+        android:name="com.unischeduler.ui.admin.AdminHomeFragment"
+        android:label="Home" />
+
+    <fragment
+        android:id="@+id/adminCalendarFragment"
+        android:name="com.unischeduler.ui.admin.AdminCalendarFragment"
+        android:label="Calendar" />
+
+    <fragment
+        android:id="@+id/dataFragment"
+        android:name="com.unischeduler.ui.admin.DataFragment"
+        android:label="Data" />
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.unischeduler.ui.admin.SettingsFragment"
+        android:label="Settings" />
+
+    <fragment
+        android:id="@+id/classroomsFragment"
+        android:name="com.unischeduler.ui.admin.ClassroomsFragment"
+        android:label="Classrooms">
+        <action
+            android:id="@+id/action_classrooms_to_assignment"
+            app:destination="@id/assignmentFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/assignmentFragment"
+        android:name="com.unischeduler.ui.admin.AssignmentFragment"
+        android:label="Assign Schedule" />
+
+    <!-- ── Lecturer ───────────────────────────────────────────────────── -->
+    <fragment
+        android:id="@+id/lecturerHomeFragment"
+        android:name="com.unischeduler.ui.lecturer.LecturerHomeFragment"
+        android:label="Home" />
+
+    <fragment
+        android:id="@+id/availabilityFragment"
+        android:name="com.unischeduler.ui.lecturer.AvailabilityFragment"
+        android:label="Availability" />
+
+    <fragment
+        android:id="@+id/calendarFragment"
+        android:name="com.unischeduler.ui.lecturer.CalendarFragment"
+        android:label="My Schedule" />
+
+</navigation>
