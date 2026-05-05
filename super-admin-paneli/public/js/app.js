@@ -176,7 +176,8 @@ async function loadDashboard() {
     if (!orgId) return;
     var results = await Promise.all([
         apiFetch('/api/stats/' + orgId), apiFetch('/api/departments/' + orgId),
-        apiFetch('/api/lecturers/' + orgId), apiFetch('/api/courses/' + orgId), apiFetch('/api/classrooms/' + orgId)
+        apiFetch('/api/lecturers/' + orgId), apiFetch('/api/courses/' + orgId), apiFetch('/api/classrooms/' + orgId),
+        apiFetch('/api/settings/' + orgId)
     ]);
     var stats = await results[0].json();
     document.getElementById('dashStats').innerHTML =
@@ -186,6 +187,11 @@ async function loadDashboard() {
         '<div class="stat-card"><div class="number">' + stats.classrooms + '</div><div class="label">Sınıf</div></div>' +
         '<div class="stat-card"><div class="number">' + stats.offerings + '</div><div class="label">Açılan Ders</div></div>' +
         '<div class="stat-card"><div class="number">' + stats.scheduleEntries + '</div><div class="label">Program Kaydı</div></div>';
+
+    var settings = await results[5].json();
+    document.getElementById('setTimeStep').value = settings.time_step_minutes || 10;
+    document.getElementById('setDayStart').value = settings.day_start || '08:00';
+    document.getElementById('setDayEnd').value = settings.day_end || '18:00';
 
     var depts = await results[1].json();
     populateCourseDeptSelect(depts);
@@ -248,6 +254,21 @@ function populateClassroomDeptSelect(depts) {
     var el = document.getElementById('classroomDept');
     if (!el) return;
     el.innerHTML = '<option value="">—</option>' + depts.map(function(d) { return '<option value="' + d.id + '">' + d.name + '</option>'; }).join('');
+}
+
+async function saveSettings() {
+    var orgId = document.getElementById('dashOrg').value;
+    if (!orgId) return;
+    var timeStep = document.getElementById('setTimeStep').value;
+    var dayStart = document.getElementById('setDayStart').value;
+    var dayEnd = document.getElementById('setDayEnd').value;
+    var res = await apiFetch('/api/settings/' + orgId, {
+        method: 'PUT',
+        body: JSON.stringify({ timeStepMinutes: timeStep, dayStart: dayStart, dayEnd: dayEnd })
+    });
+    var data = await res.json();
+    if (data.error) return showAlert('settingsAlert', data.error, 'error');
+    showAlert('settingsAlert', 'Kurum ayarları kaydedildi!', 'success');
 }
 
 async function addLecturer() {
@@ -503,6 +524,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('btnAddAvail').addEventListener('click', addAvailability);
     document.getElementById('btnAddLec').addEventListener('click', addLecturer);
     document.getElementById('btnAddClassroom').addEventListener('click', addClassroom);
+    document.getElementById('btnSaveSettings').addEventListener('click', saveSettings);
 
     // Excel Export
     document.getElementById('btnExportLecturers').addEventListener('click', function() { exportExcel('lecturers'); });

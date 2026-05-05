@@ -245,6 +245,25 @@ app.get('/api/stats/:orgId', async (req, res) => {
     });
 });
 
+// ═══ Org Settings ════════════════════════════════════════════════════
+app.get('/api/settings/:orgId', async (req, res) => {
+    const { data, error } = await supabase.from('org_settings').select('*').eq('org_id', req.params.orgId).single();
+    if (error && error.code !== 'PGRST116') return res.status(500).json({ error: error.message });
+    res.json(data || { org_id: req.params.orgId, time_step_minutes: 10, day_start: '08:00', day_end: '18:00' });
+});
+
+app.put('/api/settings/:orgId', async (req, res) => {
+    const { timeStepMinutes, dayStart, dayEnd } = req.body;
+    const { data, error } = await supabase.from('org_settings').upsert({
+        org_id: parseInt(req.params.orgId),
+        time_step_minutes: parseInt(timeStepMinutes) || 10,
+        day_start: dayStart || '08:00',
+        day_end: dayEnd || '18:00'
+    }).select().single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+});
+
 // ═══ Departments ═════════════════════════════════════════════════════
 app.get('/api/departments/:orgId', async (req, res) => {
     const { data, error } = await supabase.from('departments').select('*').eq('org_id', req.params.orgId).order('name');

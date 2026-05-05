@@ -93,6 +93,29 @@
             </div>
             <div class="org-selector"><label>Organizasyon:</label><select class="form-select" id="dashOrg"></select></div>
             <div id="dashStats" class="stats-grid"></div>
+            
+            <div class="card bg-light">
+                <h3>Kurum Ayarları <small class="text-muted">(Takvim & Ders Süreleri)</small></h3>
+                <div class="row g-2 align-items-end mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Ders Dilimi Süresi (dk)</label>
+                        <input type="number" class="form-control" id="setTimeStep" value="10" min="5" step="5" title="Örn: 40 dk ders + 10 dk mola = 50 dk dilim, veya daha detaylı 10 dk dilimler">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Mesai Başlangıç</label>
+                        <input type="time" class="form-control" id="setDayStart" value="08:00">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Mesai Bitiş</label>
+                        <input type="time" class="form-control" id="setDayEnd" value="18:00">
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-primary btn-sm" id="btnSaveSettings">Ayarları Kaydet</button>
+                    </div>
+                </div>
+                <div id="settingsAlert" class="mt-2"></div>
+                <small class="text-muted">Not: Dilim süresi (Time Step), mobilde takvimin kaç dakikalık bloklar halinde çizileceğini belirler. Standart 45 dakikalık dersleriniz varsa ve hep saat başında başlıyorsa bunu 60 yapabilirsiniz.</small>
+            </div>
             <div class="card">
                 <h3>Bölümler</h3>
                 <div class="row g-2 align-items-end mb-3">
