@@ -160,7 +160,7 @@ app.post('/api/admins', async (req, res) => {
     if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
 
     try {
-        const email = `${username.trim().toLowerCase()}@unischeduler.app`;
+        const email = usernameToEmail(username);
 
         // 1. Create Supabase Auth user via Admin API
         const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
@@ -423,6 +423,12 @@ function generatePassword() {
     return pass;
 }
 
+// Converts username to synthetic email for Supabase Auth
+// Uses dots instead of underscores because some Supabase configs reject underscores
+function usernameToEmail(username) {
+    return username.trim().toLowerCase().replace(/_/g, '.') + '@unischeduler.app';
+}
+
 // ═══ Lecturers CRUD ══════════════════════════════════════════════════
 app.post('/api/lecturers', async (req, res) => {
     const { orgId, title, firstName, lastName, email, departmentId } = req.body;
@@ -432,7 +438,7 @@ app.post('/api/lecturers', async (req, res) => {
     try {
         const username = await generateUniqueUsername(firstName, lastName);
         const password = generatePassword();
-        const emailAddr = `${username}@unischeduler.app`;
+        const emailAddr = usernameToEmail(username);
         
         const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
             email: emailAddr, password, email_confirm: true
@@ -534,7 +540,7 @@ app.post('/api/import/:type/:orgId', upload.single('file'), async (req, res) => 
                     let pwd = (r.password || r.sifre || '').toString();
                     if (!pwd) pwd = generatePassword();
                     
-                    const emailAddr = `${uname}@unischeduler.app`;
+                    const emailAddr = usernameToEmail(uname);
 
                     const { data: authUser, error: authErr } = await supabase.auth.admin.createUser({ email: emailAddr, password: pwd, email_confirm: true });
                     if (authErr) { errors.push(`${firstName} ${lastName}: ${authErr.message}`); continue; }
