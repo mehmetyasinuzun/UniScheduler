@@ -37,6 +37,8 @@ object ErrorMessages {
                 "Account not activated. Contact your administrator."
             msg.contains("user already registered") || msg.contains("already been registered") ->
                 "This username is already taken."
+            msg.contains("rate limit") || msg.contains("too many requests") ->
+                "Too many requests. Please wait a few minutes and try again."
 
             // Database constraint errors
             msg.contains("duplicate key") || msg.contains("unique constraint") || msg.contains("already exists") ->
