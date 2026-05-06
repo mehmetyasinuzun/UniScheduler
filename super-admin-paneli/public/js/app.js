@@ -338,8 +338,6 @@ async function addLecturer() {
     
     if (data.generatedCredentials) {
         showCredentialBanner(data.generatedCredentials.username, data.generatedCredentials.password, firstName + ' ' + lastName);
-        var accLec = document.getElementById('accLecturers');
-        if (accLec && !accLec.classList.contains('show')) new bootstrap.Collapse(accLec, { toggle: true });
     }
     loadDashboard();
 }
@@ -680,44 +678,40 @@ function showAlert(elementId, message, type) {
 }
 
 function showCredentialBanner(username, password, displayName) {
-    // Remove any existing banner
-    var old = document.getElementById('credentialBanner');
-    if (old) old.remove();
+    var target = document.getElementById('lecAlert');
+    if (!target) return;
 
-    var banner = document.createElement('div');
-    banner.id = 'credentialBanner';
-    banner.className = 'credential-banner';
-    banner.innerHTML = 
-        '<span class="cred-dismiss" onclick="this.parentElement.remove()">&times;</span>' +
-        '<div class="cred-title">🔑 ' + escapeHtml(displayName) + ' — Hesap Bilgileri</div>' +
-        '<div class="cred-row">' +
-            '<span class="cred-label">Kullanıcı Adı:</span>' +
-            '<span class="cred-value" id="credUser">' + escapeHtml(username) + '</span>' +
-            '<button class="btn-copy" onclick="copyCredential(\'credUser\', this)">Kopyala</button>' +
-        '</div>' +
-        '<div class="cred-row">' +
-            '<span class="cred-label">Geçici Şifre:</span>' +
-            '<span class="cred-value" id="credPass">' + escapeHtml(password) + '</span>' +
-            '<button class="btn-copy" onclick="copyCredential(\'credPass\', this)">Kopyala</button>' +
-        '</div>' +
-        '<div class="cred-note">⚠️ Bu bilgileri hocaya iletiniz. İlk girişte şifresini değiştirmesi gerekecektir.</div>';
+    var copyText = 'Kullanıcı: ' + username + ' | Şifre: ' + password;
 
-    // Insert at top of main content area
-    var main = document.getElementById('appMain');
-    main.insertBefore(banner, main.firstChild);
-
-    // Scroll to top so the banner is visible
-    main.scrollTop = 0;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function copyCredential(elementId, btn) {
-    var text = document.getElementById(elementId).textContent;
-    navigator.clipboard.writeText(text).then(function() {
-        btn.textContent = 'Kopyalandı!';
-        btn.classList.add('copied');
-        setTimeout(function() { btn.textContent = 'Kopyala'; btn.classList.remove('copied'); }, 2000);
+    target.innerHTML = 
+        '<div class="credential-banner">' +
+            '<span class="cred-dismiss" onclick="this.parentElement.remove()">&times;</span>' +
+            '<div class="cred-title">🔑 ' + escapeHtml(displayName) + '</div>' +
+            '<div class="cred-row">' +
+                '<span class="cred-label">Kullanıcı:</span>' +
+                '<span class="cred-value">' + escapeHtml(username) + '</span>' +
+                '<span style="margin:0 6px;color:#999;">|</span>' +
+                '<span class="cred-label">Şifre:</span>' +
+                '<span class="cred-value">' + escapeHtml(password) + '</span>' +
+                '<button class="btn-copy" id="btnCopyAll">📋 Tümünü Kopyala</button>' +
+            '</div>' +
+            '<div class="cred-note">⚠️ İlk girişte şifre değiştirmesi gerekecektir.</div>' +
+        '</div>';
+    
+    document.getElementById('btnCopyAll').addEventListener('click', function() {
+        navigator.clipboard.writeText(copyText).then(function() {
+            var btn = document.getElementById('btnCopyAll');
+            btn.textContent = '✅ Kopyalandı!';
+            btn.classList.add('copied');
+            setTimeout(function() { btn.textContent = '📋 Tümünü Kopyala'; btn.classList.remove('copied'); }, 2000);
+        });
     });
+
+    // Make sure the lecturer accordion is open so the banner is visible
+    var accLec = document.getElementById('accLecturers');
+    if (accLec && !accLec.classList.contains('show')) {
+        new bootstrap.Collapse(accLec, { toggle: true });
+    }
 }
 
 function escapeHtml(value) {
