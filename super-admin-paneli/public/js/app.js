@@ -624,6 +624,47 @@ function showAlert(elementId, message, type) {
     setTimeout(function() { if (el) el.innerHTML = ''; }, 4000);
 }
 
+function showCredentialBanner(username, password, displayName) {
+    // Remove any existing banner
+    var old = document.getElementById('credentialBanner');
+    if (old) old.remove();
+
+    var banner = document.createElement('div');
+    banner.id = 'credentialBanner';
+    banner.className = 'credential-banner';
+    banner.innerHTML = 
+        '<span class="cred-dismiss" onclick="this.parentElement.remove()">&times;</span>' +
+        '<div class="cred-title">🔑 ' + escapeHtml(displayName) + ' — Hesap Bilgileri</div>' +
+        '<div class="cred-row">' +
+            '<span class="cred-label">Kullanıcı Adı:</span>' +
+            '<span class="cred-value" id="credUser">' + escapeHtml(username) + '</span>' +
+            '<button class="btn-copy" onclick="copyCredential(\'credUser\', this)">Kopyala</button>' +
+        '</div>' +
+        '<div class="cred-row">' +
+            '<span class="cred-label">Geçici Şifre:</span>' +
+            '<span class="cred-value" id="credPass">' + escapeHtml(password) + '</span>' +
+            '<button class="btn-copy" onclick="copyCredential(\'credPass\', this)">Kopyala</button>' +
+        '</div>' +
+        '<div class="cred-note">⚠️ Bu bilgileri hocaya iletiniz. İlk girişte şifresini değiştirmesi gerekecektir.</div>';
+
+    // Insert at top of main content area
+    var main = document.getElementById('appMain');
+    main.insertBefore(banner, main.firstChild);
+
+    // Scroll to top so the banner is visible
+    main.scrollTop = 0;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function copyCredential(elementId, btn) {
+    var text = document.getElementById(elementId).textContent;
+    navigator.clipboard.writeText(text).then(function() {
+        btn.textContent = 'Kopyalandı!';
+        btn.classList.add('copied');
+        setTimeout(function() { btn.textContent = 'Kopyala'; btn.classList.remove('copied'); }, 2000);
+    });
+}
+
 function escapeHtml(value) {
     return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
