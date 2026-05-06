@@ -403,9 +403,64 @@ async function importExcel(type, file, alertId) {
         if (data.error) { showAlert(alertId, data.error, 'error'); return; }
         var msg = data.message || (data.inserted + ' kayıt eklendi.');
         if (data.errors && data.errors.length > 0) msg += ' Hatalar: ' + data.errors.join(', ');
+        
+        // If lecturer import returned credentials, show download button
+        if (type === 'lecturers' && data.credentials && data.credentials.length > 0) {
+            msg += '<br><button class="btn btn-primary btn-sm mt-2" onclick=\'downloadCredentialsExcel(' + JSON.stringify(data.credentials).replace(/'/g, "\\'") + ', "import_sifreler.xlsx")\'>📥 Şifreleri Excel Olarak İndir</button>';
+        }
         showAlert(alertId, msg, 'success');
+        // Don't auto-dismiss if there are credentials to download
+        if (type === 'lecturers' && data.credentials && data.credentials.length > 0) {
+            var alertEl = document.getElementById(alertId);
+            if (alertEl) alertEl.querySelector('.alert-box').style.animation = 'none';
+        }
         loadDashboard();
     } catch(e) { showAlert(alertId, 'Yükleme hatası: ' + e.message, 'error'); }
+}
+
+function downloadCredentialsExcel(credentials, filename) {
+    // Build Excel data
+    var data = credentials.map(function(c) {
+        return {
+            'Ad': c.ad,
+            'Soyad': c.soyad,
+            'Unvan': c.unvan || '',
+            'Kullanıcı Adı': c.kullanici_adi,
+            'Geçici Şifre': c.gecici_sifre || c.yeni_sifre || ''
+        };
+    });
+    // Use XLSX library loaded on the server — we'll create a simple CSV download instead
+    var csv = '\uFEFF' + 'Ad,Soyad,Unvan,Kullanıcı Adı,Geçici Şifre\n';
+    credentials.forEach(function(c) {
+        csv += '"' + (c.ad||'') + '","' + (c.soyad||'') + '","' + (c.unvan||'') + '","' + (c.kullanici_adi||'') + '","' + (c.gecici_sifre || c.yeni_sifre || '') + '"\n';
+    });
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename.replace('.xlsx', '.csv');
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+
+async function bulkResetPasswords() {
+    var orgId = document.getElementById('dashOrg').value;
+    if (!orgId) { alert('Önce organizasyon seçin.'); return; }
+    if (!confirm('⚠️ Bu organizasyondaki TÜM akademisyenlerin şifreleri sıfırlanacak!\n\nDevam etmek istiyor musunuz?')) return;
+    
+    try {
+        var res = await apiFetch('/api/lecturers/bulk-reset/' + orgId, { method: 'POST' });
+        var data = await res.json();
+        if (data.error) { alert('Hata: ' + data.error); return; }
+        
+        if (data.credentials && data.credentials.length > 0) {
+            downloadCredentialsExcel(data.credentials, 'toplu_sifreler.csv');
+            alert('✅ ' + data.reset + ' akademisyenin şifresi sıfırlandı.\nŞifre listesi otomatik olarak indiriliyor.');
+        }
+        if (data.errors && data.errors.length > 0) {
+            console.warn('Bulk reset errors:', data.errors);
+        }
+        loadDashboard();
+    } catch(e) { alert('Hata: ' + e.message); }
 }
 
 function exportExcel(type) {
@@ -703,6 +758,9 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('btnExportLecturers').addEventListener('click', function() { exportExcel('lecturers'); });
     document.getElementById('btnExportCourses').addEventListener('click', function() { exportExcel('courses'); });
     document.getElementById('btnExportClassrooms').addEventListener('click', function() { exportExcel('classrooms'); });
+
+    // Bulk reset
+    document.getElementById('btnBulkReset').addEventListener('click', bulkResetPasswords);
 
     // Excel Import
     document.getElementById('importLecturers').addEventListener('change', function(e) { if (e.target.files[0]) importExcel('lecturers', e.target.files[0], 'importLecAlert'); e.target.value = ''; });

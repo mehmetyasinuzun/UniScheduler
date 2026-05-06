@@ -481,11 +481,48 @@ app.delete('/api/lecturers/:id', async (req, res) => {
     try {
         const { data: lec } = await supabase.from('lecturers').select('user_id').eq('id', req.params.id).single();
         if (lec && lec.user_id) {
-            await supabase.auth.admin.deleteUser(lec.user_id);
+            await supabase.auth.admin.deleteUser(lec.user_id).catch(() => {});
+            await supabase.from('users').delete().eq('id', lec.user_id).catch(() => {});
         }
-        const { error } = await supabase.from('lecturers').delete().eq('id', req.params.id);
-        if (error) return res.status(400).json({ error: error.message });
+        await supabase.from('lecturers').delete().eq('id', req.params.id);
         res.json({ ok: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ═══ Bulk Password Reset — resets ALL lecturers in an org and returns credentials ═══
+app.post('/api/lecturers/bulk-reset/:orgId', async (req, res) => {
+    try {
+        const orgId = req.params.orgId;
+        const { data: lecturers } = await supabase
+            .from('lecturers')
+            .select('id, title, first_name, last_name, user_id, users(username)')
+            .eq('org_id', orgId)
+            .order('last_name');
+
+        if (!lecturers || lecturers.length === 0)
+            return res.status(400).json({ error: 'Bu organizasyonda akademisyen bulunamadı.' });
+
+        const credentials = [];
+        const errors = [];
+
+        for (const lec of lecturers) {
+            if (!lec.user_id) { errors.push(`${lec.first_name} ${lec.last_name}: Kullanıcı kaydı eksik.`); continue; }
+            try {
+                const newPwd = generatePassword();
+                const { error: authErr } = await supabase.auth.admin.updateUserById(lec.user_id, { password: newPwd });
+                if (authErr) { errors.push(`${lec.first_name} ${lec.last_name}: ${authErr.message}`); continue; }
+                await supabase.from('users').update({ must_change_password: true }).eq('id', lec.user_id);
+                credentials.push({
+                    ad: lec.first_name,
+                    soyad: lec.last_name,
+                    unvan: lec.title || '',
+                    kullanici_adi: lec.users ? lec.users.username : '—',
+                    yeni_sifre: newPwd
+                });
+            } catch (e) { errors.push(`${lec.first_name} ${lec.last_name}: ${e.message}`); }
+        }
+
+        res.json({ reset: credentials.length, credentials, errors });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -528,6 +565,7 @@ app.post('/api/import/:type/:orgId', upload.single('file'), async (req, res) => 
         let errors = [];
 
         if (type === 'lecturers') {
+            const credentials = [];
             for (const r of rows) {
                 try {
                     const firstName = (r.first_name || r.ad || r.firstname || r.name || '').toString().trim();
@@ -554,9 +592,11 @@ app.post('/api/import/:type/:orgId', upload.single('file'), async (req, res) => 
                         last_name: lastName,
                         email: (r.email || r.eposta || r.e_posta || '').toString() || null
                     });
+                    credentials.push({ ad: firstName, soyad: lastName, kullanici_adi: uname, gecici_sifre: pwd });
                     inserted++;
                 } catch (e) { errors.push(`Satır hatası: ${e.message}`); }
             }
+            return res.json({ inserted, errors, credentials, message: `${inserted} akademisyen başarıyla eklendi.` });
         } else if (type === 'courses') {
             const records = rows.map(r => ({
                 org_id: parseInt(orgId),
