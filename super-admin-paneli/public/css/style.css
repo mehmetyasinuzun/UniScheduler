@@ -54,18 +54,111 @@ pre { white-space: pre-wrap; word-break: break-word; background: #fafbfc; paddin
 .badge-red { background: #fce4ec; color: #c62828; }
 
 .availability-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
-.avail-slot { padding: 10px; background: #e8f5e9; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+.avail-slot { padding: 10px; background: #fff3e0; border-left: 3px solid #e65100; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
 .avail-slot .time { font-weight: 600; }
 .avail-slot .del-btn { cursor: pointer; color: #c62828; font-weight: bold; padding: 2px 6px; }
 
+/* Accordion */
+.accordion-item { border: 1px solid #e8e8e8; border-radius: 10px !important; margin-bottom: 12px; overflow: hidden; }
+.accordion-button { font-weight: 600; font-size: 15px; color: #333; background: #fff; padding: 16px 20px; }
+.accordion-button:not(.collapsed) { background: #f8fafd; color: #1a1a2e; box-shadow: none; }
+.accordion-button:focus { box-shadow: none; border-color: #4a90d9; }
+.accordion-button::after { width: 14px; height: 14px; background-size: 14px; }
+.accordion-body { padding: 20px; }
+.acc-count { font-size: 12px; font-weight: 400; color: #888; background: #f0f0f0; padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
+
+/* Credential banner */
+.credential-banner { background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%); border: 1px solid #bbdefb; border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; animation: fadeIn 0.3s; }
+.credential-banner .cred-title { font-weight: 700; font-size: 14px; margin-bottom: 10px; color: #1565c0; }
+.credential-banner .cred-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+.credential-banner .cred-label { font-weight: 600; min-width: 100px; color: #555; }
+.credential-banner .cred-value { font-family: 'Courier New', monospace; background: #fff; padding: 4px 10px; border-radius: 6px; border: 1px solid #ddd; user-select: all; font-size: 14px; font-weight: 600; }
+.credential-banner .btn-copy { padding: 2px 8px; font-size: 11px; border-radius: 4px; cursor: pointer; border: 1px solid #aaa; background: #fff; color: #333; }
+.credential-banner .btn-copy:hover { background: #4a90d9; color: #fff; border-color: #4a90d9; }
+.credential-banner .btn-copy.copied { background: #2e7d32; color: #fff; border-color: #2e7d32; }
+.credential-banner .cred-dismiss { float: right; cursor: pointer; color: #888; font-size: 18px; line-height: 1; }
+.credential-banner .cred-dismiss:hover { color: #333; }
+.credential-banner .cred-note { font-size: 12px; color: #666; margin-top: 8px; }
+
+/* Password status badges */
+.status-active { background: #e8f5e9; color: #2e7d32; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.status-pending { background: #fff3e0; color: #e65100; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+
 @media (max-width: 768px) {
-    .sidebar { width: 100%; height: auto; position: relative; }
-    .main { margin-left: 0; }
+    .sidebar { 
+        width: 100%; 
+        height: auto; 
+        position: relative; 
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding: 8px;
+    }
+    .sidebar-header { 
+        padding: 10px 16px; 
+        border-bottom: none;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .sidebar-header h2 { font-size: 16px; }
+    .sidebar-header small { display: none; }
+    .sidebar .section-title { display: none; }
+    .sidebar a { 
+        padding: 8px 12px; 
+        font-size: 12px; 
+        border-left: none; 
+        border-bottom: 2px solid transparent;
+        gap: 4px;
+    }
+    .sidebar a.active { border-left: none; border-bottom-color: #4a90d9; }
+    .sidebar a i { font-size: 16px; }
+    .sidebar a span, .sidebar a { white-space: nowrap; }
+    .sidebar-footer { 
+        margin-top: 0; 
+        padding: 8px; 
+        border-top: none;
+        width: auto;
+    }
+    .sidebar-footer button { padding: 6px 12px; font-size: 12px; }
+
+    .main { 
+        margin-left: 0; 
+        padding: 16px; 
+        min-height: auto;
+        overflow-x: hidden;
+    }
+    .page-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .page-title { font-size: 20px; }
+    .org-selector { flex-direction: column; align-items: stretch; }
+    .org-selector select { max-width: 100%; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .stat-card { padding: 14px; }
+    .stat-card .number { font-size: 22px; }
+
+    .card { padding: 16px; margin-bottom: 14px; }
+    .card h3 { font-size: 14px; }
+
+    /* Tables scroll horizontally */
+    .card table { display: block; overflow-x: auto; white-space: nowrap; }
+    th, td { padding: 8px 10px; font-size: 12px; }
+
+    /* Stack form rows */
+    .row.g-2 { flex-direction: column; }
+    .row.g-2 > [class*="col-"] { width: 100% !important; max-width: 100% !important; flex: none !important; }
+
+    .day-tabs { gap: 4px; }
+    .day-tab { padding: 6px 10px; font-size: 12px; }
+
+    .availability-grid { grid-template-columns: 1fr; }
 }
+
+/* Ensure main content scrolls */
+.main { overflow-y: auto; }
 
 /* Login overlay */
 .login-overlay { position: fixed; inset: 0; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); display: flex; align-items: center; justify-content: center; z-index: 9999; }
-.login-box { background: #fff; padding: 40px; border-radius: 16px; width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.login-box { background: #fff; padding: 40px; border-radius: 16px; width: 380px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
 .login-box h2 { text-align: center; margin-bottom: 6px; font-size: 22px; color: #1a1a2e; }
 .login-box p { text-align: center; color: #888; font-size: 13px; margin-bottom: 24px; }
 .login-error { color: #e74c3c; font-size: 13px; text-align: center; margin-bottom: 12px; min-height: 18px; }

@@ -34,7 +34,7 @@
         <a href="#" data-page="admins" id="nav-admins"><i class="bi bi-people"></i> Admin Kullanıcılar</a>
         <div class="section-title">Veri Görüntüleme</div>
         <a href="#" data-page="dashboard" id="nav-dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
-        <a href="#" data-page="availability" id="nav-availability"><i class="bi bi-calendar-check"></i> Müsaitlik Yönetimi</a>
+        <a href="#" data-page="availability" id="nav-availability"><i class="bi bi-calendar-check"></i> Meşguliyet Yönetimi</a>
         <a href="#" data-page="schedule" id="nav-schedule"><i class="bi bi-table"></i> Ders Programı</a>
         <div class="section-title">İzleme</div>
         <a href="#" data-page="logs" id="nav-logs"><i class="bi bi-exclamation-triangle"></i> Hata Logları</a>
@@ -93,97 +93,116 @@
             </div>
             <div class="org-selector"><label>Organizasyon:</label><select class="form-select" id="dashOrg"></select></div>
             <div id="dashStats" class="stats-grid"></div>
-            
-            <div class="card bg-light">
-                <h3>Kurum Ayarları <small class="text-muted">(Takvim & Ders Süreleri)</small></h3>
-                <div class="row g-2 align-items-end mb-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Ders Dilimi Süresi (dk)</label>
-                        <input type="number" class="form-control" id="setTimeStep" value="10" min="5" step="5" title="Örn: 40 dk ders + 10 dk mola = 50 dk dilim, veya daha detaylı 10 dk dilimler">
+
+            <!-- Credential Banner (shown after add/reset) -->
+            <div id="credentialBanner" class="credential-banner" style="display:none;"></div>
+
+            <div class="accordion" id="dashAccordion">
+                <!-- Kurum Ayarları -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accSettings"><i class="bi bi-gear me-2"></i>Kurum Ayarları <small class="text-muted ms-2">(Takvim & Ders Süreleri)</small></button></h2>
+                    <div id="accSettings" class="accordion-collapse collapse" data-bs-parent="#dashAccordion">
+                        <div class="accordion-body">
+                            <div class="row g-2 align-items-end mb-3">
+                                <div class="col-md-3"><label class="form-label">Ders Dilimi Süresi (dk)</label><input type="number" class="form-control" id="setTimeStep" value="10" min="5" step="5"></div>
+                                <div class="col-md-3"><label class="form-label">Mesai Başlangıç</label><input type="time" class="form-control" id="setDayStart" value="08:00"></div>
+                                <div class="col-md-3"><label class="form-label">Mesai Bitiş</label><input type="time" class="form-control" id="setDayEnd" value="18:00"></div>
+                                <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnSaveSettings">Ayarları Kaydet</button></div>
+                            </div>
+                            <div id="settingsAlert" class="mt-2"></div>
+                            <small class="text-muted">Not: Dilim süresi, mobilde takvimin kaç dakikalık bloklar halinde çizileceğini belirler.</small>
+                        </div>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Mesai Başlangıç</label>
-                        <input type="time" class="form-control" id="setDayStart" value="08:00">
+                </div>
+                <!-- Bölümler -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accDepts"><i class="bi bi-diagram-3 me-2"></i>Bölümler <span class="acc-count" id="countDepts"></span></button></h2>
+                    <div id="accDepts" class="accordion-collapse collapse" data-bs-parent="#dashAccordion">
+                        <div class="accordion-body">
+                            <div class="row g-2 align-items-end mb-3">
+                                <div class="col-md-4"><input type="text" class="form-control" id="newDeptName" placeholder="Yeni bölüm adı..."></div>
+                                <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddDept">Ekle</button></div>
+                            </div>
+                            <div id="deptList"></div>
+                        </div>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Mesai Bitiş</label>
-                        <input type="time" class="form-control" id="setDayEnd" value="18:00">
+                </div>
+                <!-- Akademisyenler -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accLecturers"><i class="bi bi-person-badge me-2"></i>Akademisyenler <span class="acc-count" id="countLecs"></span></button></h2>
+                    <div id="accLecturers" class="accordion-collapse collapse" data-bs-parent="#dashAccordion">
+                        <div class="accordion-body">
+                            <div class="row g-2 align-items-end mb-3">
+                                <div class="col-md-2"><label class="form-label">Unvan</label><input type="text" class="form-control" id="lecTitle" placeholder="Prof. Dr."></div>
+                                <div class="col-md-2"><label class="form-label">Ad</label><input type="text" class="form-control" id="lecFirst" placeholder="Ad"></div>
+                                <div class="col-md-2"><label class="form-label">Soyad</label><input type="text" class="form-control" id="lecLast" placeholder="Soyad"></div>
+                                <div class="col-md-3"><label class="form-label">E-posta <small class="text-muted">(opsiyonel)</small></label><input type="email" class="form-control" id="lecEmail" placeholder="abc@uni.edu.tr"></div>
+                                <div class="col-md-2"><label class="form-label">Bölüm</label><select class="form-select" id="lecDept"></select></div>
+                                <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddLec">Ekle</button></div>
+                            </div>
+                            <div id="lecAlert" class="mt-2"></div>
+                            <div class="d-flex gap-2 mb-3">
+                                <label class="btn btn-outline-success btn-sm mb-0"><i class="bi bi-upload"></i> Excel İçe Aktar <input type="file" accept=".xlsx,.xls" id="importLecturers" hidden></label>
+                                <button class="btn btn-outline-primary btn-sm" id="btnExportLecturers"><i class="bi bi-download"></i> Excel Dışa Aktar</button>
+                            </div>
+                            <div id="importLecAlert"></div>
+                            <div id="lecturerList"><div class="loading">Yükleniyor...</div></div>
+                        </div>
                     </div>
-                    <div class="col-auto">
-                        <button class="btn btn-primary btn-sm" id="btnSaveSettings">Ayarları Kaydet</button>
+                </div>
+                <!-- Dersler -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accCourses"><i class="bi bi-book me-2"></i>Dersler <span class="acc-count" id="countCourses"></span></button></h2>
+                    <div id="accCourses" class="accordion-collapse collapse" data-bs-parent="#dashAccordion">
+                        <div class="accordion-body">
+                            <div class="row g-2 align-items-end mb-3">
+                                <div class="col-md-2"><label class="form-label">Kod</label><input type="text" class="form-control" id="courseCode" placeholder="CS101"></div>
+                                <div class="col-md-3"><label class="form-label">Ad</label><input type="text" class="form-control" id="courseName" placeholder="Ders adı"></div>
+                                <div class="col-md-2"><label class="form-label">Bölüm</label><select class="form-select" id="courseDept"></select></div>
+                                <div class="col-md-1"><label class="form-label">Teori</label><input type="number" class="form-control" id="courseTheory" min="0" value="0"></div>
+                                <div class="col-md-1"><label class="form-label">Lab</label><input type="number" class="form-control" id="courseLab" min="0" value="0"></div>
+                                <div class="col-md-1"><label class="form-label">Kredi</label><input type="number" class="form-control" id="courseCredits" min="0" value="0"></div>
+                                <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddCourse">Ekle</button></div>
+                            </div>
+                            <div id="courseAlert" class="mt-2"></div>
+                            <div class="d-flex gap-2 mb-3">
+                                <label class="btn btn-outline-success btn-sm mb-0"><i class="bi bi-upload"></i> Excel İçe Aktar <input type="file" accept=".xlsx,.xls" id="importCourses" hidden></label>
+                                <button class="btn btn-outline-primary btn-sm" id="btnExportCourses"><i class="bi bi-download"></i> Excel Dışa Aktar</button>
+                            </div>
+                            <div id="importCourseAlert"></div>
+                            <div id="courseList"><div class="loading">Yükleniyor...</div></div>
+                        </div>
                     </div>
                 </div>
-                <div id="settingsAlert" class="mt-2"></div>
-                <small class="text-muted">Not: Dilim süresi (Time Step), mobilde takvimin kaç dakikalık bloklar halinde çizileceğini belirler. Standart 45 dakikalık dersleriniz varsa ve hep saat başında başlıyorsa bunu 60 yapabilirsiniz.</small>
-            </div>
-            <div class="card">
-                <h3>Bölümler</h3>
-                <div class="row g-2 align-items-end mb-3">
-                    <div class="col-md-4"><input type="text" class="form-control" id="newDeptName" placeholder="Yeni bölüm adı..."></div>
-                    <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddDept">Ekle</button></div>
+                <!-- Sınıflar -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accClassrooms"><i class="bi bi-door-open me-2"></i>Sınıflar <span class="acc-count" id="countClassrooms"></span></button></h2>
+                    <div id="accClassrooms" class="accordion-collapse collapse" data-bs-parent="#dashAccordion">
+                        <div class="accordion-body">
+                            <div class="row g-2 align-items-end mb-3">
+                                <div class="col-md-2"><label class="form-label">Oda Kodu</label><input type="text" class="form-control" id="classroomCode" placeholder="A-101"></div>
+                                <div class="col-md-2"><label class="form-label">Kapasite</label><input type="number" class="form-control" id="classroomCapacity" min="1" value="30"></div>
+                                <div class="col-md-2"><label class="form-label">Tür</label><select class="form-select" id="classroomType"><option value="theory">Teori</option><option value="lab">Lab</option></select></div>
+                                <div class="col-md-2"><label class="form-label">Bölüm</label><select class="form-select" id="classroomDept"></select></div>
+                                <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddClassroom">Ekle</button></div>
+                            </div>
+                            <div id="classroomAlert" class="mt-2"></div>
+                            <div class="d-flex gap-2 mb-3">
+                                <label class="btn btn-outline-success btn-sm mb-0"><i class="bi bi-upload"></i> Excel İçe Aktar <input type="file" accept=".xlsx,.xls" id="importClassrooms" hidden></label>
+                                <button class="btn btn-outline-primary btn-sm" id="btnExportClassrooms"><i class="bi bi-download"></i> Excel Dışa Aktar</button>
+                            </div>
+                            <div id="importClassroomAlert"></div>
+                            <div id="classroomList"><div class="loading">Yükleniyor...</div></div>
+                        </div>
+                    </div>
                 </div>
-                <div id="deptList"></div>
-            </div>
-            <div class="card">
-                <h3>Akademisyenler</h3>
-                <div class="row g-2 align-items-end mb-3">
-                    <div class="col-md-2"><label class="form-label">Unvan</label><input type="text" class="form-control" id="lecTitle" placeholder="Prof. Dr."></div>
-                    <div class="col-md-2"><label class="form-label">Ad</label><input type="text" class="form-control" id="lecFirst" placeholder="Ad"></div>
-                    <div class="col-md-2"><label class="form-label">Soyad</label><input type="text" class="form-control" id="lecLast" placeholder="Soyad"></div>
-                    <div class="col-md-3"><label class="form-label">E-posta</label><input type="email" class="form-control" id="lecEmail" placeholder="abc@uni.edu.tr"></div>
-                    <div class="col-md-2"><label class="form-label">Bölüm</label><select class="form-select" id="lecDept"></select></div>
-                    <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddLec">Ekle</button></div>
-                </div>
-                <div id="lecAlert" class="mt-2"></div>
-                <div class="d-flex gap-2 mb-3">
-                    <label class="btn btn-outline-success btn-sm mb-0"><i class="bi bi-upload"></i> Excel İçe Aktar <input type="file" accept=".xlsx,.xls" id="importLecturers" hidden></label>
-                    <button class="btn btn-outline-primary btn-sm" id="btnExportLecturers"><i class="bi bi-download"></i> Excel Dışa Aktar</button>
-                </div>
-                <div id="importLecAlert"></div>
-                <div id="lecturerList"><div class="loading">Yükleniyor...</div></div>
-            </div>
-            <div class="card">
-                <h3>Dersler</h3>
-                <div class="row g-2 align-items-end mb-3">
-                    <div class="col-md-2"><label class="form-label">Kod</label><input type="text" class="form-control" id="courseCode" placeholder="CS101"></div>
-                    <div class="col-md-3"><label class="form-label">Ad</label><input type="text" class="form-control" id="courseName" placeholder="Ders adı"></div>
-                    <div class="col-md-2"><label class="form-label">Bölüm</label><select class="form-select" id="courseDept"></select></div>
-                    <div class="col-md-1"><label class="form-label">Teori</label><input type="number" class="form-control" id="courseTheory" min="0" value="0"></div>
-                    <div class="col-md-1"><label class="form-label">Lab</label><input type="number" class="form-control" id="courseLab" min="0" value="0"></div>
-                    <div class="col-md-1"><label class="form-label">Kredi</label><input type="number" class="form-control" id="courseCredits" min="0" value="0"></div>
-                    <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddCourse">Ekle</button></div>
-                </div>
-                <div id="courseAlert" class="mt-2"></div>
-                <div class="d-flex gap-2 mb-3">
-                    <label class="btn btn-outline-success btn-sm mb-0"><i class="bi bi-upload"></i> Excel İçe Aktar <input type="file" accept=".xlsx,.xls" id="importCourses" hidden></label>
-                    <button class="btn btn-outline-primary btn-sm" id="btnExportCourses"><i class="bi bi-download"></i> Excel Dışa Aktar</button>
-                </div>
-                <div id="importCourseAlert"></div>
-                <div id="courseList"><div class="loading">Yükleniyor...</div></div>
-            </div>
-            <div class="card">
-                <h3>Sınıflar</h3>
-                <div class="row g-2 align-items-end mb-3">
-                    <div class="col-md-2"><label class="form-label">Oda Kodu</label><input type="text" class="form-control" id="classroomCode" placeholder="A-101"></div>
-                    <div class="col-md-2"><label class="form-label">Kapasite</label><input type="number" class="form-control" id="classroomCapacity" min="1" value="30"></div>
-                    <div class="col-md-2"><label class="form-label">Tür</label><select class="form-select" id="classroomType"><option value="theory">Teori</option><option value="lab">Lab</option></select></div>
-                    <div class="col-md-2"><label class="form-label">Bölüm</label><select class="form-select" id="classroomDept"></select></div>
-                    <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddClassroom">Ekle</button></div>
-                </div>
-                <div id="classroomAlert" class="mt-2"></div>
-                <div class="d-flex gap-2 mb-3">
-                    <label class="btn btn-outline-success btn-sm mb-0"><i class="bi bi-upload"></i> Excel İçe Aktar <input type="file" accept=".xlsx,.xls" id="importClassrooms" hidden></label>
-                    <button class="btn btn-outline-primary btn-sm" id="btnExportClassrooms"><i class="bi bi-download"></i> Excel Dışa Aktar</button>
-                </div>
-                <div id="importClassroomAlert"></div>
-                <div id="classroomList"><div class="loading">Yükleniyor...</div></div>
             </div>
         </div>
 
         <!-- ═══ Availability ═══ -->
         <div id="page-availability" class="page-content d-none">
             <div class="page-header">
-                <div><h1 class="page-title">Müsaitlik Yönetimi</h1><p class="page-subtitle">Akademisyenlerin uygunluk saatlerini görüntüleyin ve düzenleyin</p></div>
+                <div><h1 class="page-title">Meşguliyet Yönetimi</h1><p class="page-subtitle">Akademisyenlerin meşgul olduğu saatleri görüntüleyin ve düzenleyin</p></div>
             </div>
             <div class="org-selector"><label>Organizasyon:</label><select class="form-select" id="availOrg"></select></div>
             <div class="card">
@@ -194,7 +213,7 @@
             </div>
             <div id="availabilityContent" style="display:none;">
                 <div class="card">
-                    <h3>Yeni Müsaitlik Ekle</h3>
+                    <h3>Meşgul Zaman Bloğu Ekle</h3>
                     <div class="row g-2 align-items-end">
                         <div class="col-md-3"><label class="form-label">Gün</label>
                             <select class="form-select" id="availDay">
@@ -212,7 +231,7 @@
                     <div id="availAlert" class="mt-2"></div>
                 </div>
                 <div class="card">
-                    <h3>Mevcut Müsaitlik Blokları</h3>
+                    <h3>Mevcut Meşgul Zaman Blokları</h3>
                     <div id="availList"></div>
                 </div>
             </div>

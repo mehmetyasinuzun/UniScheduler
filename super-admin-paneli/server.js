@@ -505,11 +505,14 @@ app.post('/api/import/:type/:orgId', upload.single('file'), async (req, res) => 
         const rawRows = XLSX.utils.sheet_to_json(sheet);
         if (rawRows.length === 0) return res.status(400).json({ error: 'Dosya boş.' });
 
-        // Normalize all column names to lowercase + replace spaces/dashes with underscores
         function normalizeRow(row) {
             const out = {};
             for (const key of Object.keys(row)) {
-                out[key.toLowerCase().replace(/[\s\-]+/g, '_')] = row[key];
+                const normalized = key
+                    .replace(/([a-z])([A-Z])/g, '$1_$2')
+                    .replace(/[\s\-]+/g, '_')
+                    .toLowerCase();
+                out[normalized] = row[key];
             }
             return out;
         }
@@ -588,15 +591,15 @@ app.get('/api/export/:type/:orgId', async (req, res) => {
 
         if (type === 'lecturers') {
             const result = await supabase.from('lecturers').select('title, first_name, last_name, email, departments(name), users(username)').eq('org_id', orgId).order('last_name');
-            data = (result.data || []).map(l => ({ Unvan: l.title, Ad: l.first_name, Soyad: l.last_name, Eposta: l.email || '', Bolum: l.departments ? l.departments.name : '', Kullanici: l.users ? l.users.username : '' }));
+            data = (result.data || []).map(l => ({ Title: l.title, First_Name: l.first_name, Last_Name: l.last_name, Email: l.email || '', Department: l.departments ? l.departments.name : '', Username: l.users ? l.users.username : '' }));
             filename = 'akademisyenler.xlsx';
         } else if (type === 'courses') {
             const result = await supabase.from('courses').select('code, name, theory_hours, lab_hours, credits, departments(name)').eq('org_id', orgId).order('code');
-            data = (result.data || []).map(c => ({ Kod: c.code, Ad: c.name, Teori: c.theory_hours, Lab: c.lab_hours, Kredi: c.credits, Bolum: c.departments ? c.departments.name : '' }));
+            data = (result.data || []).map(c => ({ Code: c.code, Name: c.name, Theory_Hours: c.theory_hours, Lab_Hours: c.lab_hours, Credits: c.credits, Department: c.departments ? c.departments.name : '' }));
             filename = 'dersler.xlsx';
         } else if (type === 'classrooms') {
             const result = await supabase.from('classrooms').select('room_code, capacity, type, departments(name)').eq('org_id', orgId).order('room_code');
-            data = (result.data || []).map(c => ({ OdaKodu: c.room_code, Kapasite: c.capacity, Tur: c.type, Bolum: c.departments ? c.departments.name : '' }));
+            data = (result.data || []).map(c => ({ Room_Code: c.room_code, Capacity: c.capacity, Type: c.type, Department: c.departments ? c.departments.name : '' }));
             filename = 'siniflar.xlsx';
         } else {
             return res.status(400).json({ error: 'Geçersiz export tipi.' });

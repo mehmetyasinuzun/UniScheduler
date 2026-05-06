@@ -172,6 +172,28 @@ async function resetPassword(id) {
     loadAdmins();
 }
 
+// ── Credential Banner ────────────────────────────────────────────
+function showCredentialBanner(username, password, name) {
+    var banner = document.getElementById('credentialBanner');
+    banner.style.display = 'block';
+    banner.innerHTML =
+        '<span class="cred-dismiss" onclick="this.parentElement.style.display=\'none\'">&times;</span>' +
+        '<div class="cred-title"><i class="bi bi-key me-1"></i>' + escapeHtml(name) + ' — Giriş Bilgileri</div>' +
+        '<div class="cred-row"><span class="cred-label">Kullanıcı Adı:</span><span class="cred-value" id="credUser">' + escapeHtml(username) + '</span><button class="btn-copy" onclick="copyCredential(\'credUser\', this)">Kopyala</button></div>' +
+        '<div class="cred-row"><span class="cred-label">Geçici Şifre:</span><span class="cred-value" id="credPass">' + escapeHtml(password) + '</span><button class="btn-copy" onclick="copyCredential(\'credPass\', this)">Kopyala</button></div>' +
+        '<div class="cred-note"><i class="bi bi-info-circle me-1"></i>Bu bilgileri hocayla paylaşın. İlk girişte şifre değişimi istenecektir.</div>';
+    banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function copyCredential(elementId, btn) {
+    var text = document.getElementById(elementId).textContent;
+    navigator.clipboard.writeText(text).then(function() {
+        btn.textContent = 'Kopyalandı!';
+        btn.classList.add('copied');
+        setTimeout(function() { btn.textContent = 'Kopyala'; btn.classList.remove('copied'); }, 2000);
+    });
+}
+
 // ── Dashboard ────────────────────────────────────────────────────
 async function loadDashboard() {
     var orgId = document.getElementById('dashOrg').value;
@@ -199,41 +221,49 @@ async function loadDashboard() {
     populateCourseDeptSelect(depts);
     populateLecDeptSelect(depts);
     populateClassroomDeptSelect(depts);
+    document.getElementById('countDepts').textContent = depts.length;
     if (depts.length === 0) { document.getElementById('deptList').innerHTML = '<div class="empty-state">Bölüm yok.</div>'; }
     else { document.getElementById('deptList').innerHTML = '<table><tr><th>Ad</th><th>ID</th><th></th></tr>' + depts.map(function(d) { return '<tr><td>' + d.name + '</td><td>' + d.id + '</td><td><button class="btn btn-danger btn-sm btn-del-dept" data-id="' + d.id + '">Sil</button></td></tr>'; }).join('') + '</table>'; }
 
     var lecs = await results[2].json();
+    document.getElementById('countLecs').textContent = lecs.length;
     if (lecs.length === 0) { document.getElementById('lecturerList').innerHTML = '<div class="empty-state">Akademisyen yok.</div>'; }
     else {
-        var html = '<table><tr><th>Ad Soyad</th><th>Bölüm</th><th>Kullanıcı</th><th>E-posta</th><th>İşlemler</th></tr>';
-        lecs.forEach(function(l) { 
+        var html = '<table><tr><th>Ad Soyad</th><th>Bölüm</th><th>Kullanıcı</th><th>E-posta</th><th>Durum</th><th>İşlemler</th></tr>';
+        lecs.forEach(function(l) {
             var deptName = l.departments ? l.departments.name : '—';
+            var mustChange = l.users && l.users.must_change_password;
+            var statusHtml = mustChange
+                ? '<span class="status-pending"><i class="bi bi-exclamation-circle me-1"></i>Geçici Şifre</span>'
+                : '<span class="status-active"><i class="bi bi-check-circle me-1"></i>Aktif</span>';
             var encodedData = encodeURIComponent(JSON.stringify(l));
-            html += '<tr><td>' + l.title + ' ' + l.first_name + ' ' + l.last_name + '</td><td>' + deptName + '</td><td><span class="badge badge-blue">@' + (l.users ? l.users.username : '—') + '</span></td><td>' + (l.email || '—') + '</td><td><button class="btn btn-warning btn-sm btn-edit-lec me-1" data-data="' + encodedData + '">Düzenle</button><button class="btn btn-secondary btn-sm btn-reset-lec-pw me-1" data-id="' + l.id + '">Şifre Sıfırla</button><button class="btn btn-danger btn-sm btn-del-lec" data-id="' + l.id + '">Sil</button></td></tr>'; 
+            html += '<tr><td>' + escapeHtml(l.title + ' ' + l.first_name + ' ' + l.last_name) + '</td><td>' + escapeHtml(deptName) + '</td><td><span class="badge badge-blue">@' + escapeHtml(l.users ? l.users.username : '—') + '</span></td><td>' + escapeHtml(l.email || '—') + '</td><td>' + statusHtml + '</td><td><button class="btn btn-warning btn-sm btn-edit-lec me-1" data-data="' + encodedData + '">Düzenle</button><button class="btn btn-secondary btn-sm btn-reset-lec-pw me-1" data-id="' + l.id + '">Şifre Sıfırla</button><button class="btn btn-danger btn-sm btn-del-lec" data-id="' + l.id + '">Sil</button></td></tr>';
         });
         document.getElementById('lecturerList').innerHTML = html + '</table>';
     }
 
     var courses = await results[3].json();
+    document.getElementById('countCourses').textContent = courses.length;
     if (courses.length === 0) { document.getElementById('courseList').innerHTML = '<div class="empty-state">Ders yok.</div>'; }
     else {
         var html2 = '<table><tr><th>Kod</th><th>Ad</th><th>Teori/Lab</th><th>Kredi</th><th>Bölüm</th><th>İşlemler</th></tr>';
-        courses.forEach(function(c) { 
+        courses.forEach(function(c) {
             var deptName = c.departments ? c.departments.name : '—';
             var encodedData = encodeURIComponent(JSON.stringify(c));
-            html2 += '<tr><td><strong>' + c.code + '</strong></td><td>' + c.name + '</td><td>' + c.theory_hours + 'T / ' + c.lab_hours + 'L</td><td>' + c.credits + '</td><td>' + deptName + '</td><td><button class="btn btn-warning btn-sm btn-edit-course me-1" data-data="' + encodedData + '">Düzenle</button><button class="btn btn-danger btn-sm btn-del-course" data-id="' + c.id + '">Sil</button></td></tr>'; 
+            html2 += '<tr><td><strong>' + escapeHtml(c.code) + '</strong></td><td>' + escapeHtml(c.name) + '</td><td>' + c.theory_hours + 'T / ' + c.lab_hours + 'L</td><td>' + c.credits + '</td><td>' + escapeHtml(deptName) + '</td><td><button class="btn btn-warning btn-sm btn-edit-course me-1" data-data="' + encodedData + '">Düzenle</button><button class="btn btn-danger btn-sm btn-del-course" data-id="' + c.id + '">Sil</button></td></tr>';
         });
         document.getElementById('courseList').innerHTML = html2 + '</table>';
     }
 
     var classrooms = await results[4].json();
+    document.getElementById('countClassrooms').textContent = classrooms.length;
     if (classrooms.length === 0) { document.getElementById('classroomList').innerHTML = '<div class="empty-state">Sınıf yok.</div>'; }
     else {
         var html3 = '<table><tr><th>Oda Kodu</th><th>Kapasite</th><th>Tür</th><th>Bölüm</th><th>İşlemler</th></tr>';
-        classrooms.forEach(function(c) { 
+        classrooms.forEach(function(c) {
             var deptName = c.departments ? c.departments.name : '—';
             var encodedData = encodeURIComponent(JSON.stringify(c));
-            html3 += '<tr><td><strong>' + c.room_code + '</strong></td><td>' + c.capacity + '</td><td><span class="badge ' + (c.type === 'lab' ? 'badge-purple' : 'badge-blue') + '">' + c.type + '</span></td><td>' + deptName + '</td><td><button class="btn btn-warning btn-sm btn-edit-classroom me-1" data-data="' + encodedData + '">Düzenle</button><button class="btn btn-danger btn-sm btn-del-classroom" data-id="' + c.id + '">Sil</button></td></tr>'; 
+            html3 += '<tr><td><strong>' + escapeHtml(c.room_code) + '</strong></td><td>' + c.capacity + '</td><td><span class="badge ' + (c.type === 'lab' ? 'badge-purple' : 'badge-blue') + '">' + c.type + '</span></td><td>' + escapeHtml(deptName) + '</td><td><button class="btn btn-warning btn-sm btn-edit-classroom me-1" data-data="' + encodedData + '">Düzenle</button><button class="btn btn-danger btn-sm btn-del-classroom" data-id="' + c.id + '">Sil</button></td></tr>';
         });
         document.getElementById('classroomList').innerHTML = html3 + '</table>';
     }
@@ -307,7 +337,9 @@ async function addLecturer() {
     document.getElementById('lecEmail').value = '';
     
     if (data.generatedCredentials) {
-        alert('Akademisyen başarıyla eklendi!\n\nKullanıcı Adı: ' + data.generatedCredentials.username + '\nŞifre: ' + data.generatedCredentials.password + '\n\nLütfen bu bilgileri hocayla paylaşın. İlk girişte şifre değiştirmesi istenecektir.');
+        showCredentialBanner(data.generatedCredentials.username, data.generatedCredentials.password, firstName + ' ' + lastName);
+        var accLec = document.getElementById('accLecturers');
+        if (accLec && !accLec.classList.contains('show')) new bootstrap.Collapse(accLec, { toggle: true });
     }
     loadDashboard();
 }
@@ -317,7 +349,8 @@ async function resetLecturerPassword(id) {
     var res = await apiFetch('/api/lecturers/' + id + '/reset-password', { method: 'POST' });
     var data = await res.json();
     if (data.error) return alert('Hata: ' + data.error);
-    alert('Şifre başarıyla sıfırlandı!\n\nKullanıcı Adı: ' + data.generatedCredentials.username + '\nYeni Şifre: ' + data.generatedCredentials.password + '\n\nLütfen bu bilgileri hocayla paylaşın.');
+    showCredentialBanner(data.generatedCredentials.username, data.generatedCredentials.password, data.generatedCredentials.username + ' (Şifre Sıfırlandı)');
+    loadDashboard();
 }
 
 async function deleteLecturer(id) {
@@ -425,7 +458,7 @@ async function loadLecturerAvailability() {
 }
 
 function renderAvailability() {
-    if (currentAvailability.length === 0) { document.getElementById('availList').innerHTML = '<div class="empty-state">Müsaitlik kaydı yok.</div>'; return; }
+    if (currentAvailability.length === 0) { document.getElementById('availList').innerHTML = '<div class="empty-state">Meşgul zaman bloğu yok — bu akademisyen tüm saatlerde müsait.</div>'; return; }
     var grouped = {};
     currentAvailability.forEach(function(a) { if (!grouped[a.day]) grouped[a.day] = []; grouped[a.day].push(a); });
     var html = '';
@@ -449,7 +482,7 @@ async function addAvailability() {
     var res = await apiFetch('/api/availability', { method: 'POST', body: JSON.stringify({ lecturerId: lecId, day: day, startTime: startTime, endTime: endTime, orgId: orgId }) });
     var data = await res.json();
     if (data.error) return showAlert('availAlert', data.error, 'error');
-    showAlert('availAlert', 'Müsaitlik eklendi.', 'success');
+    showAlert('availAlert', 'Meşgul zaman bloğu eklendi.', 'success');
     loadLecturerAvailability();
 }
 

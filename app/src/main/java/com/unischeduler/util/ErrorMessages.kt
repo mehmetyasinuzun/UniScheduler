@@ -56,6 +56,14 @@ object ErrorMessages {
             msg.contains("not authenticated") || msg.contains("no api key") ->
                 "Authentication required. Please log in again."
 
+            // Database internal errors — hide from user
+            msg.contains("stack depth") || msg.contains("max_stack_depth") ->
+                "Server configuration error. Please contact your administrator."
+            msg.contains("statement timeout") ->
+                "The server is busy. Please try again in a moment."
+            msg.contains("connection refused") || msg.contains("could not connect") ->
+                "Cannot connect to the server. Please try again later."
+
             // Catch-all
             else -> e.message ?: "An unexpected error occurred. Please try again."
         }

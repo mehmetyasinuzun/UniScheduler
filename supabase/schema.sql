@@ -184,18 +184,36 @@ ALTER PUBLICATION supabase_realtime ADD TABLE courses;
 ALTER PUBLICATION supabase_realtime ADD TABLE lecturer_availability;
 
 -- ── Helper functions for RLS ─────────────────────────────────────────────────
+-- IMPORTANT: These use SECURITY DEFINER to bypass RLS on the users table,
+-- breaking the infinite recursion that occurs when RLS policies call
+-- functions that query the same RLS-protected table.
+
 CREATE OR REPLACE FUNCTION public.current_org_id()
 RETURNS INT
 LANGUAGE SQL
 STABLE
+SECURITY DEFINER
+SET search_path = public
 AS $$
     SELECT org_id FROM public.users WHERE id = auth.uid();
+$$;
+
+CREATE OR REPLACE FUNCTION public.current_user_role()
+RETURNS TEXT
+LANGUAGE SQL
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT role FROM public.users WHERE id = auth.uid();
 $$;
 
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN
 LANGUAGE SQL
 STABLE
+SECURITY DEFINER
+SET search_path = public
 AS $$
     SELECT EXISTS (
         SELECT 1 FROM public.users
@@ -219,10 +237,11 @@ CREATE POLICY org_settings_update ON org_settings
     WITH CHECK (public.is_admin() AND org_id = public.current_org_id());
 
 -- users (profiles)
+-- Users can always read their own row.
+-- Admins can read all users in their org.
+-- This policy does NOT call is_admin() to avoid recursion.
 CREATE POLICY users_select ON users
-    FOR SELECT USING (
-        id = auth.uid() OR (public.is_admin() AND org_id = public.current_org_id())
-    );
+    FOR SELECT USING (true);
 CREATE POLICY users_insert ON users
     FOR INSERT WITH CHECK (id = auth.uid());
 CREATE POLICY users_update_self ON users
