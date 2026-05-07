@@ -662,15 +662,104 @@ app.get('/api/export/:type/:orgId', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ═══ Offerings ══════════════════════════════════════════════════════
+app.get('/api/offerings/:orgId', async (req, res) => {
+    const { data, error } = await supabase
+        .from('offerings')
+        .select('*, courses(*, departments(*)), lecturers(*)')
+        .eq('org_id', req.params.orgId)
+        .order('id');
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+});
+
+app.post('/api/offerings', async (req, res) => {
+    const { orgId, courseId, lecturerId, academicYear, term, classYear, section, capacity } = req.body;
+    if (!orgId || !courseId) return res.status(400).json({ error: 'orgId and courseId required.' });
+    const { data, error } = await supabase.from('offerings').insert({
+        org_id: parseInt(orgId), course_id: parseInt(courseId),
+        lecturer_id: lecturerId ? parseInt(lecturerId) : null,
+        academic_year: academicYear || '2025-2026', term: term || 'Fall',
+        class_year: parseInt(classYear) || 1, section: section || 'A',
+        capacity: parseInt(capacity) || 40
+    }).select('*, courses(*, departments(*)), lecturers(*)').single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+});
+
+app.put('/api/offerings/:id', async (req, res) => {
+    const { courseId, lecturerId, academicYear, term, classYear, section, capacity } = req.body;
+    const update = {};
+    if (courseId) update.course_id = parseInt(courseId);
+    if (lecturerId !== undefined) update.lecturer_id = lecturerId ? parseInt(lecturerId) : null;
+    if (academicYear) update.academic_year = academicYear;
+    if (term) update.term = term;
+    if (classYear) update.class_year = parseInt(classYear);
+    if (section) update.section = section;
+    if (capacity) update.capacity = parseInt(capacity);
+    const { data, error } = await supabase.from('offerings').update(update)
+        .eq('id', req.params.id).select('*, courses(*, departments(*)), lecturers(*)').single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+});
+
+app.delete('/api/offerings/:id', async (req, res) => {
+    const { error } = await supabase.from('offerings').delete().eq('id', req.params.id);
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ ok: true });
+});
+
 // ═══ Schedule ════════════════════════════════════════════════════════
 app.get('/api/schedule/:orgId', async (req, res) => {
     const { data, error } = await supabase
         .from('schedule_entries')
-        .select('*, offerings(*, courses(*)), lecturers(*), classrooms(*)')
+        .select('*, offerings(*, courses(*, departments(*)), lecturers(*)), lecturers(*), classrooms(*)')
         .eq('org_id', req.params.orgId)
         .order('day')
         .order('start_time');
     if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+});
+
+app.post('/api/schedule/bulk', async (req, res) => {
+    const { entries } = req.body;
+    if (!Array.isArray(entries) || !entries.length) return res.status(400).json({ error: 'entries array required.' });
+    const rows = entries.map(e => ({
+        org_id: parseInt(e.orgId), offering_id: parseInt(e.offeringId),
+        lecturer_id: e.lecturerId ? parseInt(e.lecturerId) : null,
+        classroom_id: parseInt(e.classroomId), day: e.day,
+        start_time: e.startTime, end_time: e.endTime
+    }));
+    const { data, error } = await supabase.from('schedule_entries').insert(rows).select('id');
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ inserted: data.length });
+});
+
+app.post('/api/schedule', async (req, res) => {
+    const { orgId, offeringId, lecturerId, classroomId, day, startTime, endTime } = req.body;
+    if (!orgId || !offeringId || !classroomId || !day || !startTime || !endTime)
+        return res.status(400).json({ error: 'All fields required.' });
+    const { data, error } = await supabase.from('schedule_entries').insert({
+        org_id: parseInt(orgId), offering_id: parseInt(offeringId),
+        lecturer_id: lecturerId ? parseInt(lecturerId) : null,
+        classroom_id: parseInt(classroomId), day, start_time: startTime, end_time: endTime
+    }).select('*, offerings(*, courses(*)), lecturers(*), classrooms(*)').single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+});
+
+app.put('/api/schedule/:id', async (req, res) => {
+    const { offeringId, lecturerId, classroomId, day, startTime, endTime } = req.body;
+    const update = {};
+    if (offeringId) update.offering_id = parseInt(offeringId);
+    if (lecturerId !== undefined) update.lecturer_id = lecturerId ? parseInt(lecturerId) : null;
+    if (classroomId) update.classroom_id = parseInt(classroomId);
+    if (day) update.day = day;
+    if (startTime) update.start_time = startTime;
+    if (endTime) update.end_time = endTime;
+    const { data, error } = await supabase.from('schedule_entries').update(update)
+        .eq('id', req.params.id).select('*, offerings(*, courses(*)), lecturers(*), classrooms(*)').single();
+    if (error) return res.status(400).json({ error: error.message });
     res.json(data);
 });
 
@@ -683,7 +772,7 @@ app.delete('/api/schedule/:id', async (req, res) => {
 // ═══ Availability ════════════════════════════════════════════════════
 app.get('/api/availability/:orgId', async (req, res) => {
     const { lecturerId } = req.query;
-    let query = supabase.from('lecturer_availability').select('*').eq('org_id', req.params.orgId);
+    let query = supabase.from('lecturer_availability').select('*, lecturers(first_name, last_name, title)').eq('org_id', req.params.orgId);
     if (lecturerId) query = query.eq('lecturer_id', lecturerId);
     const { data, error } = await query.order('day').order('start_time');
     if (error) return res.status(500).json({ error: error.message });

@@ -1,5 +1,3 @@
-// Classroom repository — CRUD + available classroom query
-// "Available" = has at least one free slot in the week
 package com.unischeduler.data.repository
 
 import com.unischeduler.data.model.Classroom
@@ -8,6 +6,15 @@ import com.unischeduler.data.model.OrgSettings
 import com.unischeduler.data.remote.SupabaseClient.client
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
+private data class ScheduleSlot(
+    @SerialName("classroom_id") val classroomId: Int,
+    @SerialName("start_time") val startTime: String,
+    @SerialName("end_time") val endTime: String
+)
 
 class ClassroomRepository {
 
@@ -45,16 +52,13 @@ class ClassroomRepository {
             .select(Columns.raw("classroom_id, start_time, end_time")) {
                 filter { eq("org_id", orgId) }
             }
-            .decodeList<Map<String, String>>()
+            .decodeList<ScheduleSlot>()
 
         val bookedMinutesByClassroom = mutableMapOf<Int, Int>()
-        for (row in entries) {
-            val classroomId = row["classroom_id"]?.toIntOrNull() ?: continue
-            val start = row["start_time"] ?: continue
-            val end = row["end_time"] ?: continue
-            val minutes = timeDiffMinutes(start, end)
-            bookedMinutesByClassroom[classroomId] =
-                (bookedMinutesByClassroom[classroomId] ?: 0) + minutes
+        for (slot in entries) {
+            val minutes = timeDiffMinutes(slot.startTime, slot.endTime)
+            bookedMinutesByClassroom[slot.classroomId] =
+                (bookedMinutesByClassroom[slot.classroomId] ?: 0) + minutes
         }
 
         return all.filter { (bookedMinutesByClassroom[it.id] ?: 0) < totalWeekMinutes }

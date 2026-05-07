@@ -95,7 +95,7 @@ class AdminCalendarFragment : Fragment() {
         binding.chipGroupFilter.addView(chipAll)
 
         val lecturers = entries.map { it.lecturerName }.distinct().sorted()
-        if (lecturers.size > 1) {
+        if (lecturers.isNotEmpty()) {
             val chipLecturer = createChip("Hocaya Göre")
             chipLecturer.setOnClickListener { showFilterDialog("Hoca Seç", lecturers) { name ->
                 activeFilter = FilterType.LECTURER
@@ -105,8 +105,8 @@ class AdminCalendarFragment : Fragment() {
             binding.chipGroupFilter.addView(chipLecturer)
         }
 
-        val classrooms = entries.map { it.classroomCode }.distinct().sorted()
-        if (classrooms.size > 1) {
+        val classrooms = entries.map { it.classroomCode }.filter { it.isNotBlank() }.distinct().sorted()
+        if (classrooms.isNotEmpty()) {
             val chipClassroom = createChip("Dersliğe Göre")
             chipClassroom.setOnClickListener { showFilterDialog("Derslik Seç", classrooms) { code ->
                 activeFilter = FilterType.CLASSROOM
@@ -117,7 +117,7 @@ class AdminCalendarFragment : Fragment() {
         }
 
         val departments = entries.mapNotNull { it.offerings?.courses?.departments?.name }.distinct().sorted()
-        if (departments.size > 1) {
+        if (departments.isNotEmpty()) {
             val chipDept = createChip("Bölüme Göre")
             chipDept.setOnClickListener { showFilterDialog("Bölüm Seç", departments) { dept ->
                 activeFilter = FilterType.DEPARTMENT

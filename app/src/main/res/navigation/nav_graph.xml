@@ -75,7 +75,16 @@
     <fragment
         android:id="@+id/assignmentFragment"
         android:name="com.unischeduler.ui.admin.AssignmentFragment"
-        android:label="Assign Schedule" />
+        android:label="Assign Schedule">
+        <action
+            android:id="@+id/action_assignment_to_autoSchedule"
+            app:destination="@id/autoScheduleFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/autoScheduleFragment"
+        android:name="com.unischeduler.ui.admin.AutoScheduleFragment"
+        android:label="Auto Schedule" />
 
     <!-- ── Lecturer ───────────────────────────────────────────────────── -->
     <fragment

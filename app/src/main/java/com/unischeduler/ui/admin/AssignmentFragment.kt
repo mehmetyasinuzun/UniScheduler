@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.timepicker.MaterialTimePicker
@@ -44,6 +45,9 @@ class AssignmentFragment : Fragment() {
         binding.rvEntries.layoutManager = LinearLayoutManager(requireContext())
         binding.btnRetry.setOnClickListener { viewModel.loadForm() }
         binding.btnAssign.setOnClickListener { onAssignClicked(force = false) }
+        binding.btnAutoSchedule.setOnClickListener {
+            findNavController().navigate(R.id.action_assignment_to_autoSchedule)
+        }
 
         binding.etStartTime.setOnClickListener {
             showTimePicker { binding.etStartTime.setText(it) }
