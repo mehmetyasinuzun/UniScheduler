@@ -306,21 +306,21 @@ class DataViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ── Offering ──────────────────────────────────────────────────────────────
-    fun addOffering(courseId: Int, academicYear: String, term: String, classYear: Int, section: String, capacity: String) {
+    fun addOffering(courseId: Int, lecturerId: Int?, academicYear: String, term: String, classYear: Int, section: String, capacity: String) {
         val cap = capacity.toIntOrNull() ?: 0
         if (academicYear.isBlank() || term.isBlank() || section.isBlank()) {
-            _offeringAddState.value = UiState.Error("Academic year, term, and section are required.", retryable = false)
+            _offeringAddState.value = UiState.Error("Akademik yıl, dönem ve şube gerekli.", retryable = false)
             return
         }
         if (classYear !in 1..4) {
-            _offeringAddState.value = UiState.Error("Class year must be between 1 and 4.", retryable = false)
+            _offeringAddState.value = UiState.Error("Sınıf yılı 1-4 arasında olmalı.", retryable = false)
             return
         }
         viewModelScope.launch {
             _offeringAddState.value = UiState.Loading
             runCatching {
                 withContext(Dispatchers.IO) {
-                    offeringRepo.insertOffering(courseId, academicYear.trim(), term, classYear, section.trim().uppercase(), cap, session.orgId)
+                    offeringRepo.insertOffering(courseId, lecturerId, academicYear.trim(), term, classYear, section.trim().uppercase(), cap, session.orgId)
                 }
             }.onSuccess { _offeringAddState.value = UiState.Success(Unit); loadOfferings() }
              .onFailure { e ->
@@ -345,11 +345,11 @@ class DataViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun editOffering(id: Int, academicYear: String, term: String, classYear: Int, section: String, capacity: Int) {
+    fun editOffering(id: Int, lecturerId: Int?, academicYear: String, term: String, classYear: Int, section: String, capacity: Int) {
         viewModelScope.launch {
             _offeringEditState.value = UiState.Loading
             runCatching {
-                withContext(Dispatchers.IO) { offeringRepo.updateOffering(id, academicYear, term, classYear, section, capacity, session.orgId) }
+                withContext(Dispatchers.IO) { offeringRepo.updateOffering(id, lecturerId, academicYear, term, classYear, section, capacity, session.orgId) }
             }.onSuccess { _offeringEditState.value = UiState.Success(Unit); loadOfferings() }
              .onFailure { e ->
                 if (e is kotlinx.coroutines.CancellationException) throw e

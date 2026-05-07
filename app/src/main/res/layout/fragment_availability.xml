@@ -121,10 +121,33 @@
         android:text="Retry"
         android:visibility="gone" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvSlots"
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Haftalık Görünüm"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="4dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Yeşil: Müsait  •  Kırmızı: Meşgul  •  Mavi: Atanmış Ders"
+        android:textColor="@color/colorOnSurfaceVariant"
+        android:textSize="11sp"
+        android:layout_marginBottom="8dp" />
+
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1">
+
+        <com.unischeduler.ui.shared.AvailabilityGridView
+            android:id="@+id/availabilityGrid"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+    </ScrollView>
 
 </LinearLayout>

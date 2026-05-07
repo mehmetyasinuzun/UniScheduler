@@ -24,9 +24,8 @@ object CredentialGenerator {
         return "${first}_${last}"
     }
 
-    // Generates a 6-char alphanumeric password (upper + lower + digits)
     fun generatePassword(): String {
-        val chars = ('A'..'Z') + ('a'..'z') + ('0'..'9')
+        val chars = ('A'..'Z') + ('0'..'9')
         return (1..6).map { chars.random() }.joinToString("")
     }
 

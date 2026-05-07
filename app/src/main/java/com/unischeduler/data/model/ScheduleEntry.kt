@@ -11,7 +11,7 @@ data class ScheduleEntry(
     val id: Int = 0,
     @SerialName("org_id")       val orgId: Int = 0,
     @SerialName("offering_id")  val offeringId: Int = 0,
-    @SerialName("lecturer_id")  val lecturerId: Int = 0,
+    @SerialName("lecturer_id")  val lecturerId: Int? = null,
     @SerialName("classroom_id") val classroomId: Int = 0,
     val day: String = "",
     @SerialName("start_time")   val startTime: String = "",
@@ -22,7 +22,7 @@ data class ScheduleEntry(
 ) {
     val courseName: String     get() = offerings?.courses?.name ?: ""
     val courseCode: String     get() = offerings?.courses?.code ?: ""
-    val lecturerName: String   get() = lecturers?.fullName ?: ""
+    val lecturerName: String   get() = lecturers?.fullName ?: "Atanmadı"
     val classroomCode: String  get() = classrooms?.roomCode ?: ""
     val timeRange: String      get() = if (startTime.isNotBlank() && endTime.isNotBlank()) "$startTime-$endTime" else ""
 }

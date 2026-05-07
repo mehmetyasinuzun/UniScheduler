@@ -15,11 +15,10 @@ import io.github.jan.supabase.postgrest.query.Columns
 class AuthRepository {
 
     companion object {
-        /** Maps a plain username to the synthetic email used by Supabase Auth.
-         *  Underscores are replaced with dots because some Supabase Auth configurations
-         *  reject underscores in email local parts. */
-        fun usernameToEmail(username: String): String =
-            "${username.trim().lowercase().replace('_', '.')}@unischeduler.app"
+        fun usernameToEmail(username: String): String {
+            val local = username.trim().lowercase().filter { it.isLetterOrDigit() }
+            return "${local}@unischeduler.app"
+        }
     }
 
     /**

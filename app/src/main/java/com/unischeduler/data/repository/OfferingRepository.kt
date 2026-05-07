@@ -9,15 +9,20 @@ import io.github.jan.supabase.postgrest.query.Columns
 
 class OfferingRepository {
 
+    private val joinColumns = Columns.raw(
+        "*, courses(*, departments(*)), lecturers(*, departments(*), users(*))"
+    )
+
     suspend fun getAllOfferings(orgId: Int): List<Offering> =
         client.postgrest["offerings"]
-            .select(Columns.raw("*, courses(*, departments(*))")) {
+            .select(joinColumns) {
                 filter { eq("org_id", orgId) }
             }
             .decodeList<Offering>()
 
     suspend fun insertOffering(
         courseId: Int,
+        lecturerId: Int?,
         academicYear: String,
         term: String,
         classYear: Int,
@@ -29,6 +34,7 @@ class OfferingRepository {
             OfferingInsert(
                 orgId = orgId,
                 courseId = courseId,
+                lecturerId = lecturerId,
                 academicYear = academicYear,
                 term = term,
                 classYear = classYear,
@@ -38,9 +44,10 @@ class OfferingRepository {
         )
     }
 
-    suspend fun updateOffering(id: Int, academicYear: String, term: String, classYear: Int, section: String, capacity: Int, orgId: Int) {
+    suspend fun updateOffering(id: Int, lecturerId: Int?, academicYear: String, term: String, classYear: Int, section: String, capacity: Int, orgId: Int) {
         client.postgrest["offerings"]
             .update({
+                set("lecturer_id", lecturerId)
                 set("academic_year", academicYear)
                 set("term", term)
                 set("class_year", classYear)

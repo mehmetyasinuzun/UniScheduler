@@ -32,13 +32,17 @@ object ErrorMessages {
 
             // Auth errors
             msg.contains("invalid login credentials") || msg.contains("invalid username or password") ->
-                "Invalid username or password."
+                "Kullanıcı adı veya şifre hatalı."
             msg.contains("email not confirmed") ->
-                "Account not activated. Contact your administrator."
+                "Hesap aktif değil. Yöneticinize başvurun."
             msg.contains("user already registered") || msg.contains("already been registered") ->
-                "This username is already taken."
-            msg.contains("rate limit") || msg.contains("too many requests") ->
-                "Too many requests. Please wait a few minutes and try again."
+                "Bu kullanıcı adı zaten mevcut."
+            msg.contains("email rate limit exceeded") || msg.contains("rate limit") || msg.contains("too many requests") ->
+                "Çok fazla deneme yapıldı. Lütfen birkaç dakika bekleyip tekrar deneyin."
+            msg.contains("email address") && msg.contains("invalid") ->
+                "E-posta formatı geçersiz. Supabase Auth ayarlarını kontrol edin."
+            msg.contains("signup is disabled") ->
+                "Kayıt kapalı. Supabase Auth ayarlarında 'Enable Sign Ups' açık olmalı."
 
             // Database constraint errors
             msg.contains("duplicate key") || msg.contains("unique constraint") || msg.contains("already exists") ->

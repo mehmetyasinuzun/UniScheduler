@@ -41,8 +41,13 @@ class DataFragment : Fragment() {
     private val viewModel: DataViewModel by viewModels()
 
     private var departments: List<Department> = emptyList()
+    private var allCourses: List<Course>         = emptyList()
+    private var allLecturers: List<Lecturer>     = emptyList()
+    private var allOfferings: List<Offering>     = emptyList()
     private var courses: List<Course>         = emptyList()
     private var lecturers: List<Lecturer>     = emptyList()
+
+    private var selectedDeptId: Int? = null
 
     private val academicTitles = listOf("Dr.", "Prof.", "Asst. Prof.", "Lecturer", "Mr.", "Ms.")
     private val terms          = listOf("Fall", "Spring", "Summer")
@@ -127,10 +132,10 @@ class DataFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         setupStaticSpinners()
-        binding.rvLecturers.layoutManager = LinearLayoutManager(requireContext())
+        setupAccordion()
+        setupDefaults()
         binding.rvCourses.layoutManager   = LinearLayoutManager(requireContext())
 
-        // Button listeners
         binding.btnRetryLecturers.setOnClickListener    { viewModel.loadLecturers() }
         binding.btnAddLecturer.setOnClickListener       { onAddLecturerClicked() }
         binding.btnImportLecturers.setOnClickListener   { lecturerImportLauncher.launch("*/*") }
@@ -205,13 +210,9 @@ class DataFragment : Fragment() {
                     binding.progressLecturers.visibility   = View.GONE
                     binding.tvLecturerListError.visibility = View.GONE
                     binding.btnRetryLecturers.visibility   = View.GONE
-                    lecturers = state.data
-                    binding.rvLecturers.adapter = LecturerAdapter(
-                        state.data,
-                        departments,
-                        onEditClick = { showEditLecturerDialog(it) },
-                        onDeleteClick = { showDeleteLecturerDialog(it) }
-                    )
+                    allLecturers = state.data
+                    android.util.Log.d("DataFragment", "Lecturers loaded: ${state.data.size}")
+                    applyDeptFilter()
                 }
             }
         }
@@ -276,12 +277,8 @@ class DataFragment : Fragment() {
             when (state) {
                 is UiState.Idle    -> viewModel.loadCourses()
                 is UiState.Success -> {
-                    courses = state.data
-                    populateCourseSpinner(state.data)
-                    binding.rvCourses.adapter = CourseAdapter(state.data,
-                        onEdit   = { showEditCourseDialog(it) },
-                        onDelete = { showDeleteCourseDialog(it) }
-                    )
+                    allCourses = state.data
+                    applyDeptFilter()
                 }
                 else -> Unit
             }
@@ -344,11 +341,8 @@ class DataFragment : Fragment() {
                 }
                 is UiState.Success -> {
                     binding.progressOfferings.visibility = View.GONE
-                    binding.rvOfferings.adapter = OfferingAdapter(
-                        state.data,
-                        onEditClick = { showEditOfferingDialog(it) },
-                        onDeleteClick = { showDeleteOfferingDialog(it) }
-                    )
+                    allOfferings = state.data
+                    applyDeptFilter()
                 }
             }
         }
@@ -421,6 +415,7 @@ class DataFragment : Fragment() {
         }
         viewModel.addOffering(
             courseId      = courses[binding.spinnerOfferingCourse.selectedItemPosition].id,
+            lecturerId   = getSelectedLecturerId(),
             academicYear = binding.etAcademicYear.text?.toString().orEmpty(),
             term         = terms[binding.spinnerTerm.selectedItemPosition],
             classYear    = classYears[binding.spinnerClassYear.selectedItemPosition],
@@ -539,6 +534,15 @@ class DataFragment : Fragment() {
             .also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
         spinnerYear.setSelection(classYears.indexOf(offering.classYear).takeIf { it >= 0 } ?: 0)
 
+        val lecturerNames = listOf("— Atanmadı —") + lecturers.map { it.fullName }
+        val spinnerLecturer = Spinner(requireContext())
+        spinnerLecturer.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, lecturerNames)
+            .also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        val lecturerIdx = if (offering.lecturerId != null) {
+            lecturers.indexOfFirst { it.id == offering.lecturerId }.takeIf { it >= 0 }?.plus(1) ?: 0
+        } else 0
+        spinnerLecturer.setSelection(lecturerIdx)
+
         layout.addView(etYear)
         layout.addView(TextView(requireContext()).apply { text = "Term" })
         layout.addView(spinnerTerm)
@@ -546,13 +550,18 @@ class DataFragment : Fragment() {
         layout.addView(spinnerYear)
         layout.addView(etSection)
         layout.addView(etCap)
+        layout.addView(TextView(requireContext()).apply { text = "Lecturer" })
+        layout.addView(spinnerLecturer)
 
         AlertDialog.Builder(requireContext())
             .setTitle("Edit Offering")
             .setView(ScrollView(requireContext()).apply { addView(layout) })
             .setPositiveButton("Save") { _, _ ->
+                val selectedLecturerId = if (spinnerLecturer.selectedItemPosition > 0)
+                    lecturers[spinnerLecturer.selectedItemPosition - 1].id else null
                 viewModel.editOffering(
                     id = offering.id,
+                    lecturerId = selectedLecturerId,
                     academicYear = etYear.text.toString(),
                     term = terms[spinnerTerm.selectedItemPosition],
                     classYear = classYears[spinnerYear.selectedItemPosition],
@@ -692,6 +701,40 @@ class DataFragment : Fragment() {
         tv.visibility = View.VISIBLE
     }
 
+    private fun setupAccordion() {
+        fun toggle(content: View, arrow: View) {
+            if (content.visibility == View.GONE) {
+                content.visibility = View.VISIBLE
+                arrow.rotation = 180f
+            } else {
+                content.visibility = View.GONE
+                arrow.rotation = 0f
+            }
+        }
+
+        binding.headerLecturers.setOnClickListener {
+            toggle(binding.contentLecturers, binding.ivExpandLecturers)
+        }
+        binding.headerCourses.setOnClickListener {
+            toggle(binding.contentCourses, binding.ivExpandCourses)
+        }
+        binding.headerOfferings.setOnClickListener {
+            toggle(binding.contentOfferings, binding.ivExpandOfferings)
+        }
+    }
+
+    private fun setupDefaults() {
+        val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+        val month = java.util.Calendar.getInstance().get(java.util.Calendar.MONTH)
+        val academicYear = if (month >= 8) "$year-${year + 1}" else "${year - 1}-$year"
+        binding.etAcademicYear.setText(academicYear)
+
+        val termIdx = if (month in 1..6) 1 else 0
+        binding.spinnerTerm.setSelection(termIdx)
+
+        binding.etSection.setText("A")
+    }
+
     private fun setupStaticSpinners() {
         binding.spinnerTitle.adapter = ArrayAdapter(
             requireContext(), android.R.layout.simple_spinner_item, academicTitles
@@ -714,12 +757,92 @@ class DataFragment : Fragment() {
         binding.spinnerCourseDept.adapter   = ArrayAdapter(
             requireContext(), android.R.layout.simple_spinner_item, names
         ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+
+        val filterNames = listOf("Tüm Bölümler") + names
+        binding.spinnerDeptFilter.adapter = ArrayAdapter(
+            requireContext(), android.R.layout.simple_spinner_item, filterNames
+        ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+
+        binding.spinnerDeptFilter.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, pos: Int, id: Long) {
+                selectedDeptId = if (pos == 0) null else depts[pos - 1].id
+                applyDeptFilter()
+
+                if (pos > 0) {
+                    binding.spinnerLecturerDept.setSelection(pos - 1)
+                    binding.spinnerCourseDept.setSelection(pos - 1)
+                }
+            }
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+        }
+    }
+
+    private fun applyDeptFilter() {
+        val deptId = selectedDeptId
+
+        val filteredLecturers = if (deptId != null) allLecturers.filter { it.departmentId == deptId } else allLecturers
+        lecturers = filteredLecturers
+        populateLecturerSpinner()
+        binding.tvLecturerHeader.text = "Hocalar (${filteredLecturers.size})"
+        populateLecturerList(filteredLecturers)
+
+        val filteredCourses = if (deptId != null) allCourses.filter { it.departmentId == deptId } else allCourses
+        courses = filteredCourses
+        populateCourseSpinner(filteredCourses)
+        binding.tvCourseHeader.text = "Dersler (${filteredCourses.size})"
+        binding.rvCourses.adapter = CourseAdapter(filteredCourses,
+            onEdit = { showEditCourseDialog(it) },
+            onDelete = { showDeleteCourseDialog(it) }
+        )
+
+        val filteredOfferings = if (deptId != null) {
+            allOfferings.filter { it.courses?.departmentId == deptId }
+        } else allOfferings
+        binding.tvOfferingHeader.text = "Ders Açma (${filteredOfferings.size})"
+        binding.rvOfferings.adapter = OfferingAdapter(filteredOfferings,
+            onEditClick = { showEditOfferingDialog(it) },
+            onDeleteClick = { showDeleteOfferingDialog(it) }
+        )
+    }
+
+    private fun populateLecturerList(items: List<Lecturer>) {
+        binding.llLecturerList.removeAllViews()
+        if (items.isEmpty()) {
+            val tv = TextView(requireContext()).apply {
+                text = "Henüz hoca eklenmedi."
+                setPadding(0, 16, 0, 16)
+            }
+            binding.llLecturerList.addView(tv)
+            return
+        }
+        items.forEach { lecturer ->
+            val itemBinding = ItemLecturerBinding.inflate(layoutInflater, binding.llLecturerList, false)
+            itemBinding.tvName.text = lecturer.fullName
+            itemBinding.tvDepartment.text = lecturer.departmentName
+            itemBinding.tvUsername.text = "@${lecturer.username}"
+            itemBinding.btnDelete.visibility = View.VISIBLE
+            itemBinding.btnDelete.setOnClickListener { showDeleteLecturerDialog(lecturer) }
+            itemBinding.root.setOnLongClickListener { showEditLecturerDialog(lecturer); true }
+            binding.llLecturerList.addView(itemBinding.root)
+        }
     }
 
     private fun populateCourseSpinner(courseList: List<Course>) {
         binding.spinnerOfferingCourse.adapter = ArrayAdapter(
             requireContext(), android.R.layout.simple_spinner_item, courseList.map { it.displayName }
         ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+    }
+
+    private fun populateLecturerSpinner() {
+        val names = listOf("— Atanmadı —") + lecturers.map { it.fullName }
+        binding.spinnerOfferingLecturer.adapter = ArrayAdapter(
+            requireContext(), android.R.layout.simple_spinner_item, names
+        ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+    }
+
+    private fun getSelectedLecturerId(): Int? {
+        val pos = binding.spinnerOfferingLecturer.selectedItemPosition
+        return if (pos > 0) lecturers[pos - 1].id else null
     }
 
     private fun clearLecturerForm() {
@@ -737,11 +860,9 @@ class DataFragment : Fragment() {
     }
 
     private fun clearOfferingForm() {
-        binding.etAcademicYear.text?.clear()
-        binding.etSection.text?.clear()
         binding.etOfferingCapacity.text?.clear()
-        binding.spinnerTerm.setSelection(0)
-        binding.spinnerClassYear.setSelection(0)
+        binding.spinnerOfferingLecturer.setSelection(0)
+        setupDefaults()
     }
 
     override fun onDestroyView() { super.onDestroyView(); _binding = null }
@@ -782,40 +903,6 @@ class CourseAdapter(
     }
 }
 
-// ── Lecturer Adapter ─────────────────────────────────────────────────────────
-
-class LecturerAdapter(
-    private val items: List<Lecturer>,
-    private val departments: List<Department>,
-    private val onEditClick: (Lecturer) -> Unit,
-    private val onDeleteClick: (Lecturer) -> Unit
-) : RecyclerView.Adapter<LecturerAdapter.VH>() {
-
-    inner class VH(val binding: ItemLecturerBinding) : RecyclerView.ViewHolder(binding.root)
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-        VH(ItemLecturerBinding.inflate(LayoutInflater.from(parent.context), parent, false))
-
-    override fun getItemCount() = maxOf(items.size, 1)
-
-    override fun onBindViewHolder(holder: VH, position: Int) {
-        if (items.isEmpty()) {
-            holder.binding.tvName.text       = "No lecturers yet."
-            holder.binding.tvDepartment.text = ""
-            holder.binding.tvUsername.text   = ""
-            holder.binding.btnDelete.visibility = View.GONE
-            return
-        }
-        val lecturer = items[position]
-        holder.binding.tvName.text          = lecturer.fullName
-        holder.binding.tvDepartment.text    = lecturer.departmentName
-        holder.binding.tvUsername.text      = "@${lecturer.username}"
-        holder.binding.btnDelete.visibility = View.VISIBLE
-        holder.binding.btnDelete.setOnClickListener { onDeleteClick(lecturer) }
-        // Long-press to edit
-        holder.itemView.setOnLongClickListener { onEditClick(lecturer); true }
-    }
-}
 
 // ── Offering Adapter ─────────────────────────────────────────────────────────
 
@@ -842,7 +929,7 @@ class OfferingAdapter(
         }
         val o = items[position]
         holder.binding.tvOfferingName.text = o.courseName
-        holder.binding.tvOfferingDetails.text = "${o.academicYear} • ${o.term} • Year ${o.classYear} • Sec ${o.section} • Cap ${o.capacity}"
+        holder.binding.tvOfferingDetails.text = "${o.academicYear} • ${o.term} • Year ${o.classYear} • Sec ${o.section} • Cap ${o.capacity} • ${o.lecturerName}"
         holder.binding.btnEditOffering.visibility = View.VISIBLE
         holder.binding.btnDeleteOffering.visibility = View.VISIBLE
         holder.binding.btnEditOffering.setOnClickListener { onEditClick(o) }

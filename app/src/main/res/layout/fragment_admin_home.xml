@@ -14,7 +14,7 @@
             android:id="@+id/tvTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Admin Dashboard"
+            android:text="Yönetim Paneli"
             android:textSize="22sp"
             android:textStyle="bold"
             android:layout_marginBottom="16dp" />
@@ -51,9 +51,10 @@
                 android:orientation="vertical"
                 android:padding="12dp">
                 <TextView
+                    android:id="@+id/tvLecturerPanelTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Unassigned Lecturers"
+                    android:text="Atanmamış Hocalar"
                     android:textStyle="bold"
                     android:textSize="16sp" />
                 <androidx.recyclerview.widget.RecyclerView
@@ -75,9 +76,10 @@
                 android:orientation="vertical"
                 android:padding="12dp">
                 <TextView
+                    android:id="@+id/tvCoursePanelTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Unassigned Courses"
+                    android:text="Ders Açılmamış Dersler"
                     android:textStyle="bold"
                     android:textSize="16sp" />
                 <androidx.recyclerview.widget.RecyclerView
@@ -99,9 +101,10 @@
                 android:orientation="vertical"
                 android:padding="12dp">
                 <TextView
+                    android:id="@+id/tvClassroomPanelTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Available Classrooms"
+                    android:text="Mevcut Derslikler"
                     android:textStyle="bold"
                     android:textSize="16sp" />
                 <androidx.recyclerview.widget.RecyclerView

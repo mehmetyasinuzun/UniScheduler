@@ -1,29 +1,42 @@
-// AvailabilityViewModel — manages lecturer's BUSY time blocks (default = available).
 package com.unischeduler.ui.lecturer
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.unischeduler.data.model.LecturerAvailability
+import com.unischeduler.data.model.OrgSettings
+import com.unischeduler.data.model.ScheduleEntry
 import com.unischeduler.data.repository.AvailabilityRepository
+import com.unischeduler.data.repository.OrgSettingsRepository
+import com.unischeduler.data.repository.ScheduleRepository
 import com.unischeduler.util.ErrorReporter
 import com.unischeduler.util.SessionManager
 import com.unischeduler.util.ErrorMessages
 import com.unischeduler.util.UiState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+data class AvailabilityData(
+    val busySlots: List<LecturerAvailability>,
+    val scheduleEntries: List<ScheduleEntry>,
+    val settings: OrgSettings
+)
+
 class AvailabilityViewModel(app: Application) : AndroidViewModel(app) {
 
-    private val repo    = AvailabilityRepository()
-    private val session = SessionManager(app)
+    private val repo         = AvailabilityRepository()
+    private val scheduleRepo = ScheduleRepository()
+    private val settingsRepo = OrgSettingsRepository()
+    private val session      = SessionManager(app)
     private val errorReporter = ErrorReporter(app)
 
-    private val _state = MutableStateFlow<UiState<List<LecturerAvailability>>>(UiState.Idle)
-    val state: StateFlow<UiState<List<LecturerAvailability>>> = _state
+    private val _state = MutableStateFlow<UiState<AvailabilityData>>(UiState.Idle)
+    val state: StateFlow<UiState<AvailabilityData>> = _state
 
     private val _saveState = MutableStateFlow<UiState<Unit>>(UiState.Idle)
     val saveState: StateFlow<UiState<Unit>> = _saveState
@@ -33,7 +46,18 @@ class AvailabilityViewModel(app: Application) : AndroidViewModel(app) {
             _state.value = UiState.Loading
             runCatching {
                 withContext(Dispatchers.IO) {
-                    repo.getForLecturer(session.lecturerId, session.orgId)
+                    val orgId = session.orgId
+                    val lecturerId = session.lecturerId
+                    coroutineScope {
+                        val slotsDeferred = async { repo.getForLecturer(lecturerId, orgId) }
+                        val entriesDeferred = async { scheduleRepo.getEntriesForLecturer(lecturerId, orgId) }
+                        val settingsDeferred = async { settingsRepo.getSettings(orgId) }
+                        AvailabilityData(
+                            busySlots = slotsDeferred.await(),
+                            scheduleEntries = entriesDeferred.await(),
+                            settings = settingsDeferred.await()
+                        )
+                    }
                 }
             }.onSuccess { _state.value = UiState.Success(it) }
              .onFailure { e ->
@@ -46,13 +70,11 @@ class AvailabilityViewModel(app: Application) : AndroidViewModel(app) {
 
     fun addSlot(day: String, startTime: String, endTime: String) {
         if (startTime.isBlank() || endTime.isBlank()) {
-            _saveState.value = UiState.Error("Start and end time required.", retryable = false)
-            reportValidationError("addSlot", "Start and end time required.")
+            _saveState.value = UiState.Error("Başlangıç ve bitiş saati gerekli.", retryable = false)
             return
         }
         if (toMinutes(startTime) >= toMinutes(endTime)) {
-            _saveState.value = UiState.Error("End time must be after start time.", retryable = false)
-            reportValidationError("addSlot", "End time must be after start time.")
+            _saveState.value = UiState.Error("Bitiş saati başlangıçtan sonra olmalı.", retryable = false)
             return
         }
         viewModelScope.launch {
@@ -90,12 +112,6 @@ class AvailabilityViewModel(app: Application) : AndroidViewModel(app) {
     private fun reportError(action: String, e: Throwable) {
         viewModelScope.launch(Dispatchers.IO) {
             errorReporter.reportException("AvailabilityViewModel", action, e)
-        }
-    }
-
-    private fun reportValidationError(action: String, message: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            errorReporter.reportMessage("AvailabilityViewModel", action, message)
         }
     }
 

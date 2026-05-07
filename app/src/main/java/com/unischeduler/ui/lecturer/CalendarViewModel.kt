@@ -1,49 +1,59 @@
-// CalendarViewModel — loads schedule entries for the logged-in lecturer (or all for admin).
-// Supports both one-shot load and real-time Flow observation (Lab Task 2 pattern).
 package com.unischeduler.ui.lecturer
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.unischeduler.data.model.OrgSettings
 import com.unischeduler.data.model.ScheduleEntry
+import com.unischeduler.data.repository.OrgSettingsRepository
 import com.unischeduler.data.repository.ScheduleRepository
 import com.unischeduler.util.ErrorReporter
 import com.unischeduler.util.SessionManager
 import com.unischeduler.util.ErrorMessages
 import com.unischeduler.util.UiState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+data class CalendarData(
+    val entries: List<ScheduleEntry>,
+    val settings: OrgSettings
+)
+
 class CalendarViewModel(app: Application) : AndroidViewModel(app) {
 
-    private val repo    = ScheduleRepository()
-    private val session = SessionManager(app)
+    private val repo         = ScheduleRepository()
+    private val settingsRepo = OrgSettingsRepository()
+    private val session      = SessionManager(app)
     private val errorReporter = ErrorReporter(app)
 
-    private val _state = MutableStateFlow<UiState<List<ScheduleEntry>>>(UiState.Idle)
-    val state: StateFlow<UiState<List<ScheduleEntry>>> = _state
+    private val _state = MutableStateFlow<UiState<CalendarData>>(UiState.Idle)
+    val state: StateFlow<UiState<CalendarData>> = _state
 
-    // Lecturer sees only their own entries; admin sees all
     fun loadEntries() {
         viewModelScope.launch {
             _state.value = UiState.Loading
             runCatching {
                 withContext(Dispatchers.IO) {
                     val orgId = session.orgId
-                    if (orgId <= 0) {
-                        throw IllegalStateException("Organization is missing for this account.")
-                    }
-                    if (session.isLecturer) {
-                        val lecturerId = session.lecturerId
-                        if (lecturerId <= 0) {
-                            throw IllegalStateException("Lecturer profile missing. Please log in again.")
+                    if (orgId <= 0) throw IllegalStateException("Organization is missing for this account.")
+
+                    coroutineScope {
+                        val settingsDeferred = async { settingsRepo.getSettings(orgId) }
+                        val entriesDeferred = async {
+                            if (session.isLecturer) {
+                                val lecturerId = session.lecturerId
+                                if (lecturerId <= 0) throw IllegalStateException("Lecturer profile missing. Please log in again.")
+                                repo.getEntriesForLecturer(lecturerId, orgId)
+                            } else {
+                                repo.getAllEntries(orgId)
+                            }
                         }
-                        repo.getEntriesForLecturer(lecturerId, orgId)
-                    } else {
-                        repo.getAllEntries(orgId)
+                        CalendarData(entriesDeferred.await(), settingsDeferred.await())
                     }
                 }
             }.onSuccess { _state.value = UiState.Success(it) }
@@ -55,17 +65,19 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // Admin-only: load all entries
     fun loadAllEntries() {
         viewModelScope.launch {
             _state.value = UiState.Loading
             runCatching {
                 withContext(Dispatchers.IO) {
                     val orgId = session.orgId
-                    if (orgId <= 0) {
-                        throw IllegalStateException("Organization is missing for this account.")
+                    if (orgId <= 0) throw IllegalStateException("Organization is missing for this account.")
+
+                    coroutineScope {
+                        val settingsDeferred = async { settingsRepo.getSettings(orgId) }
+                        val entriesDeferred = async { repo.getAllEntries(orgId) }
+                        CalendarData(entriesDeferred.await(), settingsDeferred.await())
                     }
-                    repo.getAllEntries(orgId)
                 }
             }.onSuccess { _state.value = UiState.Success(it) }
              .onFailure { e ->

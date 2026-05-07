@@ -94,7 +94,7 @@ class AssignmentViewModel(app: Application) : AndroidViewModel(app) {
 
     fun assign(
         offeringId: Int,
-        lecturerId: Int,
+        lecturerId: Int?,
         classroomId: Int,
         day: String,
         startTime: String,
@@ -102,12 +102,12 @@ class AssignmentViewModel(app: Application) : AndroidViewModel(app) {
         force: Boolean = false
     ) {
         if (startTime.isBlank() || endTime.isBlank()) {
-            _saveState.value = UiState.Error("Start and end time are required.", retryable = false)
+            _saveState.value = UiState.Error("Başlangıç ve bitiş saati gerekli.", retryable = false)
             reportValidationError("assign", "Start and end time are required.")
             return
         }
         if (toMinutes(startTime) >= toMinutes(endTime)) {
-            _saveState.value = UiState.Error("End time must be after start time.", retryable = false)
+            _saveState.value = UiState.Error("Bitiş saati başlangıçtan sonra olmalı.", retryable = false)
             reportValidationError("assign", "End time must be after start time.")
             return
         }
@@ -118,7 +118,6 @@ class AssignmentViewModel(app: Application) : AndroidViewModel(app) {
                     val orgId = session.orgId
 
                     if (!force) {
-                        // 1. Schedule conflicts (lecturer + classroom)
                         val conflicts = scheduleRepo.findConflicts(
                             lecturerId  = lecturerId,
                             classroomId = classroomId,
@@ -128,16 +127,15 @@ class AssignmentViewModel(app: Application) : AndroidViewModel(app) {
                             orgId       = orgId
                         )
 
-                        // 2. Lecturer availability check
-                        val available = availabilityRepo.isAvailable(
-                            lecturerId = lecturerId,
-                            day        = day,
-                            startTime  = startTime,
-                            endTime    = endTime,
-                            orgId      = orgId
-                        )
-                        val availWarning = if (!available) {
-                            "Lecturer has NOT marked this time slot as available."
+                        val availWarning = if (lecturerId != null) {
+                            val available = availabilityRepo.isAvailable(
+                                lecturerId = lecturerId,
+                                day        = day,
+                                startTime  = startTime,
+                                endTime    = endTime,
+                                orgId      = orgId
+                            )
+                            if (!available) "Öğretim üyesi bu saati müsait olarak işaretlememiş." else null
                         } else null
 
                         val warnings = AssignmentWarnings(

@@ -24,7 +24,7 @@ class ErrorMessagesTest {
     @Test
     fun `auth errors return friendly message`() {
         val msg = ErrorMessages.map(Exception("Invalid login credentials"))
-        assertEquals("Invalid username or password.", msg)
+        assertEquals("Kullanıcı adı veya şifre hatalı.", msg)
     }
 
     @Test

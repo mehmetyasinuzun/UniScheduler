@@ -17,6 +17,7 @@ import com.unischeduler.data.model.Classroom
 import com.unischeduler.data.model.Lecturer
 import com.unischeduler.data.model.Offering
 import com.unischeduler.data.model.ScheduleEntry
+import com.unischeduler.R
 import com.unischeduler.databinding.FragmentAssignmentBinding
 import com.unischeduler.databinding.ItemScheduleEntryBinding
 import com.unischeduler.util.UiState
@@ -102,10 +103,26 @@ class AssignmentFragment : Fragment() {
         binding.actvClassroom.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, classroomNames))
         binding.spinnerDay.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, data.days)
 
-        // Set threshold to show all items on click
         binding.actvOffering.threshold = 1
         binding.actvLecturer.threshold = 1
         binding.actvClassroom.threshold = 1
+
+        binding.actvOffering.setOnClickListener { binding.actvOffering.showDropDown() }
+        binding.actvLecturer.setOnClickListener { binding.actvLecturer.showDropDown() }
+        binding.actvClassroom.setOnClickListener { binding.actvClassroom.showDropDown() }
+        binding.actvOffering.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) binding.actvOffering.showDropDown() }
+        binding.actvLecturer.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) binding.actvLecturer.showDropDown() }
+        binding.actvClassroom.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) binding.actvClassroom.showDropDown() }
+
+        binding.actvOffering.setOnItemClickListener { _, _, pos, _ ->
+            if (pos in offerings.indices) {
+                val offering = offerings[pos]
+                val defaultLecturer = offering.lecturers
+                if (defaultLecturer != null) {
+                    binding.actvLecturer.setText(defaultLecturer.fullName, false)
+                }
+            }
+        }
 
         binding.rvEntries.adapter = ScheduleEntryAdapter(data.entries) { entry ->
             showDeleteConfirmation(entry)
@@ -113,25 +130,27 @@ class AssignmentFragment : Fragment() {
     }
 
     private fun onAssignClicked(force: Boolean) {
-        if (offerings.isEmpty() || lecturers.isEmpty() || classrooms.isEmpty()) return
+        if (offerings.isEmpty() || classrooms.isEmpty()) return
 
         val offeringText  = binding.actvOffering.text.toString()
-        val lecturerText  = binding.actvLecturer.text.toString()
+        val lecturerText  = binding.actvLecturer.text.toString().trim()
         val classroomText = binding.actvClassroom.text.toString()
 
         val offeringIdx  = offerings.indexOfFirst { it.displayName == offeringText }
-        val lecturerIdx  = lecturers.indexOfFirst { it.fullName == lecturerText }
         val classroomIdx = classrooms.indexOfFirst { it.roomCode == classroomText }
 
-        if (offeringIdx < 0 || lecturerIdx < 0 || classroomIdx < 0) {
-            binding.tvSaveError.text = "Please select valid options from the dropdowns."
+        if (offeringIdx < 0 || classroomIdx < 0) {
+            binding.tvSaveError.text = "Lütfen geçerli bir ders ve sınıf seçin."
             binding.tvSaveError.visibility = View.VISIBLE
             return
         }
 
+        val lecturerIdx = lecturers.indexOfFirst { it.fullName == lecturerText }
+        val selectedLecturerId: Int? = if (lecturerIdx >= 0) lecturers[lecturerIdx].id else null
+
         viewModel.assign(
             offeringId = offerings[offeringIdx].id,
-            lecturerId = lecturers[lecturerIdx].id,
+            lecturerId = selectedLecturerId,
             classroomId = classrooms[classroomIdx].id,
             day = binding.spinnerDay.selectedItem.toString(),
             startTime = binding.etStartTime.text?.toString().orEmpty(),
@@ -179,41 +198,72 @@ class AssignmentFragment : Fragment() {
     }
 
     private fun showWarningDialog(warnings: AssignmentWarnings) {
-        val messages = mutableListOf<String>()
+        val dialogView = layoutInflater.inflate(R.layout.dialog_conflict, null)
 
-        // Availability warning
+        val layoutAvail = dialogView.findViewById<android.widget.LinearLayout>(R.id.layoutAvailability)
+        val tvAvailMsg = dialogView.findViewById<android.widget.TextView>(R.id.tvAvailabilityMessage)
+        val layoutLecturer = dialogView.findViewById<android.widget.LinearLayout>(R.id.layoutLecturerConflicts)
+        val containerLecturer = dialogView.findViewById<android.widget.LinearLayout>(R.id.containerLecturerConflicts)
+        val layoutClassroom = dialogView.findViewById<android.widget.LinearLayout>(R.id.layoutClassroomConflicts)
+        val containerClassroom = dialogView.findViewById<android.widget.LinearLayout>(R.id.containerClassroomConflicts)
+
         if (warnings.availabilityWarning != null) {
-            messages.add("⚠ ${warnings.availabilityWarning}")
-            messages.add("")
+            layoutAvail.visibility = View.VISIBLE
+            tvAvailMsg.text = warnings.availabilityWarning
         }
 
-        // Schedule conflicts
         val conflicts = warnings.conflicts
         if (conflicts != null) {
             if (conflicts.lecturerConflicts.isNotEmpty()) {
-                messages.add("Lecturer conflicts:")
-                conflicts.lecturerConflicts.forEach {
-                    messages.add("- ${it.courseCode} ${it.timeRange} (${it.classroomCode})")
+                layoutLecturer.visibility = View.VISIBLE
+                conflicts.lecturerConflicts.forEach { entry ->
+                    containerLecturer.addView(buildConflictEntryView(entry))
                 }
             }
             if (conflicts.classroomConflicts.isNotEmpty()) {
-                if (messages.isNotEmpty()) messages.add("")
-                messages.add("Classroom conflicts:")
-                conflicts.classroomConflicts.forEach {
-                    messages.add("- ${it.courseCode} ${it.timeRange} (${it.lecturerName})")
+                layoutClassroom.visibility = View.VISIBLE
+                conflicts.classroomConflicts.forEach { entry ->
+                    containerClassroom.addView(buildConflictEntryView(entry))
                 }
             }
         }
 
         AlertDialog.Builder(requireContext())
-            .setTitle("Warnings")
-            .setMessage(messages.joinToString("\n"))
-            .setPositiveButton("Continue Anyway") { _, _ ->
+            .setTitle("Çakışma Tespit Edildi")
+            .setView(dialogView)
+            .setPositiveButton("Yine de Ata") { dialog, _ ->
                 viewModel.clearWarnings()
                 onAssignClicked(force = true)
             }
-            .setNegativeButton("Cancel") { _, _ -> viewModel.clearWarnings() }
+            .setNegativeButton("İptal") { dialog, _ -> viewModel.clearWarnings() }
             .show()
+    }
+
+    private fun buildConflictEntryView(entry: ScheduleEntry): View {
+        val ctx = requireContext()
+        return android.widget.LinearLayout(ctx).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(0, 8, 0, 8)
+
+            addView(android.widget.TextView(ctx).apply {
+                text = "${entry.courseCode} — ${entry.courseName}"
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                textSize = 13f
+            })
+            addView(android.widget.TextView(ctx).apply {
+                text = "Hoca: ${entry.lecturerName}"
+                textSize = 12f
+            })
+            addView(android.widget.TextView(ctx).apply {
+                text = "Sınıf: ${entry.classroomCode}"
+                textSize = 12f
+            })
+            addView(android.widget.TextView(ctx).apply {
+                text = "${entry.day} ${entry.timeRange}"
+                textSize = 12f
+                setTextColor(android.graphics.Color.parseColor("#D32F2F"))
+            })
+        }
     }
 
     override fun onDestroyView() { super.onDestroyView(); _binding = null }

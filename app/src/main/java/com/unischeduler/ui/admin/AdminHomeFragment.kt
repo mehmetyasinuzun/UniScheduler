@@ -43,14 +43,17 @@ class AdminHomeFragment : Fragment() {
                 is UiState.Success -> {
                     showLoading(false)
                     val d = state.data
+                    binding.tvLecturerPanelTitle.text = "Atanmamış Hocalar (${d.unassignedLecturers.size})"
                     binding.rvUnassignedLecturers.adapter = SimpleTextAdapter(
                         d.unassignedLecturers.map { "${it.fullName} • ${it.departmentName}" }
                     )
+                    binding.tvCoursePanelTitle.text = "Ders Açılmamış Dersler (${d.unassignedCourses.size})"
                     binding.rvUnassignedCourses.adapter = SimpleTextAdapter(
                         d.unassignedCourses.map { "${it.code} — ${it.name}" }
                     )
+                    binding.tvClassroomPanelTitle.text = "Mevcut Derslikler (${d.classrooms.size})"
                     binding.rvAvailableClassrooms.adapter = SimpleTextAdapter(
-                        d.classrooms.map { "${it.roomCode} (cap. ${it.capacity})" }
+                        d.classrooms.map { "${it.roomCode} (kap. ${it.capacity})" }
                     )
                 }
             }
@@ -86,6 +89,6 @@ class SimpleTextAdapter(private val items: List<String>) :
     override fun getItemCount() = maxOf(items.size, 1)
 
     override fun onBindViewHolder(holder: VH, position: Int) {
-        holder.tv.text = if (items.isEmpty()) "— None —" else items[position]
+        holder.tv.text = if (items.isEmpty()) "— Yok —" else items[position]
     }
 }

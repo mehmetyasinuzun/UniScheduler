@@ -2,6 +2,7 @@ package com.unischeduler.util
 
 import android.app.Application
 import android.os.Build
+import android.util.Log
 import com.unischeduler.BuildConfig
 import com.unischeduler.data.model.ClientErrorLogInsert
 import com.unischeduler.data.repository.ErrorLogRepository
@@ -18,7 +19,15 @@ class ErrorReporter(app: Application) {
         usernameOverride: String? = null
     ) {
         val message = error.message ?: error::class.java.simpleName
-        reportMessage(screen, action, message, error.stackTraceToString(), usernameOverride)
+        val fullStack = buildString {
+            appendLine(error.stackTraceToString())
+            var cause = error.cause
+            while (cause != null) {
+                appendLine("Caused by: ${cause.stackTraceToString()}")
+                cause = cause.cause
+            }
+        }
+        reportMessage(screen, action, message, fullStack, usernameOverride)
     }
 
     suspend fun reportMessage(
@@ -42,6 +51,24 @@ class ErrorReporter(app: Application) {
             deviceModel = Build.MODEL,
             osVersion = Build.VERSION.RELEASE
         )
-        runCatching { repo.insert(log) }
+        try {
+            repo.insert(log)
+        } catch (e: Exception) {
+            Log.e("ErrorReporter", "Log gönderilemedi: ${e.message}. Orijinal hata: $message")
+            retryWithMinimalLog(screen, action, message)
+        }
+    }
+
+    private suspend fun retryWithMinimalLog(screen: String, action: String, message: String) {
+        val fallback = ClientErrorLogInsert(
+            orgId = session.orgId.takeIf { it > 0 },
+            screen = screen,
+            action = action,
+            message = "[FALLBACK] $message",
+            appVersion = BuildConfig.VERSION_NAME,
+            deviceModel = Build.MODEL,
+            osVersion = Build.VERSION.RELEASE
+        )
+        runCatching { repo.insert(fallback) }
     }
 }

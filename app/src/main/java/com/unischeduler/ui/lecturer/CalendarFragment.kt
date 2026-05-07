@@ -1,51 +1,96 @@
-// Lecturer calendar — weekly grid showing own assigned courses and classrooms.
-// Real-time update via collectFlow + repeatOnLifecycle (Lab Task 2 pattern).
 package com.unischeduler.ui.lecturer
 
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import com.unischeduler.databinding.FragmentCalendarBinding
+import com.unischeduler.data.model.ScheduleEntry
+import com.unischeduler.databinding.FragmentWeeklyScheduleBinding
+import com.unischeduler.ui.shared.ScheduleViewConfig
 import com.unischeduler.util.UiState
 import com.unischeduler.util.collectFlow
 
 class CalendarFragment : Fragment() {
 
-    private var _binding: FragmentCalendarBinding? = null
+    private var _binding: FragmentWeeklyScheduleBinding? = null
     private val binding get() = _binding!!
     private val viewModel: CalendarViewModel by viewModels()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        _binding = FragmentCalendarBinding.inflate(inflater, container, false)
+        _binding = FragmentWeeklyScheduleBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding.tvTitle.text = "Programım"
         binding.btnRetry.setOnClickListener { viewModel.loadEntries() }
+
+        binding.weeklySchedule.setOnEntryClickListener { entry ->
+            showEntryDetail(entry)
+        }
 
         collectFlow(viewModel.state) { state ->
             when (state) {
-                is UiState.Idle    -> viewModel.loadEntries()
-                is UiState.Loading -> binding.progressBar.visibility = View.VISIBLE
-                is UiState.Error   -> {
+                is UiState.Idle -> viewModel.loadEntries()
+                is UiState.Loading -> {
+                    binding.progressBar.visibility = View.VISIBLE
+                    binding.tvError.visibility = View.GONE
+                    binding.tvEmpty.visibility = View.GONE
+                    binding.btnRetry.visibility = View.GONE
+                }
+                is UiState.Error -> {
                     binding.progressBar.visibility = View.GONE
-                    binding.tvError.text           = state.message
-                    binding.tvError.visibility     = View.VISIBLE
-                    binding.btnRetry.visibility    = if (state.retryable) View.VISIBLE else View.GONE
+                    binding.tvError.text = state.message
+                    binding.tvError.visibility = View.VISIBLE
+                    binding.btnRetry.visibility = if (state.retryable) View.VISIBLE else View.GONE
                 }
                 is UiState.Success -> {
                     binding.progressBar.visibility = View.GONE
-                    binding.tvError.visibility     = View.GONE
-                    binding.btnRetry.visibility    = View.GONE
-                    CalendarRenderer.render(binding.calendarGrid, state.data)
+                    binding.tvError.visibility = View.GONE
+                    binding.btnRetry.visibility = View.GONE
+
+                    val data = state.data
+                    val settings = data.settings
+
+                    binding.weeklySchedule.setConfig(
+                        ScheduleViewConfig(
+                            dayStart = settings.dayStart,
+                            dayEnd = settings.dayEnd,
+                            timeStepMinutes = settings.timeStepMinutes.coerceAtLeast(30),
+                            activeDays = settings.activeDays.ifEmpty {
+                                listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
+                            }
+                        )
+                    )
+
+                    if (data.entries.isEmpty()) {
+                        binding.tvEmpty.visibility = View.VISIBLE
+                    } else {
+                        binding.tvEmpty.visibility = View.GONE
+                        binding.weeklySchedule.setEntries(data.entries)
+                    }
                 }
             }
         }
+    }
+
+    private fun showEntryDetail(entry: ScheduleEntry) {
+        val msg = buildString {
+            append("Ders: ${entry.courseCode} — ${entry.courseName}\n")
+            append("Hoca: ${entry.lecturerName}\n")
+            append("Sınıf: ${entry.classroomCode}\n")
+            append("Saat: ${entry.timeRange}")
+        }
+        AlertDialog.Builder(requireContext())
+            .setTitle("${entry.day} — ${entry.courseCode}")
+            .setMessage(msg)
+            .setPositiveButton("Tamam", null)
+            .show()
     }
 
     override fun onDestroyView() { super.onDestroyView(); _binding = null }

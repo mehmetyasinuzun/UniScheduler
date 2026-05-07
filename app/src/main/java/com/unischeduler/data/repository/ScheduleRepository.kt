@@ -53,22 +53,24 @@ class ScheduleRepository {
 
     // Throws IllegalStateException on double-booking before hitting DB.
     suspend fun findConflicts(
-        lecturerId: Int,
+        lecturerId: Int?,
         classroomId: Int,
         day: String,
         startTime: String,
         endTime: String,
         orgId: Int
     ): ScheduleConflicts {
-        val lecturerEntries = client.postgrest["schedule_entries"]
-            .select(joinColumns) {
-                filter {
-                    eq("lecturer_id", lecturerId)
-                    eq("day", day)
-                    eq("org_id", orgId)
+        val lecturerEntries = if (lecturerId != null) {
+            client.postgrest["schedule_entries"]
+                .select(joinColumns) {
+                    filter {
+                        eq("lecturer_id", lecturerId)
+                        eq("day", day)
+                        eq("org_id", orgId)
+                    }
                 }
-            }
-            .decodeList<ScheduleEntry>()
+                .decodeList<ScheduleEntry>()
+        } else emptyList()
 
         val classroomEntries = client.postgrest["schedule_entries"]
             .select(joinColumns) {
@@ -91,7 +93,7 @@ class ScheduleRepository {
 
     suspend fun insertEntry(
         offeringId: Int,
-        lecturerId: Int,
+        lecturerId: Int?,
         classroomId: Int,
         day: String,
         startTime: String,

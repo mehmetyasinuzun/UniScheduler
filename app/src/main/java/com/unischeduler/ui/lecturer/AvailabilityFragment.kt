@@ -1,4 +1,3 @@
-// AvailabilityFragment — Lecturer marks BUSY time blocks (default = available).
 package com.unischeduler.ui.lecturer
 
 import android.os.Bundle
@@ -7,16 +6,14 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
 import com.unischeduler.data.model.DAYS
-import com.unischeduler.data.model.LecturerAvailability
 import com.unischeduler.databinding.FragmentAvailabilityBinding
-import com.unischeduler.databinding.ItemAvailabilityBinding
+import com.unischeduler.ui.shared.AvailabilityGridConfig
 import com.unischeduler.util.UiState
 import com.unischeduler.util.collectFlow
 
@@ -38,32 +35,55 @@ class AvailabilityFragment : Fragment() {
             requireContext(), android.R.layout.simple_spinner_item, DAYS
         ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
 
-        binding.rvSlots.layoutManager = LinearLayoutManager(requireContext())
-
         binding.etStartTime.setOnClickListener { showTimePicker { binding.etStartTime.setText(it) } }
         binding.etEndTime.setOnClickListener   { showTimePicker { binding.etEndTime.setText(it) } }
         binding.btnAdd.setOnClickListener      { onAddClicked() }
         binding.btnRetry.setOnClickListener    { viewModel.load() }
 
+        binding.availabilityGrid.setOnBusySlotClickListener { slot ->
+            AlertDialog.Builder(requireContext())
+                .setTitle("Meşgul Slot Kaldır")
+                .setMessage("${slot.day} ${slot.timeRange} meşgul zamanını kaldırmak istiyor musunuz?")
+                .setPositiveButton("Kaldır") { _, _ -> viewModel.deleteSlot(slot.id) }
+                .setNegativeButton("İptal", null)
+                .show()
+        }
+
+        binding.availabilityGrid.setOnEmptyCellClickListener { day, startTime, endTime ->
+            binding.spinnerDay.setSelection(DAYS.indexOf(day).coerceAtLeast(0))
+            binding.etStartTime.setText(startTime)
+            binding.etEndTime.setText(endTime)
+        }
+
         collectFlow(viewModel.state) { state ->
             when (state) {
-                is UiState.Idle    -> viewModel.load()
+                is UiState.Idle -> viewModel.load()
                 is UiState.Loading -> showLoading(true)
-                is UiState.Error   -> showError(state.message, state.retryable)
+                is UiState.Error -> showError(state.message, state.retryable)
                 is UiState.Success -> {
                     showLoading(false)
-                    binding.rvSlots.adapter = AvailabilityAdapter(state.data) { slot ->
-                        viewModel.deleteSlot(slot.id)
-                    }
+                    val data = state.data
+                    val settings = data.settings
+
+                    binding.availabilityGrid.setConfig(
+                        AvailabilityGridConfig(
+                            dayStart = settings.dayStart,
+                            dayEnd = settings.dayEnd,
+                            timeStepMinutes = settings.timeStepMinutes.coerceAtLeast(30),
+                            activeDays = settings.activeDays.ifEmpty { DAYS }
+                        )
+                    )
+                    binding.availabilityGrid.setBusySlots(data.busySlots)
+                    binding.availabilityGrid.setScheduleEntries(data.scheduleEntries)
                 }
             }
         }
 
         collectFlow(viewModel.saveState) { state ->
             when (state) {
-                is UiState.Idle    -> Unit
+                is UiState.Idle -> Unit
                 is UiState.Loading -> binding.btnAdd.isEnabled = false
-                is UiState.Error   -> {
+                is UiState.Error -> {
                     binding.btnAdd.isEnabled       = true
                     binding.tvSaveError.text       = state.message
                     binding.tvSaveError.visibility = View.VISIBLE
@@ -73,7 +93,7 @@ class AvailabilityFragment : Fragment() {
                     binding.tvSaveError.visibility = View.GONE
                     binding.etStartTime.text?.clear()
                     binding.etEndTime.text?.clear()
-                    Toast.makeText(requireContext(), "Busy slot added.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Meşgul zaman eklendi.", Toast.LENGTH_SHORT).show()
                     viewModel.resetSaveState()
                 }
             }
@@ -92,7 +112,7 @@ class AvailabilityFragment : Fragment() {
         val picker = MaterialTimePicker.Builder()
             .setTimeFormat(TimeFormat.CLOCK_24H)
             .setHour(9).setMinute(0)
-            .setTitleText("Select time")
+            .setTitleText("Saat Seç")
             .build()
         picker.addOnPositiveButtonClickListener {
             onSelected(String.format("%02d:%02d", picker.hour, picker.minute))
@@ -114,31 +134,4 @@ class AvailabilityFragment : Fragment() {
     }
 
     override fun onDestroyView() { super.onDestroyView(); _binding = null }
-}
-
-class AvailabilityAdapter(
-    private val items: List<LecturerAvailability>,
-    private val onDelete: (LecturerAvailability) -> Unit
-) : RecyclerView.Adapter<AvailabilityAdapter.VH>() {
-
-    inner class VH(val binding: ItemAvailabilityBinding) : RecyclerView.ViewHolder(binding.root)
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-        VH(ItemAvailabilityBinding.inflate(LayoutInflater.from(parent.context), parent, false))
-
-    override fun getItemCount() = maxOf(items.size, 1)
-
-    override fun onBindViewHolder(holder: VH, position: Int) {
-        if (items.isEmpty()) {
-            holder.binding.tvDay.text  = "No busy times set."
-            holder.binding.tvTime.text = "You are available for all time slots by default."
-            holder.binding.btnDelete.visibility = View.GONE
-            return
-        }
-        val slot = items[position]
-        holder.binding.tvDay.text  = slot.day
-        holder.binding.tvTime.text = slot.timeRange
-        holder.binding.btnDelete.visibility = View.VISIBLE
-        holder.binding.btnDelete.setOnClickListener { onDelete(slot) }
-    }
 }

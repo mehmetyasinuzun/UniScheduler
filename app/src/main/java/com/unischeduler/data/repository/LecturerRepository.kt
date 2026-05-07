@@ -2,6 +2,7 @@
 // insertLecturerWithUser: creates auth user + users row + lecturers row
 package com.unischeduler.data.repository
 
+import android.util.Log
 import com.unischeduler.data.model.Lecturer
 import com.unischeduler.data.model.LecturerInsert
 import com.unischeduler.data.model.User
@@ -13,19 +14,31 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonPrimitive
 
 class LecturerRepository {
 
-    suspend fun getAllLecturers(orgId: Int): List<Lecturer> =
-        client.postgrest["lecturers"]
-            .select(Columns.raw("*, departments(*), users(*)")) {
+    private val joinColumns = Columns.raw("*, departments(*), users(*)")
+
+    suspend fun getAllLecturers(orgId: Int): List<Lecturer> {
+        val response = client.postgrest["lecturers"]
+            .select(joinColumns) {
                 filter { eq("org_id", orgId) }
             }
-            .decodeList<Lecturer>()
+        val raw = response.data
+        Log.d("LecturerRepo", "getAllLecturers orgId=$orgId rawLength=${raw.length} first200=${raw.take(200)}")
+        val result = response.decodeList<Lecturer>()
+        Log.d("LecturerRepo", "getAllLecturers decoded=${result.size}")
+        return result
+    }
 
     suspend fun getLecturersByDepartment(departmentId: Int, orgId: Int): List<Lecturer> =
         client.postgrest["lecturers"]
-            .select(Columns.raw("*, departments(*), users(*)")) {
+            .select(joinColumns) {
                 filter {
                     eq("department_id", departmentId)
                     eq("org_id", orgId)
@@ -33,17 +46,6 @@ class LecturerRepository {
             }
             .decodeList<Lecturer>()
 
-    /**
-     * Creates a Supabase Auth user + public.users profile + lecturers row.
-     * Returns generated (username, plainPassword) so Admin can display/export them.
-     *
-     * Flow:
-     * 1. Generate unique username + password
-     * 2. Save admin session, sign up new auth user (switches session)
-     * 3. Insert public.users profile while session is new user (RLS: id = auth.uid())
-     * 4. Restore admin session via importSession
-     * 5. Insert lecturers row as admin (RLS: is_admin())
-     */
     suspend fun insertLecturerWithUser(
         title: String,
         firstName: String,
@@ -58,17 +60,26 @@ class LecturerRepository {
         val syntheticEmail = AuthRepository.usernameToEmail(username)
 
         val adminSession = client.auth.currentSessionOrNull()
-            ?: throw IllegalStateException("No active admin session.")
+            ?: throw IllegalStateException("Admin oturumu bulunamadı. Lütfen tekrar giriş yapın.")
 
-        val signUpResult = client.auth.signUpWith(Email) {
-            this.email = syntheticEmail
-            this.password = plainPassword
+        val authUserId: String
+        try {
+            val signUpResult = client.auth.signUpWith(Email) {
+                this.email = syntheticEmail
+                this.password = plainPassword
+            }
+            authUserId = signUpResult?.id
+                ?: client.auth.currentUserOrNull()?.id
+                ?: throw IllegalStateException(
+                    "Kullanıcı oluşturulamadı (email: $syntheticEmail). " +
+                    "Supabase Auth ayarlarında 'Enable email confirmations' kapalı olmalı."
+                )
+        } catch (e: Exception) {
+            runCatching { client.auth.importSession(adminSession) }
+            if (e is IllegalStateException) throw e
+            throw IllegalStateException("Auth kullanıcı oluşturma hatası: ${e.message}", e)
         }
 
-        val authUserId = signUpResult?.id
-            ?: throw IllegalStateException("Failed to create auth user for lecturer.")
-
-        // Session is now the new lecturer — insert users row while RLS allows (id = auth.uid())
         try {
             client.postgrest["users"].insert(
                 UserInsert(
@@ -80,10 +91,10 @@ class LecturerRepository {
                 )
             )
         } catch (e: Exception) {
-            throw e
+            runCatching { client.auth.importSession(adminSession) }
+            throw IllegalStateException("Kullanıcı profili oluşturma hatası: ${e.message}", e)
         }
 
-        // Restore admin session for subsequent operations
         client.auth.importSession(adminSession)
 
         try {
@@ -102,7 +113,7 @@ class LecturerRepository {
             runCatching {
                 client.postgrest["users"].delete { filter { eq("id", authUserId) } }
             }
-            throw e
+            throw IllegalStateException("Öğretim üyesi kaydı oluşturma hatası: ${e.message}", e)
         }
 
         return username to plainPassword
@@ -145,17 +156,25 @@ class LecturerRepository {
             }
     }
 
-    // Returns lecturers with no entry in schedule_entries (unassigned)
     suspend fun getUnassignedLecturers(orgId: Int): List<Lecturer> {
         val all = getAllLecturers(orgId)
-        val assignedIds = client.postgrest["schedule_entries"]
-            .select(Columns.raw("lecturer_id")) {
-                filter { eq("org_id", orgId) }
-            }
-            .decodeList<Map<String, Int>>()
-            .mapNotNull { it["lecturer_id"] }
-            .toSet()
+        val offeringIds = extractNullableIds("offerings", "lecturer_id", orgId)
+        val scheduleIds = extractNullableIds("schedule_entries", "lecturer_id", orgId)
+        val assignedIds = offeringIds + scheduleIds
         return all.filter { it.id !in assignedIds }
+    }
+
+    private suspend fun extractNullableIds(table: String, column: String, orgId: Int): Set<Int> {
+        val raw = client.postgrest[table]
+            .select(Columns.raw(column)) { filter { eq("org_id", orgId) } }
+            .data
+        return Json.decodeFromString<List<Map<String, JsonElement>>>(raw)
+            .mapNotNull { row ->
+                val el = row[column]
+                if (el == null || el is JsonNull) null
+                else el.jsonPrimitive.intOrNull
+            }
+            .toSet()
     }
 
     private suspend fun generateUniqueUsername(base: String): String {

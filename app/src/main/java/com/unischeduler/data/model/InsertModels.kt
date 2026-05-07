@@ -53,6 +53,7 @@ data class LecturerInsert(
 data class OfferingInsert(
     @SerialName("org_id") val orgId: Int,
     @SerialName("course_id") val courseId: Int,
+    @SerialName("lecturer_id") val lecturerId: Int? = null,
     @SerialName("academic_year") val academicYear: String,
     val term: String,
     @SerialName("class_year") val classYear: Int,
@@ -64,7 +65,7 @@ data class OfferingInsert(
 data class ScheduleEntryInsert(
     @SerialName("org_id") val orgId: Int,
     @SerialName("offering_id") val offeringId: Int,
-    @SerialName("lecturer_id") val lecturerId: Int,
+    @SerialName("lecturer_id") val lecturerId: Int? = null,
     @SerialName("classroom_id") val classroomId: Int,
     val day: String,
     @SerialName("start_time") val startTime: String,
