@@ -41,4 +41,9 @@ The application requires Supabase credentials to communicate with the backend. T
 5. Build and run the application on an emulator or physical device running Android 8.0 (API level 26) or higher.
 
 ## License
+
+**Proprietary and Confidential**
+
 Copyright (c) 2026. All rights reserved.
+
+This software and its documentation are proprietary. Unauthorized copying, distribution, modification, or use of this software, via any medium, is strictly prohibited. Any unauthorized use will result in legal action. For licensing or usage inquiries, please contact the repository owner.
