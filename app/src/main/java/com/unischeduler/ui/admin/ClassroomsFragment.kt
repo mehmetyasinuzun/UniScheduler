@@ -44,9 +44,8 @@ class ClassroomsFragment : Fragment() {
         classroomImportLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             uri ?: return@registerForActivityResult
             val inputStream = requireContext().contentResolver.openInputStream(uri) ?: return@registerForActivityResult
-            val fileName = uri.lastPathSegment ?: ""
 
-            if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+            if (isExcelFile(uri)) {
                 val result = ExcelHelper.importClassrooms(inputStream)
                 inputStream.close()
                 showImportPreview(CsvImporter.ParseResult(result.valid, result.errors))
@@ -211,6 +210,14 @@ class ClassroomsFragment : Fragment() {
         binding.tvError.text           = msg
         binding.tvError.visibility     = View.VISIBLE
         binding.btnRetry.visibility    = if (retryable) View.VISIBLE else View.GONE
+    }
+
+    private fun isExcelFile(uri: android.net.Uri): Boolean {
+        val uriStr = uri.toString().lowercase()
+        if (uriStr.endsWith(".xlsx") || uriStr.endsWith(".xls") ||
+            uriStr.contains(".xlsx") || uriStr.contains(".xls")) return true
+        val mime = requireContext().contentResolver.getType(uri)?.lowercase() ?: ""
+        return mime.contains("spreadsheet") || mime.contains("excel") || mime.contains("ms-excel")
     }
 
     override fun onDestroyView() { super.onDestroyView(); _binding = null }

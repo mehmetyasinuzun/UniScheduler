@@ -15,8 +15,12 @@ import io.github.jan.supabase.postgrest.query.Columns
 class AuthRepository {
 
     companion object {
+        /**
+         * Converts username to synthetic email for Supabase Auth.
+         * Uses dots instead of underscores — mirrors server.js usernameToEmail().
+         */
         fun usernameToEmail(username: String): String {
-            val local = username.trim().lowercase().filter { it.isLetterOrDigit() }
+            val local = username.trim().lowercase().replace("_", ".")
             return "${local}@unischeduler.app"
         }
     }
@@ -26,6 +30,10 @@ class AuthRepository {
      * After this call, every Postgrest request carries the JWT → RLS is enforced.
      */
     suspend fun signIn(username: String, password: String) {
+        // Always clear any existing session first to prevent stale JWT leakage
+        // when switching between accounts (e.g. different org admins)
+        runCatching { client.auth.signOut() }
+
         val email = usernameToEmail(username)
         client.auth.signInWith(Email) {
             this.email = email

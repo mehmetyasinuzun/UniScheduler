@@ -29,6 +29,12 @@ class AdminHomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Show logged-in user and org info so user can verify correct account
+        val session = com.unischeduler.util.SessionManager(requireContext())
+        android.util.Log.d("AdminHome", "Session: user=${session.username}, orgId=${session.orgId}, role=${session.role}")
+        (requireActivity() as? androidx.appcompat.app.AppCompatActivity)?.supportActionBar?.subtitle =
+            "${session.username} • Org #${session.orgId}"
+
         binding.rvUnassignedLecturers.layoutManager  = LinearLayoutManager(requireContext())
         binding.rvUnassignedCourses.layoutManager    = LinearLayoutManager(requireContext())
         binding.rvAvailableClassrooms.layoutManager  = LinearLayoutManager(requireContext())

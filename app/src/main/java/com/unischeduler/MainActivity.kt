@@ -17,6 +17,7 @@ import com.unischeduler.util.SessionManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
 
@@ -112,25 +113,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun logout() {
-        // Sign out from Supabase Auth
-        lifecycleScope.launch(Dispatchers.IO) {
-            runCatching { AuthRepository().signOut() }
+        // Sign out from Supabase Auth — wait for it to complete before clearing local session
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                runCatching { AuthRepository().signOut() }
+            }
+            session.clear()
+            // Reset nav-setup flags so the next login re-wires the correct nav
+            adminNavReady    = false
+            lecturerNavReady = false
+            // Hide navs immediately
+            binding.bottomNavAdmin.visibility    = View.GONE
+            binding.bottomNavLecturer.visibility = View.GONE
+            // Clear the whole back stack and land on login
+            navController.navigate(
+                R.id.loginFragment,
+                null,
+                NavOptions.Builder()
+                    .setPopUpTo(navController.graph.id, true)
+                    .build()
+            )
         }
-        session.clear()
-        // Reset nav-setup flags so the next login re-wires the correct nav
-        adminNavReady    = false
-        lecturerNavReady = false
-        // Hide navs immediately
-        binding.bottomNavAdmin.visibility    = View.GONE
-        binding.bottomNavLecturer.visibility = View.GONE
-        // Clear the whole back stack and land on login
-        navController.navigate(
-            R.id.loginFragment,
-            null,
-            NavOptions.Builder()
-                .setPopUpTo(navController.graph.id, true)
-                .build()
-        )
     }
 
     private fun resolveStartDestination(): Int = when {

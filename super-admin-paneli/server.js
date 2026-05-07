@@ -133,6 +133,15 @@ app.post('/api/organizations', async (req, res) => {
     if (!name || !code) return res.status(400).json({ error: 'Name and code are required.' });
     const { data, error } = await supabase.from('organizations').insert({ name, code }).select().single();
     if (error) return res.status(400).json({ error: error.message });
+
+    // Auto-create default org_settings for the new organization
+    await supabase.from('org_settings').insert({
+        org_id: data.id,
+        time_step_minutes: 10,
+        day_start: '08:00',
+        day_end: '18:00'
+    });
+
     res.json(data);
 });
 
@@ -250,7 +259,12 @@ app.get('/api/stats/:orgId', async (req, res) => {
 app.get('/api/settings/:orgId', async (req, res) => {
     const { data, error } = await supabase.from('org_settings').select('*').eq('org_id', req.params.orgId).single();
     if (error && error.code !== 'PGRST116') return res.status(500).json({ error: error.message });
-    res.json(data || { org_id: req.params.orgId, time_step_minutes: 10, day_start: '08:00', day_end: '18:00' });
+    if (data) return res.json(data);
+
+    // Auto-create default settings if missing (handles orgs created before this fix)
+    const defaults = { org_id: parseInt(req.params.orgId), time_step_minutes: 10, day_start: '08:00', day_end: '18:00' };
+    const { data: created } = await supabase.from('org_settings').upsert(defaults).select().single();
+    res.json(created || defaults);
 });
 
 app.put('/api/settings/:orgId', async (req, res) => {
@@ -572,8 +586,9 @@ app.post('/api/import/:type/:orgId', upload.single('file'), async (req, res) => 
                     const lastName = (r.last_name || r.soyad || r.lastname || r.surname || '').toString().trim();
                     if (!firstName || !lastName) { errors.push('Ad veya soyad boş — satır atlandı.'); continue; }
                     
-                    let uname = (r.username || r.kullanici_adi || r.kullanici || '').toString().trim().toLowerCase();
-                    if (!uname) uname = await generateUniqueUsername(firstName, lastName);
+                    // Always generate a unique username — Excel may contain usernames
+                    // from another org that already exist in Supabase Auth
+                    const uname = await generateUniqueUsername(firstName, lastName);
                     
                     let pwd = (r.password || r.sifre || '').toString();
                     if (!pwd) pwd = generatePassword();
@@ -583,15 +598,26 @@ app.post('/api/import/:type/:orgId', upload.single('file'), async (req, res) => 
                     const { data: authUser, error: authErr } = await supabase.auth.admin.createUser({ email: emailAddr, password: pwd, email_confirm: true });
                     if (authErr) { errors.push(`${firstName} ${lastName}: ${authErr.message}`); continue; }
 
-                    await supabase.from('users').insert({ id: authUser.user.id, org_id: parseInt(orgId), username: uname, role: 'lecturer', must_change_password: true });
+                    const { error: userErr } = await supabase.from('users').insert({ id: authUser.user.id, org_id: parseInt(orgId), username: uname, role: 'lecturer', must_change_password: true });
+                    if (userErr) {
+                        await supabase.auth.admin.deleteUser(authUser.user.id).catch(() => {});
+                        errors.push(`${firstName} ${lastName}: ${userErr.message}`);
+                        continue;
+                    }
 
-                    await supabase.from('lecturers').insert({
+                    const { error: lecErr } = await supabase.from('lecturers').insert({
                         org_id: parseInt(orgId), user_id: authUser.user.id,
                         title: (r.title || r.unvan || '').toString(),
                         first_name: firstName,
                         last_name: lastName,
                         email: (r.email || r.eposta || r.e_posta || '').toString() || null
                     });
+                    if (lecErr) {
+                        await supabase.auth.admin.deleteUser(authUser.user.id).catch(() => {});
+                        errors.push(`${firstName} ${lastName}: ${lecErr.message}`);
+                        continue;
+                    }
+
                     credentials.push({ ad: firstName, soyad: lastName, kullanici_adi: uname, gecici_sifre: pwd });
                     inserted++;
                 } catch (e) { errors.push(`Satır hatası: ${e.message}`); }
@@ -806,6 +832,24 @@ app.get('/api/error-logs', async (req, res) => {
     res.json(data);
 });
 
+// ═══ Startup: ensure all existing orgs have org_settings ═════════════
+async function ensureOrgSettings() {
+    const { data: orgs } = await supabase.from('organizations').select('id');
+    if (!orgs || !orgs.length) return;
+    const { data: existing } = await supabase.from('org_settings').select('org_id');
+    const existingIds = new Set((existing || []).map(s => s.org_id));
+    const missing = orgs.filter(o => !existingIds.has(o.id));
+    for (const org of missing) {
+        await supabase.from('org_settings').insert({
+            org_id: org.id, time_step_minutes: 10, day_start: '08:00', day_end: '18:00'
+        });
+        console.log(`  ✓ org_settings created for org #${org.id}`);
+    }
+}
+
 // ═══ Start Server ════════════════════════════════════════════════════
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Admin panel → http://localhost:${PORT}`));
+app.listen(PORT, async () => {
+    console.log(`Admin panel → http://localhost:${PORT}`);
+    await ensureOrgSettings();
+});

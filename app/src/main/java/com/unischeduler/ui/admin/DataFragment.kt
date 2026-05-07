@@ -65,9 +65,8 @@ class DataFragment : Fragment() {
         courseImportLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             uri ?: return@registerForActivityResult
             val inputStream = requireContext().contentResolver.openInputStream(uri) ?: return@registerForActivityResult
-            val fileName = uri.lastPathSegment ?: ""
 
-            if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+            if (isExcelFile(uri)) {
                 val result = ExcelHelper.importCourses(inputStream)
                 inputStream.close()
                 showCourseImportPreview(CsvImporter.ParseResult(result.valid, result.errors))
@@ -82,9 +81,8 @@ class DataFragment : Fragment() {
         lecturerImportLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             uri ?: return@registerForActivityResult
             val inputStream = requireContext().contentResolver.openInputStream(uri) ?: return@registerForActivityResult
-            val fileName = uri.lastPathSegment ?: ""
 
-            if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+            if (isExcelFile(uri)) {
                 val result = ExcelHelper.importLecturers(inputStream)
                 inputStream.close()
                 showLecturerImportPreview(CsvImporter.ParseResult(result.valid, result.errors))
@@ -673,6 +671,20 @@ class DataFragment : Fragment() {
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Detects Excel files from Android content URIs.
+     * uri.lastPathSegment often returns encoded paths like "document/primary:Download/file.xlsx"
+     * so we check both the full URI string and the ContentResolver MIME type.
+     */
+    private fun isExcelFile(uri: android.net.Uri): Boolean {
+        val uriStr = uri.toString().lowercase()
+        if (uriStr.endsWith(".xlsx") || uriStr.endsWith(".xls") ||
+            uriStr.contains(".xlsx") || uriStr.contains(".xls")) return true
+        val mime = requireContext().contentResolver.getType(uri)?.lowercase() ?: ""
+        return mime.contains("spreadsheet") || mime.contains("excel") || mime.contains("ms-excel")
+    }
+
 
     private fun showCredentialsDialog(username: String, password: String) {
         AlertDialog.Builder(requireContext())
