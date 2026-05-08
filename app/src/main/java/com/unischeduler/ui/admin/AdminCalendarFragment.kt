@@ -37,6 +37,7 @@ class AdminCalendarFragment : Fragment() {
 
         binding.tvTitle.text = "Ders Programı"
         binding.btnRetry.setOnClickListener { viewModel.loadAllEntries() }
+        binding.swipeRefresh.setOnRefreshListener { viewModel.loadAllEntries() }
         binding.chipGroupFilter.visibility = View.VISIBLE
 
         binding.weeklySchedule.setOnEntryClickListener { entry ->
@@ -47,18 +48,20 @@ class AdminCalendarFragment : Fragment() {
             when (state) {
                 is UiState.Idle -> viewModel.loadAllEntries()
                 is UiState.Loading -> {
-                    binding.progressBar.visibility = View.VISIBLE
+                    if (!binding.swipeRefresh.isRefreshing) binding.progressBar.visibility = View.VISIBLE
                     binding.tvError.visibility = View.GONE
                     binding.tvEmpty.visibility = View.GONE
                     binding.btnRetry.visibility = View.GONE
                 }
                 is UiState.Error -> {
+                    binding.swipeRefresh.isRefreshing = false
                     binding.progressBar.visibility = View.GONE
                     binding.tvError.text = state.message
                     binding.tvError.visibility = View.VISIBLE
                     binding.btnRetry.visibility = if (state.retryable) View.VISIBLE else View.GONE
                 }
                 is UiState.Success -> {
+                    binding.swipeRefresh.isRefreshing = false
                     binding.progressBar.visibility = View.GONE
                     binding.tvError.visibility = View.GONE
                     binding.btnRetry.visibility = View.GONE
@@ -174,6 +177,13 @@ class AdminCalendarFragment : Fragment() {
             .setMessage(msg)
             .setPositiveButton(getString(R.string.common_ok), null)
             .show()
+    }
+
+    private var isFirstResume = true
+    override fun onResume() {
+        super.onResume()
+        if (isFirstResume) { isFirstResume = false; return }
+        viewModel.loadAllEntries()
     }
 
     override fun onDestroyView() { super.onDestroyView(); _binding = null }

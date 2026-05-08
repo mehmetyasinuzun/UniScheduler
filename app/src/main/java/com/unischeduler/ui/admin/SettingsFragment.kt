@@ -30,6 +30,7 @@ class SettingsFragment : Fragment() {
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
     private val viewModel: SettingsViewModel by viewModels()
+    private var isFirstResume = true
 
     private lateinit var departmentAdapter: DepartmentAdapter
 
@@ -49,6 +50,7 @@ class SettingsFragment : Fragment() {
         )
         binding.rvDepartments.adapter = departmentAdapter
         binding.btnRetry.setOnClickListener { viewModel.loadDepartments() }
+        binding.swipeRefresh.setOnRefreshListener { viewModel.loadDepartments() }
 
         binding.btnAddDept.setOnClickListener {
             viewModel.addDepartment(binding.etDeptName.text?.toString().orEmpty())
@@ -72,8 +74,12 @@ class SettingsFragment : Fragment() {
             when (state) {
                 is UiState.Idle    -> viewModel.loadDepartments()
                 is UiState.Loading -> showLoading(true)
-                is UiState.Error   -> showError(state.message, state.retryable)
+                is UiState.Error   -> {
+                    binding.swipeRefresh.isRefreshing = false
+                    showError(state.message, state.retryable)
+                }
                 is UiState.Success -> {
+                    binding.swipeRefresh.isRefreshing = false
                     showLoading(false)
                     departmentAdapter.submitList(state.data)
                 }
@@ -214,6 +220,12 @@ class SettingsFragment : Fragment() {
         binding.tvError.text           = msg
         binding.tvError.visibility     = View.VISIBLE
         binding.btnRetry.visibility    = if (retryable) View.VISIBLE else View.GONE
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (isFirstResume) { isFirstResume = false; return }
+        viewModel.loadDepartments()
     }
 
     override fun onDestroyView() { super.onDestroyView(); _binding = null }

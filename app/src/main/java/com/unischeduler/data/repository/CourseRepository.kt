@@ -6,20 +6,10 @@ package com.unischeduler.data.repository
 import com.unischeduler.data.model.Course
 import com.unischeduler.data.model.CourseInsert
 import com.unischeduler.data.remote.SupabaseClient.client
+import com.unischeduler.util.JsonUtil
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
-import io.github.jan.supabase.realtime.PostgresAction
-import io.github.jan.supabase.realtime.channel
-import io.github.jan.supabase.realtime.postgresChangeFlow
-import io.github.jan.supabase.realtime.realtime
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.launch
 
 class CourseRepository {
 
@@ -31,18 +21,6 @@ class CourseRepository {
         client.postgrest["courses"]
             .select(Columns.raw("*, departments(*)")) {
                 filter { eq("org_id", orgId) }
-                order(column = "code", order = Order.ASCENDING)
-                limit(10000)
-            }
-            .decodeList<Course>()
-
-    suspend fun getCoursesByDepartment(departmentId: Int, orgId: Int): List<Course> =
-        client.postgrest["courses"]
-            .select(Columns.raw("*, departments(*)")) {
-                filter {
-                    eq("department_id", departmentId)
-                    eq("org_id", orgId)
-                }
                 order(column = "code", order = Order.ASCENDING)
                 limit(10000)
             }
@@ -86,43 +64,15 @@ class CourseRepository {
             .delete { filter { eq("id", id); eq("org_id", orgId) } }
     }
 
-    // Real-time Flow — used by Task 2 pattern
-    // Emits a fresh list every time any row in "courses" changes.
-    fun observeCourses(orgId: Int): Flow<List<Course>> = callbackFlow {
-        val channel = client.realtime.channel("courses_changes")
-
-        val changeFlow = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
-            table = "courses"
-        }
-
-        launch {
-            changeFlow.collect {
-                // Re-fetch full list with join on every change
-                trySend(getAllCourses(orgId))
-            }
-        }
-
-        channel.subscribe()
-        // Emit initial data immediately
-        trySend(getAllCourses(orgId))
-
-        awaitClose {
-            CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
-                client.realtime.removeChannel(channel)
-            }
-        }
-    }
-
     // Returns courses with no entry in schedule_entries (unassigned)
     suspend fun getUnassignedCourses(orgId: Int): List<Course> {
         val all = getAllCourses(orgId)
-        val assignedIds = client.postgrest["offerings"]
+        val raw = client.postgrest["offerings"]
             .select(Columns.raw("course_id")) {
                 filter { eq("org_id", orgId) }
             }
-            .decodeList<Map<String, Int>>()
-            .mapNotNull { it["course_id"] }
-            .toSet()
+            .data
+        val assignedIds = JsonUtil.extractIntsFromColumn(raw, "course_id")
         return all.filter { it.id !in assignedIds }
     }
 }

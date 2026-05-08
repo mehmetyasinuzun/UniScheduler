@@ -21,7 +21,6 @@ import com.unischeduler.data.model.Classroom
 import com.unischeduler.data.model.Department
 import com.unischeduler.databinding.FragmentClassroomsBinding
 import com.unischeduler.databinding.ItemClassroomBinding
-import com.unischeduler.util.CsvExporter
 import com.unischeduler.util.CsvImporter
 import com.unischeduler.util.ErrorReporter
 import com.unischeduler.util.ExcelHelper
@@ -43,6 +42,8 @@ class ClassroomsFragment : Fragment() {
     private var classrooms: List<Classroom>   = emptyList()
     private val classroomTypes = listOf("theory", "lab")
 
+    private var isFirstResume = true
+
     private lateinit var classroomAdapter: ClassroomAdapter
 
     private lateinit var classroomImportLauncher: ActivityResultLauncher<String>
@@ -58,12 +59,23 @@ class ClassroomsFragment : Fragment() {
 
         classroomExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) { uri ->
             uri ?: return@registerForActivityResult
-            try {
-                val outputStream = requireContext().contentResolver.openOutputStream(uri) ?: return@registerForActivityResult
-                outputStream.use { ExcelHelper.exportClassrooms(classrooms, it) }
-                Toast.makeText(requireContext(), getString(R.string.classroom_export_success), Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Toast.makeText(requireContext(), getString(R.string.classroom_export_fail, e.message), Toast.LENGTH_LONG).show()
+            val appCtx = requireContext().applicationContext
+            val items = classrooms
+            lifecycleScope.launch {
+                val result = runCatching {
+                    kotlinx.coroutines.withContext(Dispatchers.IO) {
+                        val out = appCtx.contentResolver.openOutputStream(uri)
+                            ?: error("Dosya açılamadı")
+                        out.use { ExcelHelper.exportClassrooms(items, it) }
+                    }
+                }
+                if (!isAdded) return@launch
+                result
+                    .onSuccess { Toast.makeText(requireContext(), getString(R.string.classroom_export_success), Toast.LENGTH_SHORT).show() }
+                    .onFailure {
+                        if (it is kotlinx.coroutines.CancellationException) throw it
+                        Toast.makeText(requireContext(), getString(R.string.classroom_export_fail, it.message), Toast.LENGTH_LONG).show()
+                    }
             }
         }
     }
@@ -77,7 +89,8 @@ class ClassroomsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.rvClassrooms.layoutManager = LinearLayoutManager(requireContext())
-        binding.rvClassrooms.isNestedScrollingEnabled = false
+        binding.rvClassrooms.setHasFixedSize(true)
+        binding.swipeRefresh.setOnRefreshListener { viewModel.loadClassrooms() }
         classroomAdapter = ClassroomAdapter(
             onEditClick   = { showEditDialog(it) },
             onDeleteClick = { showDeleteDialog(it) }
@@ -107,8 +120,12 @@ class ClassroomsFragment : Fragment() {
             when (state) {
                 is UiState.Idle    -> viewModel.loadClassrooms()
                 is UiState.Loading -> showLoading(true)
-                is UiState.Error   -> showError(state.message, state.retryable)
+                is UiState.Error   -> {
+                    binding.swipeRefresh.isRefreshing = false
+                    showError(state.message, state.retryable)
+                }
                 is UiState.Success -> {
+                    binding.swipeRefresh.isRefreshing = false
                     showLoading(false)
                     classrooms = state.data
                     classroomAdapter.submitList(state.data)
@@ -289,32 +306,45 @@ class ClassroomsFragment : Fragment() {
     }
 
     private fun handleClassroomImport(uri: android.net.Uri) {
-        val ctx = requireContext()
-        try {
-            val kind = FileTypeDetector.detect(ctx, uri)
-            val parseResult: CsvImporter.ParseResult<CsvImporter.ClassroomRow> = when (kind) {
-                FileTypeDetector.Kind.XLSX, FileTypeDetector.Kind.XLS -> {
-                    val stream = ctx.contentResolver.openInputStream(uri)
-                        ?: return showImportFatal("Dosya açılamadı.")
-                    stream.use {
-                        val r = ExcelHelper.importClassrooms(it)
-                        CsvImporter.ParseResult(r.valid, r.errors)
+        val appCtx = requireContext().applicationContext
+        binding.btnImportClassrooms.isEnabled = false
+        lifecycleScope.launch {
+            val result = runCatching {
+                kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    val kind = FileTypeDetector.detect(appCtx, uri)
+                    val parsed: CsvImporter.ParseResult<CsvImporter.ClassroomRow> = when (kind) {
+                        FileTypeDetector.Kind.XLSX, FileTypeDetector.Kind.XLS -> {
+                            val stream = appCtx.contentResolver.openInputStream(uri)
+                                ?: error("Dosya açılamadı.")
+                            stream.use {
+                                val r = ExcelHelper.importClassrooms(it)
+                                CsvImporter.ParseResult(r.valid, r.errors)
+                            }
+                        }
+                        FileTypeDetector.Kind.CSV -> {
+                            val stream = appCtx.contentResolver.openInputStream(uri)
+                                ?: error("Dosya açılamadı.")
+                            val text = stream.use { it.bufferedReader().readText() }
+                            CsvImporter.parseClassrooms(text)
+                        }
+                        FileTypeDetector.Kind.UNKNOWN ->
+                            error("Dosya tipi tanınamadı. Lütfen .xlsx, .xls veya .csv yükleyin.")
                     }
+                    kind to parsed
                 }
-                FileTypeDetector.Kind.CSV -> {
-                    val stream = ctx.contentResolver.openInputStream(uri)
-                        ?: return showImportFatal("Dosya açılamadı.")
-                    val text = stream.use { it.bufferedReader().readText() }
-                    CsvImporter.parseClassrooms(text)
-                }
-                FileTypeDetector.Kind.UNKNOWN ->
-                    return showImportFatal("Dosya tipi tanınamadı. Lütfen .xlsx, .xls veya .csv yükleyin.")
             }
-            logImportErrors("import_classrooms", uri, kind, parseResult.errors, parseResult.valid.size)
-            showImportPreview(parseResult)
-        } catch (e: Exception) {
-            reportImportFatal("import_classrooms", uri, e)
-            showImportFatal("Dosya okuma hatası: ${e.message ?: e::class.java.simpleName}")
+            if (!isAdded) return@launch
+            binding.btnImportClassrooms.isEnabled = true
+            result
+                .onSuccess { (kind, parseResult) ->
+                    logImportErrors("import_classrooms", uri, kind, parseResult.errors, parseResult.valid.size)
+                    showImportPreview(parseResult)
+                }
+                .onFailure {
+                    if (it is kotlinx.coroutines.CancellationException) throw it
+                    reportImportFatal("import_classrooms", uri, it)
+                    showImportFatal("Dosya okuma hatası: ${it.message ?: it::class.java.simpleName}")
+                }
         }
     }
 
@@ -348,6 +378,13 @@ class ClassroomsFragment : Fragment() {
         lifecycleScope.launch(Dispatchers.IO) {
             runCatching { reporter.reportException("ClassroomsFragment", "$action[${uri}]", e) }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (isFirstResume) { isFirstResume = false; return }
+        viewModel.loadClassrooms()
+        viewModel.loadDepartmentsSilently()
     }
 
     override fun onDestroyView() { super.onDestroyView(); _binding = null }

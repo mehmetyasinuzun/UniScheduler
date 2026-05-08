@@ -35,6 +35,7 @@ class AssignmentFragment : Fragment() {
     private var offerings: List<Offering>   = emptyList()
     private var lecturers: List<Lecturer>   = emptyList()
     private var classrooms: List<Classroom> = emptyList()
+    private var isFirstResume = true
 
     private lateinit var scheduleEntryAdapter: ScheduleEntryAdapter
 
@@ -51,6 +52,7 @@ class AssignmentFragment : Fragment() {
         scheduleEntryAdapter = ScheduleEntryAdapter { showDeleteConfirmation(it) }
         binding.rvEntries.adapter = scheduleEntryAdapter
         binding.btnRetry.setOnClickListener { viewModel.loadForm() }
+        binding.swipeRefresh.setOnRefreshListener { viewModel.loadForm() }
         binding.btnAssign.setOnClickListener { onAssignClicked(force = false) }
         binding.btnAutoSchedule.setOnClickListener {
             findNavController().navigate(R.id.action_assignment_to_autoSchedule)
@@ -67,8 +69,12 @@ class AssignmentFragment : Fragment() {
             when (state) {
                 is UiState.Idle    -> viewModel.loadForm()
                 is UiState.Loading -> showLoading(true)
-                is UiState.Error   -> showError(state.message, state.retryable)
+                is UiState.Error   -> {
+                    binding.swipeRefresh.isRefreshing = false
+                    showError(state.message, state.retryable)
+                }
                 is UiState.Success -> {
+                    binding.swipeRefresh.isRefreshing = false
                     showLoading(false)
                     populateForm(state.data)
                 }
@@ -273,6 +279,12 @@ class AssignmentFragment : Fragment() {
                 setTextColor(android.graphics.Color.parseColor("#D32F2F"))
             })
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (isFirstResume) { isFirstResume = false; return }
+        viewModel.loadForm()
     }
 
     override fun onDestroyView() { super.onDestroyView(); _binding = null }

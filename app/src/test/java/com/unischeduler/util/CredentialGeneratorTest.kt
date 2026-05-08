@@ -42,25 +42,38 @@ class CredentialGeneratorTest {
     }
 
     @Test
-    fun `generatePassword produces 6-character string`() {
+    fun `generatePassword produces 12-character string`() {
         val password = CredentialGenerator.generatePassword()
-        assertEquals(6, password.length)
+        assertEquals(12, password.length)
     }
 
     @Test
-    fun `generatePassword contains only alphanumeric chars`() {
-        repeat(100) {
-            val password = CredentialGenerator.generatePassword()
-            assertTrue("Password '$password' contains invalid chars",
-                password.all { it.isLetterOrDigit() })
+    fun `generatePassword always contains at least one of each category`() {
+        val specials = setOf('!', '@', '#', '$', '%', '&', '*', '?', '+', '-', '_', '=')
+        repeat(200) {
+            val pwd = CredentialGenerator.generatePassword()
+            assertTrue("'$pwd' missing uppercase", pwd.any { it.isUpperCase() })
+            assertTrue("'$pwd' missing lowercase", pwd.any { it.isLowerCase() })
+            assertTrue("'$pwd' missing digit",     pwd.any { it.isDigit() })
+            assertTrue("'$pwd' missing special",   pwd.any { it in specials })
         }
     }
 
     @Test
-    fun `generatePassword produces different values each call`() {
-        val passwords = (1..50).map { CredentialGenerator.generatePassword() }.toSet()
-        // With 62^6 possibilities, 50 calls should almost never produce duplicates
-        assertTrue("Too many duplicate passwords", passwords.size > 40)
+    fun `generatePassword produces unique values`() {
+        val passwords = (1..200).map { CredentialGenerator.generatePassword() }.toSet()
+        // 12 char alphabet ~70+ → trivially distinct
+        assertEquals("Duplicate passwords detected", 200, passwords.size)
+    }
+
+    @Test
+    fun `generatePassword has no whitespace or ambiguous chars`() {
+        repeat(100) {
+            val pwd = CredentialGenerator.generatePassword()
+            assertFalse("'$pwd' has whitespace",   pwd.any { it.isWhitespace() })
+            assertFalse("'$pwd' has backtick",     pwd.contains('`'))
+            assertFalse("'$pwd' has quote",        pwd.contains('"'))
+        }
     }
 
     @Test

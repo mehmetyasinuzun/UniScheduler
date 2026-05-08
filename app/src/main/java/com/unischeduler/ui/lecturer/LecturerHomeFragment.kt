@@ -23,6 +23,7 @@ class LecturerHomeFragment : Fragment() {
     private var _binding: FragmentLecturerHomeBinding? = null
     private val binding get() = _binding!!
     private val viewModel: LecturerHomeViewModel by viewModels()
+    private var isFirstResume = true
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentLecturerHomeBinding.inflate(inflater, container, false)
@@ -33,6 +34,7 @@ class LecturerHomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.btnRetry.setOnClickListener { viewModel.load() }
+        binding.swipeRefresh.setOnRefreshListener { viewModel.load() }
 
         setupThemeSelector()
         setupLanguageSelector()
@@ -52,8 +54,12 @@ class LecturerHomeFragment : Fragment() {
             when (state) {
                 is UiState.Idle    -> viewModel.load()
                 is UiState.Loading -> showLoading(true)
-                is UiState.Error   -> showError(state.message, state.retryable)
+                is UiState.Error   -> {
+                    binding.swipeRefresh.isRefreshing = false
+                    showError(state.message, state.retryable)
+                }
                 is UiState.Success -> {
+                    binding.swipeRefresh.isRefreshing = false
                     showLoading(false)
                     val d = state.data
                     binding.tvWelcome.text      = getString(R.string.lecturer_home_welcome, d.lecturer.fullName)
@@ -117,7 +123,7 @@ class LecturerHomeFragment : Fragment() {
     }
 
     private fun showLoading(loading: Boolean) {
-        binding.progressBar.visibility = if (loading) View.VISIBLE else View.GONE
+        binding.progressBar.visibility = if (loading && !binding.swipeRefresh.isRefreshing) View.VISIBLE else View.GONE
         binding.tvError.visibility     = View.GONE
         binding.btnRetry.visibility    = View.GONE
     }
@@ -127,6 +133,12 @@ class LecturerHomeFragment : Fragment() {
         binding.tvError.text           = msg
         binding.tvError.visibility     = View.VISIBLE
         binding.btnRetry.visibility    = if (retryable) View.VISIBLE else View.GONE
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (isFirstResume) { isFirstResume = false; return }
+        viewModel.load()
     }
 
     override fun onDestroyView() { super.onDestroyView(); _binding = null }

@@ -9,17 +9,6 @@ import com.unischeduler.data.remote.SupabaseClient.client
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
-import io.github.jan.supabase.realtime.PostgresAction
-import io.github.jan.supabase.realtime.channel
-import io.github.jan.supabase.realtime.postgresChangeFlow
-import io.github.jan.supabase.realtime.realtime
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.launch
 
 class ScheduleRepository {
 
@@ -128,28 +117,6 @@ class ScheduleRepository {
                     eq("org_id", orgId)
                 }
             }
-    }
-
-    // Real-time Flow for schedule changes (Lab Task 2 pattern)
-    fun observeSchedule(orgId: Int): Flow<List<ScheduleEntry>> = callbackFlow {
-        val channel = client.realtime.channel("schedule_changes")
-
-        val changeFlow = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
-            table = "schedule_entries"
-        }
-
-        launch {
-            changeFlow.collect { trySend(getAllEntries(orgId)) }
-        }
-
-        channel.subscribe()
-        trySend(getAllEntries(orgId))
-
-        awaitClose {
-            CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
-                client.realtime.removeChannel(channel)
-            }
-        }
     }
 
     private fun overlaps(startA: Int, endA: Int, startB: String, endB: String): Boolean {

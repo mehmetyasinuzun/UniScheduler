@@ -19,8 +19,42 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 
 const app = express();
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors());
+
+// CORS: in production, only allow explicit origins (ALLOWED_ORIGINS env).
+// In dev, allow everything for convenience.
+const isProduction = process.env.NODE_ENV === 'production';
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+    .split(',').map(s => s.trim()).filter(Boolean);
+
+if (isProduction && allowedOrigins.length > 0) {
+    app.use(cors({
+        origin: (origin, cb) => {
+            if (!origin || allowedOrigins.includes(origin)) cb(null, true);
+            else cb(new Error('Origin not allowed'));
+        },
+        credentials: true
+    }));
+} else {
+    app.use(cors());
+}
+
 app.use(express.json());
+
+// Optional IP allowlist — set ALLOWED_IPS to restrict access to known IPs.
+const allowedIps = (process.env.ALLOWED_IPS || '')
+    .split(',').map(s => s.trim()).filter(Boolean);
+if (allowedIps.length > 0) {
+    app.use((req, res, next) => {
+        const clientIp = (req.headers['x-forwarded-for']?.split(',')[0]?.trim()) || req.ip;
+        // Match exact IP. CIDR support intentionally omitted; keep this simple
+        // and use a real firewall (nginx, iptables, cloud security groups) for
+        // network-level filtering. This is a defense-in-depth backup.
+        if (!allowedIps.includes(clientIp)) {
+            return res.status(403).json({ error: 'IP not allowed.' });
+        }
+        next();
+    });
+}
 
 // Disable caching on every API response so the panel never serves stale data
 // after switching organizations. Browsers / proxies otherwise hold onto the
@@ -62,6 +96,22 @@ const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'superadmin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'SuperAdmin123!';
 const activeSessions = new Map(); // token → { createdAt }
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
+
+// Production safety: refuse to start with default / weak credentials.
+const WEAK_DEFAULTS = new Set([
+    'SuperAdmin123!',
+    'CHANGE_ME_PRODUCTION_REQUIRES_STRONG_PASSWORD',
+    'admin',
+    'password',
+    ''
+]);
+if (isProduction) {
+    if (WEAK_DEFAULTS.has(ADMIN_PASSWORD) || ADMIN_PASSWORD.length < 12) {
+        console.error('REFUSING TO START: ADMIN_PASSWORD is the default or too short.');
+        console.error('Set a strong (16+ char random) ADMIN_PASSWORD in .env before NODE_ENV=production.');
+        process.exit(1);
+    }
+}
 
 // ── Supabase Client ──────────────────────────────────────────────────
 const supabaseUrl = process.env.SUPABASE_URL;

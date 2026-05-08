@@ -9,17 +9,13 @@ import com.unischeduler.data.model.User
 import com.unischeduler.data.model.UserInsert
 import com.unischeduler.data.remote.SupabaseClient.client
 import com.unischeduler.util.CredentialGenerator
+import com.unischeduler.util.JsonUtil
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonPrimitive
 
 class LecturerRepository {
 
@@ -38,18 +34,6 @@ class LecturerRepository {
         Log.d("LecturerRepo", "getAllLecturers decoded=${result.size}")
         return result
     }
-
-    suspend fun getLecturersByDepartment(departmentId: Int, orgId: Int): List<Lecturer> =
-        client.postgrest["lecturers"]
-            .select(joinColumns) {
-                filter {
-                    eq("department_id", departmentId)
-                    eq("org_id", orgId)
-                }
-                order(column = "last_name", order = Order.ASCENDING)
-                limit(10000)
-            }
-            .decodeList<Lecturer>()
 
     suspend fun insertLecturerWithUser(
         title: String,
@@ -173,13 +157,7 @@ class LecturerRepository {
         val raw = client.postgrest[table]
             .select(Columns.raw(column)) { filter { eq("org_id", orgId) } }
             .data
-        return Json.decodeFromString<List<Map<String, JsonElement>>>(raw)
-            .mapNotNull { row ->
-                val el = row[column]
-                if (el == null || el is JsonNull) null
-                else el.jsonPrimitive.intOrNull
-            }
-            .toSet()
+        return JsonUtil.extractIntsFromColumn(raw, column)
     }
 
     private suspend fun generateUniqueUsername(base: String): String {
@@ -193,11 +171,11 @@ class LecturerRepository {
     }
 
     private suspend fun usernameExists(username: String): Boolean {
-        val rows = client.postgrest["users"]
+        val raw = client.postgrest["users"]
             .select(Columns.raw("id")) {
                 filter { eq("username", username) }
             }
-            .decodeList<Map<String, String>>()
-        return rows.isNotEmpty()
+            .data
+        return JsonUtil.rowCount(raw) > 0
     }
 }

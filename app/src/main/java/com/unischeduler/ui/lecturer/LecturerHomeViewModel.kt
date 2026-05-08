@@ -39,12 +39,18 @@ class LecturerHomeViewModel(app: Application) : AndroidViewModel(app) {
                     coroutineScope {
                         val orgId = session.orgId
                         if (orgId <= 0) {
-                            throw IllegalStateException("Organization is missing for this account.")
+                            throw IllegalStateException("Bu hesap bir kuruma bağlı değil. Yöneticiyle iletişime geçin.")
+                        }
+                        val lecturerId = session.lecturerId
+                        if (lecturerId <= 0) {
+                            throw IllegalStateException(
+                                "Hocaya ait bir profil bulunamadı. Yönetici sizi öğretim üyesi listesine eklemiş olmalı; lütfen yöneticiyle iletişime geçin."
+                            )
                         }
                         val lecturerDeferred = async { authRepo.getLecturerByUserId(session.userId, orgId) }
-                        val entriesDeferred  = async { scheduleRepo.getEntriesForLecturer(session.lecturerId, orgId) }
+                        val entriesDeferred  = async { scheduleRepo.getEntriesForLecturer(lecturerId, orgId) }
                         val lecturer = lecturerDeferred.await()
-                            ?: throw IllegalStateException("Lecturer profile not found.")
+                            ?: throw IllegalStateException("Öğretim üyesi profili bulunamadı.")
                         LecturerHomeData(lecturer = lecturer, weeklyCount = entriesDeferred.await().size)
                     }
                 }

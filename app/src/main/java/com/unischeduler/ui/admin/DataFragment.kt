@@ -30,7 +30,6 @@ import com.unischeduler.databinding.FragmentDataBinding
 import com.unischeduler.databinding.ItemCourseBinding
 import com.unischeduler.databinding.ItemLecturerBinding
 import com.unischeduler.databinding.ItemOfferingBinding
-import com.unischeduler.util.CsvExporter
 import com.unischeduler.util.CsvImporter
 import com.unischeduler.util.ErrorReporter
 import com.unischeduler.util.ExcelHelper
@@ -56,6 +55,10 @@ class DataFragment : Fragment() {
     private var lecturers: List<Lecturer>     = emptyList()
 
     private var selectedDeptId: Int? = null
+    // Tab değişikliklerinden sonra arka plandaki verinin de güncel kalması için
+    // onResume'da yeniden yüklüyoruz. İlk açılışta ViewModel zaten Idle->load
+    // tetikliyor, çift yüklemeyi önlemek için flag'liyoruz.
+    private var isFirstResume = true
 
     private val academicTitles = listOf("Dr.", "Prof.", "Asst. Prof.", "Lecturer", "Mr.", "Ms.")
     private val terms          = listOf("Fall", "Spring", "Summer")
@@ -82,23 +85,46 @@ class DataFragment : Fragment() {
 
         courseExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) { uri ->
             uri ?: return@registerForActivityResult
-            try {
-                val outputStream = requireContext().contentResolver.openOutputStream(uri) ?: return@registerForActivityResult
-                outputStream.use { ExcelHelper.exportCourses(courses, it) }
-                Toast.makeText(requireContext(), getString(R.string.data_course_export_success), Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Toast.makeText(requireContext(), getString(R.string.data_export_fail, e.message), Toast.LENGTH_LONG).show()
+            performExportAsync(uri, getString(R.string.data_course_export_success)) { stream ->
+                ExcelHelper.exportCourses(courses, stream)
             }
         }
 
         lecturerExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) { uri ->
             uri ?: return@registerForActivityResult
-            try {
-                val outputStream = requireContext().contentResolver.openOutputStream(uri) ?: return@registerForActivityResult
-                outputStream.use { ExcelHelper.exportLecturers(lecturers, it) }
-                Toast.makeText(requireContext(), getString(R.string.data_lecturer_export_success), Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Toast.makeText(requireContext(), getString(R.string.data_export_fail, e.message), Toast.LENGTH_LONG).show()
+            performExportAsync(uri, getString(R.string.data_lecturer_export_success)) { stream ->
+                ExcelHelper.exportLecturers(lecturers, stream)
+            }
+        }
+    }
+
+    private fun performExportAsync(
+        uri: android.net.Uri,
+        successMessage: String,
+        write: (java.io.OutputStream) -> Unit
+    ) {
+        val ctx = requireContext().applicationContext
+        viewLifecycleOwnerLiveData.value?.lifecycleScope?.launch {
+            val result = runCatching {
+                kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    val out = ctx.contentResolver.openOutputStream(uri)
+                        ?: error("Dosya açılamadı")
+                    out.use { write(it) }
+                }
+            }
+            if (!isAdded) return@launch
+            result
+                .onSuccess { Toast.makeText(requireContext(), successMessage, Toast.LENGTH_SHORT).show() }
+                .onFailure {
+                    if (it is kotlinx.coroutines.CancellationException) throw it
+                    Toast.makeText(requireContext(), getString(R.string.data_export_fail, it.message), Toast.LENGTH_LONG).show()
+                }
+        } ?: lifecycleScope.launch {
+            // Fallback: view destroyed before launcher returned — swallow silently
+            runCatching {
+                kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    ctx.contentResolver.openOutputStream(uri)?.use { write(it) }
+                }
             }
         }
     }
@@ -113,6 +139,7 @@ class DataFragment : Fragment() {
     // Adapters set once and reused across data updates (DiffUtil computes diffs).
     private val courseAdapter   by lazy { CourseAdapter({ showEditCourseDialog(it) }, { showDeleteCourseDialog(it) }) }
     private val offeringAdapter by lazy { OfferingAdapter({ showEditOfferingDialog(it) }, { showDeleteOfferingDialog(it) }) }
+    private val lecturerAdapter by lazy { LecturerAdapter({ showEditLecturerDialog(it) }, { showDeleteLecturerDialog(it) }) }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -123,11 +150,23 @@ class DataFragment : Fragment() {
         binding.rvCourses.layoutManager   = LinearLayoutManager(requireContext())
         binding.rvCourses.adapter         = courseAdapter
         binding.rvCourses.isNestedScrollingEnabled = false
+        binding.rvCourses.setItemViewCacheSize(20)
         binding.rvOfferings.layoutManager = LinearLayoutManager(requireContext())
         binding.rvOfferings.adapter       = offeringAdapter
         binding.rvOfferings.isNestedScrollingEnabled = false
+        binding.rvOfferings.setItemViewCacheSize(20)
+        binding.rvLecturers.layoutManager = LinearLayoutManager(requireContext())
+        binding.rvLecturers.adapter       = lecturerAdapter
+        binding.rvLecturers.isNestedScrollingEnabled = false
+        binding.rvLecturers.setItemViewCacheSize(20)
 
         binding.btnRetryLecturers.setOnClickListener    { viewModel.loadLecturers() }
+        binding.swipeRefresh.setOnRefreshListener {
+            viewModel.loadDepartments()
+            viewModel.loadLecturers()
+            viewModel.loadCourses()
+            viewModel.loadOfferings()
+        }
         binding.btnAddLecturer.setOnClickListener       { onAddLecturerClicked() }
         binding.btnImportLecturers.setOnClickListener   { lecturerImportLauncher.launch("*/*") }
         binding.btnExportLecturers.setOnClickListener   { lecturerExportLauncher.launch("lecturers.xlsx") }
@@ -196,13 +235,14 @@ class DataFragment : Fragment() {
                     binding.tvLecturerListError.text       = state.message
                     binding.tvLecturerListError.visibility = View.VISIBLE
                     binding.btnRetryLecturers.visibility   = if (state.retryable) View.VISIBLE else View.GONE
+                    binding.swipeRefresh.isRefreshing      = false
                 }
                 is UiState.Success -> {
                     binding.progressLecturers.visibility   = View.GONE
                     binding.tvLecturerListError.visibility = View.GONE
                     binding.btnRetryLecturers.visibility   = View.GONE
                     allLecturers = state.data
-                    android.util.Log.d("DataFragment", "Lecturers loaded: ${state.data.size}")
+                    binding.swipeRefresh.isRefreshing      = false
                     applyDeptFilter()
                 }
             }
@@ -813,25 +853,14 @@ class DataFragment : Fragment() {
     }
 
     private fun populateLecturerList(items: List<Lecturer>) {
-        binding.llLecturerList.removeAllViews()
         if (items.isEmpty()) {
-            val tv = TextView(requireContext()).apply {
-                text = getString(R.string.data_lecturer_empty)
-                setPadding(0, 16, 0, 16)
-            }
-            binding.llLecturerList.addView(tv)
-            return
+            binding.tvLecturerEmpty.visibility = View.VISIBLE
+            binding.rvLecturers.visibility = View.GONE
+        } else {
+            binding.tvLecturerEmpty.visibility = View.GONE
+            binding.rvLecturers.visibility = View.VISIBLE
         }
-        items.forEach { lecturer ->
-            val itemBinding = ItemLecturerBinding.inflate(layoutInflater, binding.llLecturerList, false)
-            itemBinding.tvName.text = lecturer.fullName
-            itemBinding.tvDepartment.text = lecturer.departmentName
-            itemBinding.tvUsername.text = "@${lecturer.username}"
-            itemBinding.btnDelete.visibility = View.VISIBLE
-            itemBinding.btnDelete.setOnClickListener { showDeleteLecturerDialog(lecturer) }
-            itemBinding.root.setOnLongClickListener { showEditLecturerDialog(lecturer); true }
-            binding.llLecturerList.addView(itemBinding.root)
-        }
+        lecturerAdapter.submitList(items)
     }
 
     private fun populateCourseSpinner(courseList: List<Course>) {
@@ -875,63 +904,97 @@ class DataFragment : Fragment() {
     // ── Import dispatch (file-type aware) ─────────────────────────────────────
 
     private fun handleCourseImport(uri: android.net.Uri) {
-        val ctx = requireContext()
-        try {
-            val kind = FileTypeDetector.detect(ctx, uri)
-            val parseResult: CsvImporter.ParseResult<CsvImporter.CourseRow> = when (kind) {
-                FileTypeDetector.Kind.XLSX, FileTypeDetector.Kind.XLS -> {
-                    val stream = ctx.contentResolver.openInputStream(uri)
-                        ?: return showImportFatal("Dosya açılamadı.")
-                    stream.use {
-                        val r = ExcelHelper.importCourses(it)
-                        CsvImporter.ParseResult(r.valid, r.errors)
-                    }
+        val appCtx = requireContext().applicationContext
+        binding.btnImportCourses.isEnabled = false
+        lifecycleScope.launch {
+            val result = runCatching {
+                kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    val kind = FileTypeDetector.detect(appCtx, uri)
+                    val parsed = parseCourseFile(appCtx, uri, kind)
+                    Triple(kind, parsed, null as Throwable?)
                 }
-                FileTypeDetector.Kind.CSV -> {
-                    val stream = ctx.contentResolver.openInputStream(uri)
-                        ?: return showImportFatal("Dosya açılamadı.")
-                    val text = stream.use { it.bufferedReader().readText() }
-                    CsvImporter.parseCourses(text)
-                }
-                FileTypeDetector.Kind.UNKNOWN ->
-                    return showImportFatal("Dosya tipi tanınamadı. Lütfen .xlsx, .xls veya .csv yükleyin.")
             }
-            logImportErrors("import_courses", uri, kind, parseResult.errors, parseResult.valid.size)
-            showCourseImportPreview(parseResult)
-        } catch (e: Exception) {
-            reportImportFatal("import_courses", uri, e)
-            showImportFatal("Dosya okuma hatası: ${e.message ?: e::class.java.simpleName}")
+            if (!isAdded) return@launch
+            binding.btnImportCourses.isEnabled = true
+            result
+                .onSuccess { (kind, parseResult, _) ->
+                    logImportErrors("import_courses", uri, kind, parseResult.errors, parseResult.valid.size)
+                    showCourseImportPreview(parseResult)
+                }
+                .onFailure {
+                    if (it is kotlinx.coroutines.CancellationException) throw it
+                    reportImportFatal("import_courses", uri, it)
+                    showImportFatal("Dosya okuma hatası: ${it.message ?: it::class.java.simpleName}")
+                }
         }
     }
 
     private fun handleLecturerImport(uri: android.net.Uri) {
-        val ctx = requireContext()
-        try {
-            val kind = FileTypeDetector.detect(ctx, uri)
-            val parseResult: CsvImporter.ParseResult<CsvImporter.LecturerRow> = when (kind) {
-                FileTypeDetector.Kind.XLSX, FileTypeDetector.Kind.XLS -> {
-                    val stream = ctx.contentResolver.openInputStream(uri)
-                        ?: return showImportFatal("Dosya açılamadı.")
-                    stream.use {
-                        val r = ExcelHelper.importLecturers(it)
-                        CsvImporter.ParseResult(r.valid, r.errors)
-                    }
+        val appCtx = requireContext().applicationContext
+        binding.btnImportLecturers.isEnabled = false
+        lifecycleScope.launch {
+            val result = runCatching {
+                kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    val kind = FileTypeDetector.detect(appCtx, uri)
+                    val parsed = parseLecturerFile(appCtx, uri, kind)
+                    Triple(kind, parsed, null as Throwable?)
                 }
-                FileTypeDetector.Kind.CSV -> {
-                    val stream = ctx.contentResolver.openInputStream(uri)
-                        ?: return showImportFatal("Dosya açılamadı.")
-                    val text = stream.use { it.bufferedReader().readText() }
-                    CsvImporter.parseLecturers(text)
-                }
-                FileTypeDetector.Kind.UNKNOWN ->
-                    return showImportFatal("Dosya tipi tanınamadı. Lütfen .xlsx, .xls veya .csv yükleyin.")
             }
-            logImportErrors("import_lecturers", uri, kind, parseResult.errors, parseResult.valid.size)
-            showLecturerImportPreview(parseResult)
-        } catch (e: Exception) {
-            reportImportFatal("import_lecturers", uri, e)
-            showImportFatal("Dosya okuma hatası: ${e.message ?: e::class.java.simpleName}")
+            if (!isAdded) return@launch
+            binding.btnImportLecturers.isEnabled = true
+            result
+                .onSuccess { (kind, parseResult, _) ->
+                    logImportErrors("import_lecturers", uri, kind, parseResult.errors, parseResult.valid.size)
+                    showLecturerImportPreview(parseResult)
+                }
+                .onFailure {
+                    if (it is kotlinx.coroutines.CancellationException) throw it
+                    reportImportFatal("import_lecturers", uri, it)
+                    showImportFatal("Dosya okuma hatası: ${it.message ?: it::class.java.simpleName}")
+                }
         }
+    }
+
+    private fun parseCourseFile(
+        ctx: android.content.Context,
+        uri: android.net.Uri,
+        kind: FileTypeDetector.Kind
+    ): CsvImporter.ParseResult<CsvImporter.CourseRow> = when (kind) {
+        FileTypeDetector.Kind.XLSX, FileTypeDetector.Kind.XLS -> {
+            val stream = ctx.contentResolver.openInputStream(uri) ?: error("Dosya açılamadı.")
+            stream.use {
+                val r = ExcelHelper.importCourses(it)
+                CsvImporter.ParseResult(r.valid, r.errors)
+            }
+        }
+        FileTypeDetector.Kind.CSV -> {
+            val stream = ctx.contentResolver.openInputStream(uri) ?: error("Dosya açılamadı.")
+            val text = stream.use { it.bufferedReader().readText() }
+            CsvImporter.parseCourses(text)
+        }
+        FileTypeDetector.Kind.UNKNOWN ->
+            error("Dosya tipi tanınamadı. Lütfen .xlsx, .xls veya .csv yükleyin.")
+    }
+
+    private fun parseLecturerFile(
+        ctx: android.content.Context,
+        uri: android.net.Uri,
+        kind: FileTypeDetector.Kind
+    ): CsvImporter.ParseResult<CsvImporter.LecturerRow> = when (kind) {
+        FileTypeDetector.Kind.XLSX, FileTypeDetector.Kind.XLS -> {
+            val stream = ctx.contentResolver.openInputStream(uri) ?: error("Dosya açılamadı.")
+            stream.use {
+                val r = ExcelHelper.importLecturers(it)
+                CsvImporter.ParseResult(r.valid, r.errors)
+            }
+        }
+        FileTypeDetector.Kind.CSV -> {
+            val stream = ctx.contentResolver.openInputStream(uri) ?: error("Dosya açılamadı.")
+            val text = stream.use { it.bufferedReader().readText() }
+            CsvImporter.parseLecturers(text)
+        }
+        FileTypeDetector.Kind.UNKNOWN ->
+            error("Dosya tipi tanınamadı. Lütfen .xlsx, .xls veya .csv yükleyin.")
     }
 
     private fun showImportFatal(message: String) {
@@ -967,6 +1030,20 @@ class DataFragment : Fragment() {
         lifecycleScope.launch(Dispatchers.IO) {
             runCatching { reporter.reportException("DataFragment", "$action[${uri}]", e) }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (isFirstResume) {
+            isFirstResume = false
+            return
+        }
+        // Tab'a tekrar dönüldüğünde Settings'te eklenen departmanlar /
+        // ders, hoca, atama listelerinin güncel kalması için yeniden çek.
+        viewModel.loadDepartments()
+        viewModel.loadLecturers()
+        viewModel.loadCourses()
+        viewModel.loadOfferings()
     }
 
     override fun onDestroyView() { super.onDestroyView(); _binding = null }
@@ -1030,6 +1107,37 @@ class OfferingAdapter(
         private val DIFF = object : DiffUtil.ItemCallback<Offering>() {
             override fun areItemsTheSame(old: Offering, new: Offering)    = old.id == new.id
             override fun areContentsTheSame(old: Offering, new: Offering) = old == new
+        }
+    }
+}
+
+
+// ── Lecturer Adapter ─────────────────────────────────────────────────────────
+
+class LecturerAdapter(
+    private val onEdit: (Lecturer) -> Unit,
+    private val onDelete: (Lecturer) -> Unit
+) : ListAdapter<Lecturer, LecturerAdapter.VH>(DIFF) {
+
+    inner class VH(val binding: ItemLecturerBinding) : RecyclerView.ViewHolder(binding.root)
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
+        VH(ItemLecturerBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        val l = getItem(position)
+        holder.binding.tvName.text = l.fullName
+        holder.binding.tvDepartment.text = l.departmentName
+        holder.binding.tvUsername.text = "@${l.username}"
+        holder.binding.btnDelete.visibility = View.VISIBLE
+        holder.binding.btnDelete.setOnClickListener { onDelete(l) }
+        holder.binding.root.setOnLongClickListener { onEdit(l); true }
+    }
+
+    companion object {
+        private val DIFF = object : DiffUtil.ItemCallback<Lecturer>() {
+            override fun areItemsTheSame(old: Lecturer, new: Lecturer)    = old.id == new.id
+            override fun areContentsTheSame(old: Lecturer, new: Lecturer) = old == new
         }
     }
 }

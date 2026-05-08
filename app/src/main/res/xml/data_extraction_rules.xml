@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ data extraction rules. Controls what gets included when:
+   • the user backs up via "Cloud backup" / Google Drive (cloud-backup)
+   • the user transfers data to a new phone (device-transfer)
+  We exclude everything — UniScheduler's local state (encrypted session,
+  cached prefs) is safe to drop on a new device; the user simply re-logs in
+  and pulls fresh data from Supabase.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="database"   path="." />
+        <exclude domain="file"       path="." />
+        <exclude domain="external"   path="." />
+        <exclude domain="root"       path="." />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="database"   path="." />
+        <exclude domain="file"       path="." />
+        <exclude domain="external"   path="." />
+        <exclude domain="root"       path="." />
+    </device-transfer>
+</data-extraction-rules>

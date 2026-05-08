@@ -19,6 +19,7 @@ class CalendarFragment : Fragment() {
     private var _binding: FragmentWeeklyScheduleBinding? = null
     private val binding get() = _binding!!
     private val viewModel: CalendarViewModel by viewModels()
+    private var isFirstResume = true
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentWeeklyScheduleBinding.inflate(inflater, container, false)
@@ -30,6 +31,7 @@ class CalendarFragment : Fragment() {
 
         binding.tvTitle.text = "Programım"
         binding.btnRetry.setOnClickListener { viewModel.loadEntries() }
+        binding.swipeRefresh.setOnRefreshListener { viewModel.loadEntries() }
 
         binding.weeklySchedule.setOnEntryClickListener { entry ->
             showEntryDetail(entry)
@@ -39,18 +41,20 @@ class CalendarFragment : Fragment() {
             when (state) {
                 is UiState.Idle -> viewModel.loadEntries()
                 is UiState.Loading -> {
-                    binding.progressBar.visibility = View.VISIBLE
+                    if (!binding.swipeRefresh.isRefreshing) binding.progressBar.visibility = View.VISIBLE
                     binding.tvError.visibility = View.GONE
                     binding.tvEmpty.visibility = View.GONE
                     binding.btnRetry.visibility = View.GONE
                 }
                 is UiState.Error -> {
+                    binding.swipeRefresh.isRefreshing = false
                     binding.progressBar.visibility = View.GONE
                     binding.tvError.text = state.message
                     binding.tvError.visibility = View.VISIBLE
                     binding.btnRetry.visibility = if (state.retryable) View.VISIBLE else View.GONE
                 }
                 is UiState.Success -> {
+                    binding.swipeRefresh.isRefreshing = false
                     binding.progressBar.visibility = View.GONE
                     binding.tvError.visibility = View.GONE
                     binding.btnRetry.visibility = View.GONE
@@ -92,6 +96,12 @@ class CalendarFragment : Fragment() {
             .setMessage(msg)
             .setPositiveButton(getString(R.string.common_ok), null)
             .show()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (isFirstResume) { isFirstResume = false; return }
+        viewModel.loadEntries()
     }
 
     override fun onDestroyView() { super.onDestroyView(); _binding = null }

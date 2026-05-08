@@ -4,6 +4,7 @@ package com.unischeduler.data.repository
 import com.unischeduler.data.model.Offering
 import com.unischeduler.data.model.OfferingInsert
 import com.unischeduler.data.remote.SupabaseClient.client
+import com.unischeduler.util.JsonUtil
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
@@ -66,13 +67,12 @@ class OfferingRepository {
 
     suspend fun getUnassignedOfferings(orgId: Int): List<Offering> {
         val all = getAllOfferings(orgId)
-        val assignedIds = client.postgrest["schedule_entries"]
+        val raw = client.postgrest["schedule_entries"]
             .select(Columns.raw("offering_id")) {
                 filter { eq("org_id", orgId) }
             }
-            .decodeList<Map<String, Int>>()
-            .mapNotNull { it["offering_id"] }
-            .toSet()
+            .data
+        val assignedIds = JsonUtil.extractIntsFromColumn(raw, "offering_id")
         return all.filter { it.id !in assignedIds }
     }
 }

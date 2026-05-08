@@ -32,6 +32,17 @@ class WeeklyScheduleView @JvmOverloads constructor(
     private var emptyCellClickListener: ((day: String, hour: Int) -> Unit)? = null
 
     private val cardRects = mutableListOf<Pair<RectF, ScheduleEntry>>()
+    // onDraw allocation'larını engellemek için kullanılan reuse buffer'ları:
+    private val reusableRect = RectF()
+    private val parsedColorCache = HashMap<String, Int>()
+    private val darkenedColorCache = HashMap<Int, Int>()
+    // Layout sonucu setEntries'te bir kez hesaplanır; onDraw sadece okur.
+    private var cachedLayout: Map<String, List<LayoutEntry>> = emptyMap()
+    // Şimdi noktası için ayrı paint objesi (FILL) — nowLinePaint state mutation
+    // edilmesin diye.
+    private val nowDotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
 
     private val headerHeight = 48f.dp
     private val timeColumnWidth = 56f.dp
@@ -133,6 +144,7 @@ class WeeklyScheduleView @JvmOverloads constructor(
 
     fun setConfig(config: ScheduleViewConfig) {
         this.config = config
+        cardRects.clear()
         requestLayout()
         invalidate()
     }
@@ -140,6 +152,9 @@ class WeeklyScheduleView @JvmOverloads constructor(
     fun setEntries(entries: List<ScheduleEntry>) {
         this.entries = entries
         cardRects.clear()
+        cachedLayout = entries.groupBy { it.day }.mapValues { (_, dayEntries) ->
+            layoutOverlapping(dayEntries)
+        }
         requestLayout()
         invalidate()
     }
@@ -229,12 +244,8 @@ class WeeklyScheduleView @JvmOverloads constructor(
     }
 
     private fun drawEntries(canvas: Canvas) {
-        val grouped = entries.groupBy { it.day }
-
         for ((dayIndex, dayName) in config.activeDays.withIndex()) {
-            val dayEntries = grouped[dayName] ?: continue
-            val layout = layoutOverlapping(dayEntries)
-
+            val layout = cachedLayout[dayName] ?: continue
             for ((entry, column, totalColumns) in layout) {
                 drawEntryCard(canvas, entry, dayIndex, column, totalColumns)
             }
@@ -258,16 +269,19 @@ class WeeklyScheduleView @JvmOverloads constructor(
         val top = minuteToY(entryStart) + cardPadding
         val bottom = (minuteToY(entryEnd) - cardPadding).coerceAtLeast(top + minCardHeight)
 
+        // Click hit-test için RectF tutuyoruz (her kart için tek allocation; layout
+        // değişmediği sürece tekrar üretilmez). Çizimde reusableRect kullanılır.
         val rect = RectF(left, top, right, bottom)
         cardRects.add(rect to entry)
+        reusableRect.set(left, top, right, bottom)
 
         val colorHex = getColorForEntry(entry)
-        val color = Color.parseColor(colorHex)
+        val color = parsedColorCache.getOrPut(colorHex) { Color.parseColor(colorHex) }
         cardPaint.color = color
-        canvas.drawRoundRect(rect, cardCornerRadius, cardCornerRadius, cardPaint)
+        canvas.drawRoundRect(reusableRect, cardCornerRadius, cardCornerRadius, cardPaint)
 
-        cardBorderPaint.color = darkenColor(color, 0.2f)
-        canvas.drawRoundRect(rect, cardCornerRadius, cardCornerRadius, cardBorderPaint)
+        cardBorderPaint.color = darkenedColorCache.getOrPut(color) { darkenColor(color, 0.2f) }
+        canvas.drawRoundRect(reusableRect, cardCornerRadius, cardCornerRadius, cardBorderPaint)
 
         val textLeft = left + 6f.dp
         val availableHeight = bottom - top
@@ -315,9 +329,11 @@ class WeeklyScheduleView @JvmOverloads constructor(
         val y = minuteToY(nowMinutes)
         canvas.drawLine(timeColumnWidth, y, width.toFloat(), y, nowLinePaint)
 
-        val circleX = timeColumnWidth
-        canvas.drawCircle(circleX, y, 4f.dp, nowLinePaint.apply { style = Paint.Style.FILL })
-        nowLinePaint.style = Paint.Style.STROKE
+        // Ayrı FILL paint kullan — nowLinePaint'i çizim ortasında stylee'ini
+        // değiştirmek HW renderer üzerinde sürpriz cache invalidasyonlarına
+        // yol açabiliyordu.
+        nowDotPaint.color = nowLinePaint.color
+        canvas.drawCircle(timeColumnWidth, y, 4f.dp, nowDotPaint)
     }
 
     private fun handleTap(x: Float, y: Float) {

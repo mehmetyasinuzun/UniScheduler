@@ -49,6 +49,13 @@ class AdminHomeFragment : Fragment() {
         binding.rvUnassignedCourses.isNestedScrollingEnabled    = false
         binding.rvAvailableClassrooms.isNestedScrollingEnabled  = false
 
+        // wrap_content + ScrollView içindeyiz; setHasFixedSize false bırakmak gerek
+        // (her item bind sonrası tekrar measure). Ama view cache'i artırmak GC
+        // baskısını azaltıyor.
+        binding.rvUnassignedLecturers.setItemViewCacheSize(20)
+        binding.rvUnassignedCourses.setItemViewCacheSize(20)
+        binding.rvAvailableClassrooms.setItemViewCacheSize(20)
+
         lecturersAdapter   = SimpleTextAdapter()
         coursesAdapter     = SimpleTextAdapter()
         classroomsAdapter  = SimpleTextAdapter()
@@ -58,13 +65,18 @@ class AdminHomeFragment : Fragment() {
         binding.rvAvailableClassrooms.adapter  = classroomsAdapter
 
         binding.btnRetry.setOnClickListener { viewModel.loadDashboard() }
+        binding.swipeRefresh.setOnRefreshListener { viewModel.loadDashboard() }
 
         collectFlow(viewModel.state) { state ->
             when (state) {
                 is UiState.Idle    -> viewModel.loadDashboard()
                 is UiState.Loading -> showLoading(true)
-                is UiState.Error   -> showError(state.message, state.retryable)
+                is UiState.Error   -> {
+                    binding.swipeRefresh.isRefreshing = false
+                    showError(state.message, state.retryable)
+                }
                 is UiState.Success -> {
+                    binding.swipeRefresh.isRefreshing = false
                     showLoading(false)
                     val d = state.data
                     binding.tvLecturerPanelTitle.text = "Atanmamış Hocalar (${d.unassignedLecturers.size})"
@@ -79,7 +91,8 @@ class AdminHomeFragment : Fragment() {
     }
 
     private fun showLoading(loading: Boolean) {
-        binding.progressBar.visibility = if (loading) View.VISIBLE else View.GONE
+        // SwipeRefresh kendi spinner'ını gösteriyorsa ProgressBar'ı çift göstermeyelim.
+        binding.progressBar.visibility = if (loading && !binding.swipeRefresh.isRefreshing) View.VISIBLE else View.GONE
         binding.tvError.visibility     = View.GONE
         binding.btnRetry.visibility    = View.GONE
     }
@@ -89,6 +102,13 @@ class AdminHomeFragment : Fragment() {
         binding.tvError.text           = msg
         binding.tvError.visibility     = View.VISIBLE
         binding.btnRetry.visibility    = if (retryable) View.VISIBLE else View.GONE
+    }
+
+    private var isFirstResume = true
+    override fun onResume() {
+        super.onResume()
+        if (isFirstResume) { isFirstResume = false; return }
+        viewModel.loadDashboard()
     }
 
     override fun onDestroyView() { super.onDestroyView(); _binding = null }

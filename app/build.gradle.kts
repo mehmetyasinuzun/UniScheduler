@@ -84,6 +84,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.recyclerview)
+    implementation(libs.androidx.swiperefreshlayout)
     implementation(libs.androidx.security.crypto)
 
     implementation(libs.lifecycle.viewmodel.ktx)
@@ -114,7 +115,11 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
 }
 
-// Fix duplicate resource issues from Apache POI on Android
+// Fix duplicate resource issues from Apache POI on Android.
+// "META-INF/services/**" must be MERGED, not excluded — Apache POI
+// (XSSFWorkbook etc.) discovers StAX / XmlBeans providers via
+// ServiceLoader at runtime; without these files, release APK throws
+// XmlException / NoSuchMethodError when opening .xlsx imports.
 android.packagingOptions {
     resources.excludes += setOf(
         "META-INF/DEPENDENCIES",
@@ -122,6 +127,10 @@ android.packagingOptions {
         "META-INF/LICENSE.txt",
         "META-INF/NOTICE",
         "META-INF/NOTICE.txt",
-        "META-INF/versions/**"
+        "META-INF/versions/**",
+        "META-INF/*.kotlin_module"
+    )
+    resources.merges += setOf(
+        "META-INF/services/**"
     )
 }

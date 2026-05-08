@@ -329,10 +329,60 @@ cd UniScheduler
 - [ ] `local.properties` git'e commit edilmedi
 - [ ] Keystore dosyası **birden fazla yerde yedekli** (kaybedersen app güncelleme imkânsız)
 - [ ] Web panel HTTPS arkasında (Heroku/Railway otomatik, VPS'de Let's Encrypt)
-- [ ] `ADMIN_PASSWORD` güçlü ve düzenli değiştiriliyor
+- [ ] `ADMIN_PASSWORD` 16+ karakter, default değil ve düzenli değiştiriliyor
+- [ ] Web panel `NODE_ENV=production` ile çalışıyor (default şifre reddi devrede)
+- [ ] Web panel için `ALLOWED_IPS` set edilmiş (ofis/VPN IP allowlist) — defense in depth
 - [ ] Supabase Auth'da **rate limit** açık
 - [ ] Supabase **MFA for admins** etkin (Pro tier)
-- [ ] Migration 004 production DB'de çalıştırıldı (multi-tenant izolasyon)
+- [ ] `schema.sql` (tek dosya) production DB'de çalıştırıldı; legacy migration'lar **çalıştırılmadı**
+- [ ] Mobil APK'da `android:allowBackup="false"` (manifest'te zaten kuruldu)
+- [ ] Mobil APK'da `network-security-config.xml` cleartext'i kapatıyor (zaten kuruldu)
+
+---
+
+## 10. Production Launch Checklist (FINAL — yayından önce)
+
+Bu listenin **TÜM** maddeleri ✅ olmadan production'a gönderme.
+
+### 10.1 Backend (Supabase)
+- [ ] Production Supabase projesi ayrı (dev/staging karışmamalı)
+- [ ] `schema.sql` tek seferlik çalıştırıldı
+- [ ] En az bir organization oluşturuldu (`organizations` tablosu)
+- [ ] En az bir admin oluşturuldu ve `must_change_password=true` flag'i set
+- [ ] Auth → Confirm email **KAPALI**
+- [ ] Auth → Enable Signups → **AÇIK** (panel admin oluşturma için)
+- [ ] Anon key + Service role key güvenli yerde (1Password vb.)
+
+### 10.2 Web Panel (super-admin)
+- [ ] Ayrı sunucu/VPS'te (mobil APK ile aynı dağıtımda değil)
+- [ ] HTTPS arkasında (sertifika geçerli)
+- [ ] `NODE_ENV=production`
+- [ ] `ADMIN_PASSWORD` güçlü (16+ karakter, default değil)
+- [ ] `ALLOWED_IPS` veya en azından firewall ile erişim kısıtlı
+- [ ] Service role key sadece bu sunucuda, başka hiçbir yerde değil
+- [ ] `.env` git'e veya cloud bucket'a sızmadı
+
+### 10.3 Mobil APK
+- [ ] `local.properties`'te SUPABASE_URL/ANON_KEY production değerleri
+- [ ] Production keystore oluşturuldu (`unischeduler-release.jks`)
+- [ ] **Keystore dosyası iki ayrı yedek lokasyonda** (kaybedersen Play Store'da uygulamayı bir daha güncelleyemezsin)
+- [ ] `KEYSTORE_PASSWORD`, `KEY_PASSWORD` password manager'da
+- [ ] `versionCode` ve `versionName` doğru bir sonraki sürüme bumplandı
+- [ ] `./gradlew assembleRelease` başarılı (R8 + ProGuard temiz)
+- [ ] Release APK gerçek bir cihaza yüklenip 5 dakika tüm ekranlar test edildi
+- [ ] Excel import release'de çalıştığı doğrulandı (ana release crash sebebiydi)
+
+### 10.4 Hızlı Smoke Test (5 dakika)
+1. Telefonda **production** APK'yı sıfırdan kur
+2. Login → admin hesabı
+3. Settings → Departman ekle → 5 saniye içinde listede görünmeli
+4. Data → Hoca ekle → Credentials dialogu açılmalı
+5. Excel ile 50 ders import → liste tam dolmalı
+6. Auto Schedule → Generate → en az bir alternatif çıkmalı
+7. Çıkış → tekrar giriş → veriler korunuyor olmalı
+8. Pull-to-refresh → her sekmede düzgün çalışmalı
+
+Hepsi ✅ ise yayına hazır.
 
 ---
 

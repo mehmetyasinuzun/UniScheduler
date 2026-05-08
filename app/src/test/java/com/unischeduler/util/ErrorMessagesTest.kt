@@ -12,13 +12,13 @@ class ErrorMessagesTest {
     @Test
     fun `network errors return friendly message`() {
         val msg1 = ErrorMessages.map(UnknownHostException("Unable to resolve host"))
-        assertEquals("No internet connection. Please check your network.", msg1)
+        assertEquals("İnternet bağlantısı yok. Lütfen ağınızı kontrol edin.", msg1)
 
         val msg2 = ErrorMessages.map(ConnectException("Connection refused"))
-        assertEquals("No internet connection. Please check your network.", msg2)
+        assertEquals("İnternet bağlantısı yok. Lütfen ağınızı kontrol edin.", msg2)
 
         val msg3 = ErrorMessages.map(SocketTimeoutException("Read timed out"))
-        assertEquals("Connection timed out. Please try again.", msg3)
+        assertEquals("Sunucuya ulaşılamadı. Lütfen tekrar deneyin.", msg3)
     }
 
     @Test
@@ -42,25 +42,25 @@ class ErrorMessagesTest {
     @Test
     fun `duplicate key returns friendly message`() {
         val msg = ErrorMessages.map(Exception("duplicate key value violates unique constraint"))
-        assertEquals("This record already exists. Please use a different value.", msg)
+        assertEquals("Bu kayıt zaten mevcut. Lütfen farklı bir değer kullanın.", msg)
     }
 
     @Test
     fun `foreign key violation returns friendly message`() {
         val msg = ErrorMessages.map(Exception("violates foreign key constraint"))
-        assertEquals("Cannot complete this action — related records exist.", msg)
+        assertEquals("İşlem tamamlanamadı — bu kayda bağlı başka kayıtlar var.", msg)
     }
 
     @Test
     fun `RLS error returns friendly message`() {
         val msg = ErrorMessages.map(Exception("new row violates row-level security policy"))
-        assertEquals("You don't have permission to perform this action.", msg)
+        assertEquals("Bu işlem için yetkiniz yok.", msg)
     }
 
     @Test
     fun `JWT expired returns friendly message`() {
         val msg = ErrorMessages.map(Exception("JWT expired"))
-        assertEquals("Your session has expired. Please log in again.", msg)
+        assertEquals("Oturumunuz sona erdi. Lütfen tekrar giriş yapın.", msg)
     }
 
     @Test
@@ -72,6 +72,6 @@ class ErrorMessagesTest {
     @Test
     fun `null message returns generic fallback`() {
         val msg = ErrorMessages.map(Exception())
-        assertTrue(msg.contains("unexpected error", ignoreCase = true))
+        assertTrue(msg.contains("beklenmeyen", ignoreCase = true))
     }
 }

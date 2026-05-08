@@ -47,7 +47,11 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                         val entriesDeferred = async {
                             if (session.isLecturer) {
                                 val lecturerId = session.lecturerId
-                                if (lecturerId <= 0) throw IllegalStateException("Lecturer profile missing. Please log in again.")
+                                if (lecturerId <= 0) {
+                                    throw IllegalStateException(
+                                        "Hocaya ait bir profil bulunamadı. Yöneticiyle iletişime geçin veya yeniden giriş yapın."
+                                    )
+                                }
                                 repo.getEntriesForLecturer(lecturerId, orgId)
                             } else {
                                 repo.getAllEntries(orgId)

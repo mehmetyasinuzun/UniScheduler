@@ -72,16 +72,22 @@
             android:textSize="16sp"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
-        <ScrollView
+        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+            android:id="@+id/swipeRefresh"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
-            <com.unischeduler.ui.shared.WeeklyScheduleView
-                android:id="@+id/weeklySchedule"
+            <ScrollView
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                android:layout_height="match_parent">
 
-        </ScrollView>
+                <com.unischeduler.ui.shared.WeeklyScheduleView
+                    android:id="@+id/weeklySchedule"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+            </ScrollView>
+        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
     </FrameLayout>
 
 </LinearLayout>

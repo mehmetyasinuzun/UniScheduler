@@ -3,7 +3,7 @@
 -keepclassmembers class com.unischeduler.data.model.** { *; }
 
 # ── kotlinx.serialization ────────────────────────────────────────────────────
--keepattributes *Annotation*, InnerClasses
+-keepattributes *Annotation*, InnerClasses, Signature, EnclosingMethod
 -dontnote kotlinx.serialization.AnnotationsKt
 
 -keepclassmembers class kotlinx.serialization.json.** {
@@ -13,6 +13,14 @@
     kotlinx.serialization.KSerializer serializer(...);
 }
 
+# JsonElement, JsonObject, JsonArray, JsonPrimitive — JsonUtil reflection-free
+# id çıkarımı için bunları kullanıyor; built-in serializer'ların korunması şart.
+-keep class kotlinx.serialization.json.JsonElement { *; }
+-keep class kotlinx.serialization.json.JsonObject { *; }
+-keep class kotlinx.serialization.json.JsonArray { *; }
+-keep class kotlinx.serialization.json.JsonPrimitive { *; }
+-keep class kotlinx.serialization.json.JsonNull { *; }
+
 -keep,includedescriptorclasses class com.unischeduler.**$$serializer { *; }
 -keepclassmembers class com.unischeduler.** {
     *** Companion;
@@ -20,6 +28,10 @@
 -keepclasseswithmembers class com.unischeduler.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
+
+# Tüm @Serializable işaretli sınıfları + ilkel serializer'ları koru.
+-keep @kotlinx.serialization.Serializable class * { *; }
+-keep class kotlinx.serialization.builtins.** { *; }
 
 # ── Supabase / Ktor — keep types used over the wire ──────────────────────────
 -keep class io.github.jan.supabase.** { *; }

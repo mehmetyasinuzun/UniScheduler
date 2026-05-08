@@ -60,12 +60,6 @@ class AuthRepository {
             .decodeSingleOrNull<User>()
     }
 
-    /** Fetch user profile by username (used for legacy lookup). */
-    suspend fun findUserByUsername(username: String): User? =
-        client.postgrest["users"]
-            .select { filter { eq("username", username) } }
-            .decodeSingleOrNull<User>()
-
     suspend fun getLecturerByUserId(userId: String, orgId: Int? = null): Lecturer? =
         client.postgrest["lecturers"]
             .select(Columns.raw("*, departments(*), users(*)")) {

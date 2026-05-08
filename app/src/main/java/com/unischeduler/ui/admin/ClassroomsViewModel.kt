@@ -44,7 +44,7 @@ class ClassroomsViewModel(app: Application) : AndroidViewModel(app) {
         loadDepartmentsSilently()
     }
 
-    private fun loadDepartmentsSilently() {
+    fun loadDepartmentsSilently() {
         viewModelScope.launch {
             runCatching {
                 withContext(Dispatchers.IO) { departmentRepo.getAllDepartments(session.orgId) }
