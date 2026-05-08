@@ -10,7 +10,9 @@ import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
@@ -34,6 +36,8 @@ class AssignmentFragment : Fragment() {
     private var lecturers: List<Lecturer>   = emptyList()
     private var classrooms: List<Classroom> = emptyList()
 
+    private lateinit var scheduleEntryAdapter: ScheduleEntryAdapter
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentAssignmentBinding.inflate(inflater, container, false)
         return binding.root
@@ -43,6 +47,9 @@ class AssignmentFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.rvEntries.layoutManager = LinearLayoutManager(requireContext())
+        binding.rvEntries.isNestedScrollingEnabled = false
+        scheduleEntryAdapter = ScheduleEntryAdapter { showDeleteConfirmation(it) }
+        binding.rvEntries.adapter = scheduleEntryAdapter
         binding.btnRetry.setOnClickListener { viewModel.loadForm() }
         binding.btnAssign.setOnClickListener { onAssignClicked(force = false) }
         binding.btnAutoSchedule.setOnClickListener {
@@ -80,7 +87,7 @@ class AssignmentFragment : Fragment() {
                 is UiState.Success -> {
                     binding.btnAssign.isEnabled    = true
                     binding.tvSaveError.visibility = View.GONE
-                    Toast.makeText(requireContext(), "Assigned successfully!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.assignment_success), Toast.LENGTH_SHORT).show()
                     viewModel.resetSaveState()
                 }
             }
@@ -128,9 +135,7 @@ class AssignmentFragment : Fragment() {
             }
         }
 
-        binding.rvEntries.adapter = ScheduleEntryAdapter(data.entries) { entry ->
-            showDeleteConfirmation(entry)
-        }
+        scheduleEntryAdapter.submitList(data.entries)
     }
 
     private fun onAssignClicked(force: Boolean) {
@@ -144,7 +149,7 @@ class AssignmentFragment : Fragment() {
         val classroomIdx = classrooms.indexOfFirst { it.roomCode == classroomText }
 
         if (offeringIdx < 0 || classroomIdx < 0) {
-            binding.tvSaveError.text = "Lütfen geçerli bir ders ve sınıf seçin."
+            binding.tvSaveError.text = getString(R.string.assignment_invalid_selection)
             binding.tvSaveError.visibility = View.VISIBLE
             return
         }
@@ -165,10 +170,10 @@ class AssignmentFragment : Fragment() {
 
     private fun showDeleteConfirmation(entry: ScheduleEntry) {
         AlertDialog.Builder(requireContext())
-            .setTitle("Delete Assignment")
-            .setMessage("Remove ${entry.courseCode} (${entry.day} ${entry.timeRange})?")
-            .setPositiveButton("Delete") { _, _ -> viewModel.deleteEntry(entry.id) }
-            .setNegativeButton("Cancel", null)
+            .setTitle(getString(R.string.assignment_delete_title))
+            .setMessage(getString(R.string.assignment_delete_message, entry.courseCode, entry.day, entry.timeRange))
+            .setPositiveButton(getString(R.string.common_delete)) { _, _ -> viewModel.deleteEntry(entry.id) }
+            .setNegativeButton(getString(R.string.common_cancel), null)
             .show()
     }
 
@@ -190,7 +195,7 @@ class AssignmentFragment : Fragment() {
             .setTimeFormat(TimeFormat.CLOCK_24H)
             .setHour(9)
             .setMinute(0)
-            .setTitleText("Select time")
+            .setTitleText(getString(R.string.common_select_time))
             .build()
 
         picker.addOnPositiveButtonClickListener {
@@ -233,13 +238,13 @@ class AssignmentFragment : Fragment() {
         }
 
         AlertDialog.Builder(requireContext())
-            .setTitle("Çakışma Tespit Edildi")
+            .setTitle(getString(R.string.assignment_conflict_title))
             .setView(dialogView)
-            .setPositiveButton("Yine de Ata") { dialog, _ ->
+            .setPositiveButton(getString(R.string.assignment_force_assign)) { dialog, _ ->
                 viewModel.clearWarnings()
                 onAssignClicked(force = true)
             }
-            .setNegativeButton("İptal") { dialog, _ -> viewModel.clearWarnings() }
+            .setNegativeButton(getString(R.string.common_cancel)) { dialog, _ -> viewModel.clearWarnings() }
             .show()
     }
 
@@ -259,7 +264,7 @@ class AssignmentFragment : Fragment() {
                 textSize = 12f
             })
             addView(android.widget.TextView(ctx).apply {
-                text = "Sınıf: ${entry.classroomCode}"
+                text = getString(R.string.assignment_classroom_short, entry.classroomCode)
                 textSize = 12f
             })
             addView(android.widget.TextView(ctx).apply {
@@ -274,9 +279,8 @@ class AssignmentFragment : Fragment() {
 }
 
 class ScheduleEntryAdapter(
-    private val items: List<ScheduleEntry>,
     private val onDeleteClick: (ScheduleEntry) -> Unit
-) : RecyclerView.Adapter<ScheduleEntryAdapter.VH>() {
+) : ListAdapter<ScheduleEntry, ScheduleEntryAdapter.VH>(DIFF) {
 
     inner class VH(val binding: ItemScheduleEntryBinding) :
         RecyclerView.ViewHolder(binding.root)
@@ -284,21 +288,19 @@ class ScheduleEntryAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
         VH(ItemScheduleEntryBinding.inflate(LayoutInflater.from(parent.context), parent, false))
 
-    override fun getItemCount() = maxOf(items.size, 1)
-
     override fun onBindViewHolder(holder: VH, position: Int) {
-        if (items.isEmpty()) {
-            holder.binding.tvCourse.text   = "No assignments yet."
-            holder.binding.tvLecturer.text = ""
-            holder.binding.tvSlot.text     = ""
-            holder.binding.btnDelete.visibility = View.GONE
-            return
-        }
-        val e = items[position]
+        val e = getItem(position)
         holder.binding.tvCourse.text        = "${e.courseCode} — ${e.courseName}"
         holder.binding.tvLecturer.text      = e.lecturerName
         holder.binding.tvSlot.text          = "${e.day} ${e.timeRange} • ${e.classroomCode}"
         holder.binding.btnDelete.visibility = View.VISIBLE
         holder.binding.btnDelete.setOnClickListener { onDeleteClick(e) }
+    }
+
+    companion object {
+        private val DIFF = object : DiffUtil.ItemCallback<ScheduleEntry>() {
+            override fun areItemsTheSame(old: ScheduleEntry, new: ScheduleEntry) = old.id == new.id
+            override fun areContentsTheSame(old: ScheduleEntry, new: ScheduleEntry) = old == new
+        }
     }
 }

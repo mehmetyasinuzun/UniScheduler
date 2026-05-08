@@ -22,7 +22,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Veri Yönetimi"
+                android:text="@string/data_title"
                 android:textSize="22sp"
                 android:textStyle="bold" />
 
@@ -31,7 +31,7 @@
                 style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Bölümler"
+                android:text="@string/data_departments_button"
                 android:textSize="12sp"
                 app:icon="@android:drawable/ic_menu_manage" />
         </LinearLayout>
@@ -56,7 +56,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Bölüm:"
+                    android:text="@string/data_dept_label"
                     android:textStyle="bold"
                     android:textSize="14sp"
                     android:layout_marginEnd="8dp" />
@@ -80,7 +80,7 @@
             android:id="@+id/tvDeptsError"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="#B00020"
+            android:textColor="?attr/colorError"
             android:visibility="gone"
             android:layout_marginBottom="8dp" />
 
@@ -112,7 +112,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Hocalar"
+                        android:text="@string/data_lecturers_header"
                         android:textStyle="bold"
                         android:textSize="16sp" />
 
@@ -135,7 +135,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Unvan"
+                        android:text="@string/data_title_label"
                         android:textSize="12sp" />
 
                     <Spinner
@@ -148,7 +148,7 @@
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Ad">
+                        android:hint="@string/data_first_name_hint">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etFirstName"
                             android:layout_width="match_parent"
@@ -160,7 +160,7 @@
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Soyad"
+                        android:hint="@string/data_last_name_hint"
                         android:layout_marginTop="8dp">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etLastName"
@@ -186,7 +186,7 @@
                         android:id="@+id/tvLecturerAddError"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textColor="#B00020"
+                        android:textColor="?attr/colorError"
                         android:visibility="gone"
                         android:layout_marginBottom="4dp" />
 
@@ -202,7 +202,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:layout_marginEnd="4dp"
-                            android:text="Ekle" />
+                            android:text="@string/common_add" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnImportLecturers"
@@ -211,7 +211,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:layout_marginHorizontal="4dp"
-                            android:text="Import" />
+                            android:text="@string/common_import" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnExportLecturers"
@@ -220,7 +220,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:layout_marginStart="4dp"
-                            android:text="Export" />
+                            android:text="@string/common_export" />
                     </LinearLayout>
 
                     <ProgressBar
@@ -235,14 +235,14 @@
                         android:id="@+id/tvLecturerListError"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textColor="#B00020"
+                        android:textColor="?attr/colorError"
                         android:visibility="gone" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnRetryLecturers"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Yeniden Dene"
+                        android:text="@string/common_retry"
                         android:visibility="gone" />
 
                     <LinearLayout
@@ -284,7 +284,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Dersler"
+                        android:text="@string/data_courses_header"
                         android:textStyle="bold"
                         android:textSize="16sp" />
 
@@ -308,7 +308,7 @@
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Ders Kodu (ör. CNG342)">
+                        android:hint="@string/data_course_code_hint">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etCourseCode"
                             android:layout_width="match_parent"
@@ -320,7 +320,7 @@
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Ders Adı"
+                        android:hint="@string/data_course_name_hint"
                         android:layout_marginTop="8dp">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etCourseName"
@@ -342,7 +342,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:layout_marginEnd="4dp"
-                            android:hint="Teori S.">
+                            android:hint="@string/data_theory_hours_hint">
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/etTheoryHours"
                                 android:layout_width="match_parent"
@@ -356,7 +356,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:layout_marginHorizontal="4dp"
-                            android:hint="Lab S.">
+                            android:hint="@string/data_lab_hours_hint">
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/etLabHours"
                                 android:layout_width="match_parent"
@@ -370,7 +370,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:layout_marginStart="4dp"
-                            android:hint="Kredi">
+                            android:hint="@string/data_credits_hint">
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/etCredits"
                                 android:layout_width="match_parent"
@@ -396,7 +396,7 @@
                         android:id="@+id/tvCourseAddError"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textColor="#B00020"
+                        android:textColor="?attr/colorError"
                         android:visibility="gone"
                         android:layout_marginBottom="4dp" />
 
@@ -412,7 +412,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:layout_marginEnd="4dp"
-                            android:text="Ekle" />
+                            android:text="@string/common_add" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnImportCourses"
@@ -421,7 +421,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:layout_marginHorizontal="4dp"
-                            android:text="Import" />
+                            android:text="@string/common_import" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnExportCourses"
@@ -430,14 +430,25 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:layout_marginStart="4dp"
-                            android:text="Export" />
+                            android:text="@string/common_export" />
                     </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvCoursesEmpty"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/data_course_empty"
+                        android:textSize="13sp"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:padding="12dp"
+                        android:visibility="gone" />
 
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/rvCourses"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:nestedScrollingEnabled="false"
+                        android:overScrollMode="never"
                         android:layout_marginTop="8dp" />
 
                 </LinearLayout>
@@ -472,7 +483,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Ders Açma"
+                        android:text="@string/data_offerings_header"
                         android:textStyle="bold"
                         android:textSize="16sp" />
 
@@ -495,7 +506,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Ders"
+                        android:text="@string/data_offering_course_label"
                         android:textSize="12sp" />
 
                     <Spinner
@@ -507,7 +518,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Hoca (opsiyonel)"
+                        android:text="@string/data_offering_lecturer_optional"
                         android:textSize="12sp" />
 
                     <Spinner
@@ -520,7 +531,7 @@
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Akademik Yıl (ör. 2025-2026)">
+                        android:hint="@string/data_offering_academic_year_hint">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etAcademicYear"
                             android:layout_width="match_parent"
@@ -544,7 +555,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Dönem"
+                                android:text="@string/data_offering_term_label"
                                 android:textSize="12sp" />
                             <Spinner
                                 android:id="@+id/spinnerTerm"
@@ -561,7 +572,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Sınıf"
+                                android:text="@string/data_offering_class_year_label"
                                 android:textSize="12sp" />
                             <Spinner
                                 android:id="@+id/spinnerClassYear"
@@ -583,7 +594,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:layout_marginEnd="4dp"
-                            android:hint="Şube (A, B...)">
+                            android:hint="@string/data_offering_section_hint">
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/etSection"
                                 android:layout_width="match_parent"
@@ -598,7 +609,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:layout_marginStart="4dp"
-                            android:hint="Kontenjan">
+                            android:hint="@string/data_offering_quota_hint">
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/etOfferingCapacity"
                                 android:layout_width="match_parent"
@@ -611,7 +622,7 @@
                         android:id="@+id/tvOfferingError"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textColor="#B00020"
+                        android:textColor="?attr/colorError"
                         android:visibility="gone"
                         android:layout_marginBottom="4dp"
                         android:layout_marginTop="4dp" />
@@ -620,7 +631,7 @@
                         android:id="@+id/btnAddOffering"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Ders Aç"
+                        android:text="@string/data_offering_add_button"
                         android:layout_marginTop="8dp" />
 
                     <ProgressBar
@@ -631,11 +642,22 @@
                         android:layout_gravity="center_horizontal"
                         android:layout_marginTop="8dp" />
 
+                    <TextView
+                        android:id="@+id/tvOfferingsEmpty"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/data_offering_empty"
+                        android:textSize="13sp"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:padding="12dp"
+                        android:visibility="gone" />
+
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/rvOfferings"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:nestedScrollingEnabled="false"
+                        android:overScrollMode="never"
                         android:layout_marginTop="8dp" />
 
                 </LinearLayout>

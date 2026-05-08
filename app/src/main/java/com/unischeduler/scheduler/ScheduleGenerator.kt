@@ -55,6 +55,9 @@ class ScheduleGenerator(
 
     private val assigned = mutableListOf<ProposedEntry>()
     private val usedSlots = mutableListOf<OccupiedSlot>()
+    // Day-indexed view of usedSlots so the hot-path conflict checks
+    // (lecturer/classroom/student overlap) skip irrelevant days.
+    private val slotsByDay = HashMap<String, MutableList<OccupiedSlot>>()
 
     companion object {
         fun generateAlternatives(
@@ -93,7 +96,7 @@ class ScheduleGenerator(
 
     init {
         existingEntries.forEach { entry ->
-            usedSlots.add(
+            addUsedSlot(
                 OccupiedSlot(
                     day = entry.day,
                     startMin = toMinutes(entry.startTime),
@@ -107,6 +110,13 @@ class ScheduleGenerator(
             )
         }
     }
+
+    private fun addUsedSlot(slot: OccupiedSlot) {
+        usedSlots.add(slot)
+        slotsByDay.getOrPut(slot.day) { mutableListOf() }.add(slot)
+    }
+
+    private fun slotsForDay(day: String): List<OccupiedSlot> = slotsByDay[day] ?: emptyList()
 
     fun generate(offerings: List<Offering>): ScheduleResult {
         val sorted = sortByConstraintLevel(offerings)
@@ -237,7 +247,7 @@ class ScheduleGenerator(
                 endTime = slot.endTime
             )
             assigned.add(entry)
-            usedSlots.add(
+            addUsedSlot(
                 OccupiedSlot(
                     day = day,
                     startMin = startMin,
@@ -319,25 +329,25 @@ class ScheduleGenerator(
     }
 
     private fun isLecturerOccupied(lecturerId: Int, day: String, startMin: Int, endMin: Int): Boolean {
-        return usedSlots.any {
-            it.lecturerId == lecturerId && it.day == day &&
+        return slotsForDay(day).any {
+            it.lecturerId == lecturerId &&
             it.startMin < endMin && startMin < it.endMin
         }
     }
 
     private fun isClassroomOccupied(classroomId: Int, day: String, startMin: Int, endMin: Int): Boolean {
-        return usedSlots.any {
-            it.classroomId == classroomId && it.day == day &&
+        return slotsForDay(day).any {
+            it.classroomId == classroomId &&
             it.startMin < endMin && startMin < it.endMin
         }
     }
 
     private fun hasStudentConflict(offering: Offering, day: String, startMin: Int, endMin: Int): Boolean {
-        return usedSlots.any {
+        val deptId = offering.courses?.departmentId
+        return slotsForDay(day).any {
             it.classYear == offering.classYear &&
             it.section == offering.section &&
-            it.departmentId == offering.courses?.departmentId &&
-            it.day == day &&
+            it.departmentId == deptId &&
             it.startMin < endMin && startMin < it.endMin
         }
     }

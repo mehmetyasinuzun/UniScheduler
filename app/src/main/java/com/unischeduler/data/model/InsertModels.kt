@@ -93,5 +93,6 @@ data class ClientErrorLogInsert(
     @SerialName("stack_trace") val stackTrace: String? = null,
     @SerialName("app_version") val appVersion: String? = null,
     @SerialName("device_model") val deviceModel: String? = null,
-    @SerialName("os_version") val osVersion: String? = null
+    @SerialName("os_version") val osVersion: String? = null,
+    val source: String = "mobile"
 )

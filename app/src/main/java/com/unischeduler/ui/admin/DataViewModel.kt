@@ -174,9 +174,15 @@ class DataViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ── Lecturer (import) ─────────────────────────────────────────────────────
-    fun importLecturers(rows: List<CsvImporter.LecturerRow>, departmentId: Int) {
+    /**
+     * Import lecturers. Each row's [CsvImporter.LecturerRow.departmentName] takes
+     * precedence over [fallbackDepartmentId] when matched against existing
+     * departments by name. Username is auto-generated (importing the export's
+     * username column would collide with Supabase Auth's globally-unique email).
+     */
+    fun importLecturers(rows: List<CsvImporter.LecturerRow>, fallbackDepartmentId: Int) {
         if (rows.isEmpty()) {
-            _lecturerImportState.value = UiState.Error("No valid rows to import.", retryable = false)
+            _lecturerImportState.value = UiState.Error("İçe aktarılacak geçerli satır yok.", retryable = false)
             return
         }
         viewModelScope.launch {
@@ -184,13 +190,17 @@ class DataViewModel(app: Application) : AndroidViewModel(app) {
             runCatching {
                 withContext(Dispatchers.IO) {
                     val orgId = session.orgId
+                    val depts = deptRepo.getAllDepartments(orgId)
+                    val deptByName = depts.associateBy { it.name.lowercase().trim() }
                     val credentials = mutableListOf<Pair<String, String>>()
                     val errors = mutableListOf<String>()
                     for (row in rows) {
+                        val deptId = row.departmentName?.lowercase()?.trim()
+                            ?.let { deptByName[it]?.id } ?: fallbackDepartmentId
                         runCatching {
                             val (u, p) = lecturerRepo.insertLecturerWithUser(
                                 title = row.title, firstName = row.firstName,
-                                lastName = row.lastName, departmentId = departmentId,
+                                lastName = row.lastName, departmentId = deptId,
                                 orgId = orgId, email = row.email
                             )
                             credentials.add(u to p)
@@ -274,9 +284,14 @@ class DataViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ── Course (import) ───────────────────────────────────────────────────────
-    fun importCourses(rows: List<CsvImporter.CourseRow>, departmentId: Int) {
+    /**
+     * Import courses. Each row's [CsvImporter.CourseRow.departmentName] takes
+     * precedence over [fallbackDepartmentId] when it matches an existing
+     * department by case-insensitive name; otherwise the fallback is used.
+     */
+    fun importCourses(rows: List<CsvImporter.CourseRow>, fallbackDepartmentId: Int) {
         if (rows.isEmpty()) {
-            _courseImportState.value = UiState.Error("No valid rows to import.", retryable = false)
+            _courseImportState.value = UiState.Error("İçe aktarılacak geçerli satır yok.", retryable = false)
             return
         }
         viewModelScope.launch {
@@ -284,10 +299,14 @@ class DataViewModel(app: Application) : AndroidViewModel(app) {
             runCatching {
                 withContext(Dispatchers.IO) {
                     val orgId = session.orgId
+                    val depts = deptRepo.getAllDepartments(orgId)
+                    val deptByName = depts.associateBy { it.name.lowercase().trim() }
                     var imported = 0
                     for (row in rows) {
+                        val deptId = row.departmentName?.lowercase()?.trim()
+                            ?.let { deptByName[it]?.id } ?: fallbackDepartmentId
                         runCatching {
-                            courseRepo.insertCourse(row.code, row.name, departmentId, orgId,
+                            courseRepo.insertCourse(row.code, row.name, deptId, orgId,
                                 theoryHours = row.theoryHours, labHours = row.labHours, credits = row.credits)
                             imported++
                         }

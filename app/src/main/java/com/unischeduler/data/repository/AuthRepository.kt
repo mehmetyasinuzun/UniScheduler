@@ -6,6 +6,7 @@ package com.unischeduler.data.repository
 
 import com.unischeduler.data.model.Lecturer
 import com.unischeduler.data.model.User
+import com.unischeduler.data.remote.SupabaseClient
 import com.unischeduler.data.remote.SupabaseClient.client
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
@@ -30,9 +31,10 @@ class AuthRepository {
      * After this call, every Postgrest request carries the JWT → RLS is enforced.
      */
     suspend fun signIn(username: String, password: String) {
-        // Always clear any existing session first to prevent stale JWT leakage
-        // when switching between accounts (e.g. different org admins)
-        runCatching { client.auth.signOut() }
+        // Tear down any leftover Realtime channels and the old JWT before
+        // issuing a new login. Without this, callbackFlow subscriptions from
+        // the previous session keep emitting against the old org_id.
+        SupabaseClient.resetForLogout()
 
         val email = usernameToEmail(username)
         client.auth.signInWith(Email) {
@@ -41,9 +43,9 @@ class AuthRepository {
         }
     }
 
-    /** Sign out — clears session, JWT token, etc. */
+    /** Sign out — clears session, JWT token, and all live subscriptions. */
     suspend fun signOut() {
-        client.auth.signOut()
+        SupabaseClient.resetForLogout()
     }
 
     /**

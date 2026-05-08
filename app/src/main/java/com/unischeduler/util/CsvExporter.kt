@@ -8,7 +8,7 @@ import com.unischeduler.data.model.Lecturer
 
 object CsvExporter {
 
-    private const val BOM = "﻿"
+    private const val BOM = "\uFEFF"
 
     fun exportCourses(courses: List<Course>): String = buildString {
         append(BOM)

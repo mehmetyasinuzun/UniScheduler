@@ -17,7 +17,9 @@ import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.unischeduler.R
 import com.unischeduler.data.model.Course
@@ -30,9 +32,15 @@ import com.unischeduler.databinding.ItemLecturerBinding
 import com.unischeduler.databinding.ItemOfferingBinding
 import com.unischeduler.util.CsvExporter
 import com.unischeduler.util.CsvImporter
+import com.unischeduler.util.ErrorReporter
 import com.unischeduler.util.ExcelHelper
+import com.unischeduler.util.FileTypeDetector
+import com.unischeduler.util.ImportPreviewDialog
 import com.unischeduler.util.UiState
 import com.unischeduler.util.collectFlow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
 
 class DataFragment : Fragment() {
 
@@ -64,45 +72,22 @@ class DataFragment : Fragment() {
 
         courseImportLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             uri ?: return@registerForActivityResult
-            val inputStream = requireContext().contentResolver.openInputStream(uri) ?: return@registerForActivityResult
-
-            if (isExcelFile(uri)) {
-                val result = ExcelHelper.importCourses(inputStream)
-                inputStream.close()
-                showCourseImportPreview(CsvImporter.ParseResult(result.valid, result.errors))
-            } else {
-                val text = inputStream.bufferedReader().readText()
-                inputStream.close()
-                val result = CsvImporter.parseCourses(text)
-                showCourseImportPreview(result)
-            }
+            handleCourseImport(uri)
         }
 
         lecturerImportLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             uri ?: return@registerForActivityResult
-            val inputStream = requireContext().contentResolver.openInputStream(uri) ?: return@registerForActivityResult
-
-            if (isExcelFile(uri)) {
-                val result = ExcelHelper.importLecturers(inputStream)
-                inputStream.close()
-                showLecturerImportPreview(CsvImporter.ParseResult(result.valid, result.errors))
-            } else {
-                val text = inputStream.bufferedReader().readText()
-                inputStream.close()
-                val result = CsvImporter.parseLecturers(text)
-                showLecturerImportPreview(result)
-            }
+            handleLecturerImport(uri)
         }
 
         courseExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) { uri ->
             uri ?: return@registerForActivityResult
             try {
                 val outputStream = requireContext().contentResolver.openOutputStream(uri) ?: return@registerForActivityResult
-                ExcelHelper.exportCourses(courses, outputStream)
-                outputStream.close()
-                Toast.makeText(requireContext(), "Courses exported successfully.", Toast.LENGTH_SHORT).show()
+                outputStream.use { ExcelHelper.exportCourses(courses, it) }
+                Toast.makeText(requireContext(), getString(R.string.data_course_export_success), Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), getString(R.string.data_export_fail, e.message), Toast.LENGTH_LONG).show()
             }
         }
 
@@ -110,11 +95,10 @@ class DataFragment : Fragment() {
             uri ?: return@registerForActivityResult
             try {
                 val outputStream = requireContext().contentResolver.openOutputStream(uri) ?: return@registerForActivityResult
-                ExcelHelper.exportLecturers(lecturers, outputStream)
-                outputStream.close()
-                Toast.makeText(requireContext(), "Lecturers exported successfully.", Toast.LENGTH_SHORT).show()
+                outputStream.use { ExcelHelper.exportLecturers(lecturers, it) }
+                Toast.makeText(requireContext(), getString(R.string.data_lecturer_export_success), Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), getString(R.string.data_export_fail, e.message), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -126,6 +110,10 @@ class DataFragment : Fragment() {
         return binding.root
     }
 
+    // Adapters set once and reused across data updates (DiffUtil computes diffs).
+    private val courseAdapter   by lazy { CourseAdapter({ showEditCourseDialog(it) }, { showDeleteCourseDialog(it) }) }
+    private val offeringAdapter by lazy { OfferingAdapter({ showEditOfferingDialog(it) }, { showDeleteOfferingDialog(it) }) }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -133,6 +121,11 @@ class DataFragment : Fragment() {
         setupAccordion()
         setupDefaults()
         binding.rvCourses.layoutManager   = LinearLayoutManager(requireContext())
+        binding.rvCourses.adapter         = courseAdapter
+        binding.rvCourses.isNestedScrollingEnabled = false
+        binding.rvOfferings.layoutManager = LinearLayoutManager(requireContext())
+        binding.rvOfferings.adapter       = offeringAdapter
+        binding.rvOfferings.isNestedScrollingEnabled = false
 
         binding.btnRetryLecturers.setOnClickListener    { viewModel.loadLecturers() }
         binding.btnAddLecturer.setOnClickListener       { onAddLecturerClicked() }
@@ -224,7 +217,7 @@ class DataFragment : Fragment() {
                     binding.tvLecturerListError.visibility = View.VISIBLE
                 }
                 is UiState.Success -> {
-                    Toast.makeText(requireContext(), "Lecturer deleted.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.data_lecturer_deleted), Toast.LENGTH_SHORT).show()
                     viewModel.resetLecturerDeleteState()
                 }
             }
@@ -264,7 +257,7 @@ class DataFragment : Fragment() {
                     binding.btnAddCourse.isEnabled      = true
                     binding.tvCourseAddError.visibility = View.GONE
                     clearCourseForm()
-                    Toast.makeText(requireContext(), "Course saved.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.data_course_added), Toast.LENGTH_SHORT).show()
                     viewModel.resetCourseAddState()
                     viewModel.loadCourses()
                 }
@@ -293,7 +286,7 @@ class DataFragment : Fragment() {
                 }
                 is UiState.Success -> {
                     binding.btnImportCourses.isEnabled = true
-                    Toast.makeText(requireContext(), "${state.data} course(s) imported successfully.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.data_course_import_count, state.data), Toast.LENGTH_SHORT).show()
                     viewModel.resetCourseImportState()
                 }
             }
@@ -315,7 +308,7 @@ class DataFragment : Fragment() {
                     binding.btnAddOffering.isEnabled   = true
                     binding.tvOfferingError.visibility = View.GONE
                     clearOfferingForm()
-                    Toast.makeText(requireContext(), "Offering added.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.data_offering_added), Toast.LENGTH_SHORT).show()
                     viewModel.resetOfferingAddState()
                 }
             }
@@ -327,8 +320,6 @@ class DataFragment : Fragment() {
         }
 
         // ── Offering list ──────────────────────────────────────────────────────
-        binding.rvOfferings.layoutManager = LinearLayoutManager(requireContext())
-
         collectFlow(viewModel.offeringListState) { state ->
             when (state) {
                 is UiState.Idle    -> viewModel.loadOfferings()
@@ -354,7 +345,7 @@ class DataFragment : Fragment() {
                     viewModel.resetLecturerEditState()
                 }
                 is UiState.Success -> {
-                    Toast.makeText(requireContext(), "Lecturer updated.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.data_lecturer_updated), Toast.LENGTH_SHORT).show()
                     viewModel.resetLecturerEditState()
                 }
             }
@@ -369,7 +360,7 @@ class DataFragment : Fragment() {
                     viewModel.resetOfferingEditState()
                 }
                 is UiState.Success -> {
-                    Toast.makeText(requireContext(), "Offering updated.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.data_offering_updated), Toast.LENGTH_SHORT).show()
                     viewModel.resetOfferingEditState()
                 }
             }
@@ -380,7 +371,7 @@ class DataFragment : Fragment() {
 
     private fun onAddLecturerClicked() {
         if (departments.isEmpty()) {
-            showFieldError(binding.tvLecturerAddError, "No departments yet. Add one in Settings.")
+            showFieldError(binding.tvLecturerAddError, getString(R.string.data_no_dept_error))
             return
         }
         viewModel.addLecturer(
@@ -393,7 +384,7 @@ class DataFragment : Fragment() {
 
     private fun onAddCourseClicked() {
         if (departments.isEmpty()) {
-            showFieldError(binding.tvCourseAddError, "No departments yet. Add one in Settings.")
+            showFieldError(binding.tvCourseAddError, getString(R.string.data_no_dept_error))
             return
         }
         viewModel.addCourse(
@@ -408,7 +399,7 @@ class DataFragment : Fragment() {
 
     private fun onAddOfferingClicked() {
         if (courses.isEmpty()) {
-            showFieldError(binding.tvOfferingError, "No courses yet. Add a course first.")
+            showFieldError(binding.tvOfferingError, getString(R.string.data_no_courses_error))
             return
         }
         viewModel.addOffering(
@@ -442,9 +433,9 @@ class DataFragment : Fragment() {
         layout.addView(etCredits)
 
         AlertDialog.Builder(requireContext())
-            .setTitle("Edit Course")
+            .setTitle(getString(R.string.data_course_edit_title))
             .setView(layout)
-            .setPositiveButton("Save") { _, _ ->
+            .setPositiveButton(getString(R.string.common_save)) { _, _ ->
                 viewModel.updateCourse(
                     id = course.id,
                     code = etCode.text.toString(),
@@ -454,16 +445,16 @@ class DataFragment : Fragment() {
                     credits = etCredits.text.toString().toIntOrNull() ?: 0
                 )
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(getString(R.string.common_cancel), null)
             .show()
     }
 
     private fun showDeleteCourseDialog(course: Course) {
         AlertDialog.Builder(requireContext())
-            .setTitle("Delete Course")
-            .setMessage("Delete ${course.code} — ${course.name}?\nThis will also remove related offerings.")
-            .setPositiveButton("Delete") { _, _ -> viewModel.deleteCourse(course.id) }
-            .setNegativeButton("Cancel", null)
+            .setTitle(getString(R.string.data_course_delete_title))
+            .setMessage(getString(R.string.data_course_delete_message, course.code, course.name))
+            .setPositiveButton(getString(R.string.common_delete)) { _, _ -> viewModel.deleteCourse(course.id) }
+            .setNegativeButton(getString(R.string.common_cancel), null)
             .show()
     }
 
@@ -497,9 +488,9 @@ class DataFragment : Fragment() {
         layout.addView(spinnerDept)
 
         AlertDialog.Builder(requireContext())
-            .setTitle("Edit Lecturer")
+            .setTitle(getString(R.string.data_lecturer_edit_title))
             .setView(ScrollView(requireContext()).apply { addView(layout) })
-            .setPositiveButton("Save") { _, _ ->
+            .setPositiveButton(getString(R.string.common_save)) { _, _ ->
                 viewModel.editLecturer(
                     id = lecturer.id,
                     title = academicTitles[spinnerTitle.selectedItemPosition],
@@ -509,7 +500,7 @@ class DataFragment : Fragment() {
                     email = etEmail.text.toString().takeIf { it.isNotBlank() }
                 )
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(getString(R.string.common_cancel), null)
             .show()
     }
 
@@ -532,7 +523,7 @@ class DataFragment : Fragment() {
             .also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
         spinnerYear.setSelection(classYears.indexOf(offering.classYear).takeIf { it >= 0 } ?: 0)
 
-        val lecturerNames = listOf("— Atanmadı —") + lecturers.map { it.fullName }
+        val lecturerNames = listOf(getString(R.string.common_not_assigned)) + lecturers.map { it.fullName }
         val spinnerLecturer = Spinner(requireContext())
         spinnerLecturer.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, lecturerNames)
             .also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
@@ -552,9 +543,9 @@ class DataFragment : Fragment() {
         layout.addView(spinnerLecturer)
 
         AlertDialog.Builder(requireContext())
-            .setTitle("Edit Offering")
+            .setTitle(getString(R.string.data_offering_edit_title))
             .setView(ScrollView(requireContext()).apply { addView(layout) })
-            .setPositiveButton("Save") { _, _ ->
+            .setPositiveButton(getString(R.string.common_save)) { _, _ ->
                 val selectedLecturerId = if (spinnerLecturer.selectedItemPosition > 0)
                     lecturers[spinnerLecturer.selectedItemPosition - 1].id else null
                 viewModel.editOffering(
@@ -567,16 +558,16 @@ class DataFragment : Fragment() {
                     capacity = etCap.text.toString().toIntOrNull() ?: 0
                 )
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(getString(R.string.common_cancel), null)
             .show()
     }
 
     private fun showDeleteOfferingDialog(offering: Offering) {
         AlertDialog.Builder(requireContext())
-            .setTitle("Delete Offering")
-            .setMessage("Delete ${offering.courseName} ${offering.section}? Related schedule entries will also be removed.")
-            .setPositiveButton("Delete") { _, _ -> viewModel.deleteOffering(offering.id) }
-            .setNegativeButton("Cancel", null)
+            .setTitle(getString(R.string.data_offering_delete_title))
+            .setMessage(getString(R.string.data_offering_delete_message, offering.courseName, offering.section))
+            .setPositiveButton(getString(R.string.common_delete)) { _, _ -> viewModel.deleteOffering(offering.id) }
+            .setNegativeButton(getString(R.string.common_cancel), null)
             .show()
     }
 
@@ -584,74 +575,81 @@ class DataFragment : Fragment() {
 
     private fun showCourseImportPreview(result: CsvImporter.ParseResult<CsvImporter.CourseRow>) {
         if (departments.isEmpty()) {
-            Toast.makeText(requireContext(), "Load departments first before importing.", Toast.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), getString(R.string.import_load_depts_first), Toast.LENGTH_LONG).show()
             return
         }
         val deptPos  = binding.spinnerCourseDept.selectedItemPosition
-        val deptName = departments.getOrNull(deptPos)?.name ?: "Unknown"
+        val deptName = departments.getOrNull(deptPos)?.name ?: "Bilinmiyor"
         val deptId   = departments.getOrNull(deptPos)?.id ?: return
 
-        val msg = buildString {
-            append("Found ${result.valid.size} valid row(s).")
-            if (result.errors.isNotEmpty()) {
-                append("\n\nSkipped ${result.errors.size} row(s):")
-                result.errors.take(5).forEach { append("\n• $it") }
-                if (result.errors.size > 5) append("\n…and ${result.errors.size - 5} more")
-            }
-            append("\n\nDepartment: $deptName")
-            append("\nImport now?")
+        if (result.valid.isEmpty()) {
+            val errMsg = if (result.errors.isEmpty()) getString(R.string.import_preview_no_rows)
+            else getString(R.string.import_preview_no_valid_rows, result.errors.size) + "\n" +
+                 result.errors.take(5).joinToString("\n") { "• $it" }
+            AlertDialog.Builder(requireContext())
+                .setTitle(getString(R.string.import_dialog_title))
+                .setMessage(errMsg)
+                .setPositiveButton(getString(R.string.common_ok), null)
+                .show()
+            return
         }
 
-        AlertDialog.Builder(requireContext())
-            .setTitle("Import Courses")
-            .setMessage(msg)
-            .setPositiveButton("Import") { _, _ ->
-                if (result.valid.isNotEmpty()) viewModel.importCourses(result.valid, deptId)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        ImportPreviewDialog.show(
+            context = requireContext(),
+            title = getString(R.string.import_preview_title_courses),
+            targetDescription = "Bölüm: $deptName",
+            rows = result.valid,
+            errors = result.errors,
+            titleProvider = { "${it.code} — ${it.name}" },
+            subtitleProvider = { "Teori: ${it.theoryHours}  Lab: ${it.labHours}  Kredi: ${it.credits}" },
+            onImport = { chosen -> viewModel.importCourses(chosen, deptId) }
+        )
     }
 
     private fun showLecturerImportPreview(result: CsvImporter.ParseResult<CsvImporter.LecturerRow>) {
         if (departments.isEmpty()) {
-            Toast.makeText(requireContext(), "Load departments first before importing.", Toast.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), getString(R.string.import_load_depts_first), Toast.LENGTH_LONG).show()
             return
         }
         val deptPos  = binding.spinnerLecturerDept.selectedItemPosition
-        val deptName = departments.getOrNull(deptPos)?.name ?: "Unknown"
+        val deptName = departments.getOrNull(deptPos)?.name ?: "Bilinmiyor"
         val deptId   = departments.getOrNull(deptPos)?.id ?: return
 
-        val msg = buildString {
-            append("Found ${result.valid.size} valid row(s).")
-            if (result.errors.isNotEmpty()) {
-                append("\n\nSkipped ${result.errors.size} row(s):")
-                result.errors.take(5).forEach { append("\n• $it") }
-            }
-            append("\n\nDepartment: $deptName")
-            append("\nCredentials will be generated automatically.")
-            append("\nImport now?")
+        if (result.valid.isEmpty()) {
+            val errMsg = if (result.errors.isEmpty()) getString(R.string.import_preview_no_rows)
+            else getString(R.string.import_preview_no_valid_rows, result.errors.size) + "\n" +
+                 result.errors.take(5).joinToString("\n") { "• $it" }
+            AlertDialog.Builder(requireContext())
+                .setTitle(getString(R.string.import_dialog_title))
+                .setMessage(errMsg)
+                .setPositiveButton(getString(R.string.common_ok), null)
+                .show()
+            return
         }
 
-        AlertDialog.Builder(requireContext())
-            .setTitle("Import Lecturers")
-            .setMessage(msg)
-            .setPositiveButton("Import") { _, _ ->
-                if (result.valid.isNotEmpty()) viewModel.importLecturers(result.valid, deptId)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        ImportPreviewDialog.show(
+            context = requireContext(),
+            title = getString(R.string.import_preview_title_lecturers),
+            targetDescription = getString(R.string.import_lecturer_target, deptName),
+            rows = result.valid,
+            errors = result.errors,
+            titleProvider = { "${it.title} ${it.firstName} ${it.lastName}".trim() },
+            subtitleProvider = { it.email?.takeIf { e -> e.isNotBlank() } ?: "E-posta yok" },
+            onImport = { chosen -> viewModel.importLecturers(chosen, deptId) }
+        )
     }
 
     private fun showLecturerImportResult(result: LecturerImportResult) {
+        val credentialsBlock = result.credentials.joinToString("\n") { (u, p) -> "$u  /  $p" }
         val sb = StringBuilder()
-        sb.appendLine("Imported: ${result.imported}")
-        if (result.errors.isNotEmpty()) sb.appendLine("Failed: ${result.errors.size}")
+        sb.appendLine("İçe aktarılan: ${result.imported}")
+        if (result.errors.isNotEmpty()) sb.appendLine("Başarısız: ${result.errors.size}")
         sb.appendLine()
-        sb.appendLine("Generated credentials:")
-        result.credentials.forEach { (u, p) -> sb.appendLine("$u  /  $p") }
+        sb.appendLine("Oluşturulan kullanıcı bilgileri:")
+        sb.appendLine(credentialsBlock)
         if (result.errors.isNotEmpty()) {
             sb.appendLine()
-            sb.appendLine("Errors:")
+            sb.appendLine("Hatalar:")
             result.errors.forEach { sb.appendLine("• $it") }
         }
 
@@ -664,47 +662,46 @@ class DataFragment : Fragment() {
         val scroll = ScrollView(requireContext()).apply { addView(tv) }
 
         AlertDialog.Builder(requireContext())
-            .setTitle("Import Complete")
+            .setTitle(getString(R.string.import_result_title))
             .setView(scroll)
-            .setPositiveButton("OK", null)
+            .setPositiveButton(getString(R.string.common_ok), null)
+            .setNeutralButton(getString(R.string.data_copy_users)) { _, _ ->
+                val cm = requireContext().getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                    as android.content.ClipboardManager
+                cm.setPrimaryClip(android.content.ClipData.newPlainText("Hocalar", credentialsBlock))
+                Toast.makeText(requireContext(), getString(R.string.data_all_users_copied), Toast.LENGTH_SHORT).show()
+            }
             .show()
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    /**
-     * Detects Excel files from Android content URIs.
-     * uri.lastPathSegment often returns encoded paths like "document/primary:Download/file.xlsx"
-     * so we check both the full URI string and the ContentResolver MIME type.
-     */
-    private fun isExcelFile(uri: android.net.Uri): Boolean {
-        val uriStr = uri.toString().lowercase()
-        if (uriStr.endsWith(".xlsx") || uriStr.endsWith(".xls") ||
-            uriStr.contains(".xlsx") || uriStr.contains(".xls")) return true
-        val mime = requireContext().contentResolver.getType(uri)?.lowercase() ?: ""
-        return mime.contains("spreadsheet") || mime.contains("excel") || mime.contains("ms-excel")
-    }
-
-
     private fun showCredentialsDialog(username: String, password: String) {
+        val text = "Hocaya paylaşmak için bu bilgileri kullanın:\n\n" +
+                   "Kullanıcı Adı: $username\n" +
+                   "Şifre: $password\n\n" +
+                   "İlk girişte hoca şifresini değiştirmek zorunda kalacak."
         AlertDialog.Builder(requireContext())
-            .setTitle("Lecturer Added")
-            .setMessage(
-                "Share these credentials with the lecturer:\n\n" +
-                "Username: $username\n" +
-                "Password: $password\n\n" +
-                "They must change their password on first login."
-            )
-            .setPositiveButton("OK", null)
+            .setTitle(getString(R.string.data_lecturer_added_title))
+            .setMessage(text)
+            .setPositiveButton(getString(R.string.common_ok), null)
+            .setNeutralButton(getString(R.string.common_copy_clipboard)) { _, _ ->
+                val cm = requireContext().getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                    as android.content.ClipboardManager
+                cm.setPrimaryClip(android.content.ClipData.newPlainText(
+                    "Hoca Bilgileri", "$username  /  $password"
+                ))
+                Toast.makeText(requireContext(), getString(R.string.common_copied_clipboard), Toast.LENGTH_SHORT).show()
+            }
             .show()
     }
 
     private fun showDeleteLecturerDialog(lecturer: Lecturer) {
         AlertDialog.Builder(requireContext())
-            .setTitle("Delete Lecturer")
-            .setMessage("Delete ${lecturer.fullName}? This also removes their login account.")
-            .setPositiveButton("Delete") { _, _ -> viewModel.deleteLecturer(lecturer) }
-            .setNegativeButton("Cancel", null)
+            .setTitle(getString(R.string.data_lecturer_delete_title))
+            .setMessage(getString(R.string.data_lecturer_delete_message, lecturer.fullName))
+            .setPositiveButton(getString(R.string.common_delete)) { _, _ -> viewModel.deleteLecturer(lecturer) }
+            .setNegativeButton(getString(R.string.common_cancel), null)
             .show()
     }
 
@@ -770,7 +767,7 @@ class DataFragment : Fragment() {
             requireContext(), android.R.layout.simple_spinner_item, names
         ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
 
-        val filterNames = listOf("Tüm Bölümler") + names
+        val filterNames = listOf(getString(R.string.common_all_departments)) + names
         binding.spinnerDeptFilter.adapter = ArrayAdapter(
             requireContext(), android.R.layout.simple_spinner_item, filterNames
         ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
@@ -795,33 +792,31 @@ class DataFragment : Fragment() {
         val filteredLecturers = if (deptId != null) allLecturers.filter { it.departmentId == deptId } else allLecturers
         lecturers = filteredLecturers
         populateLecturerSpinner()
-        binding.tvLecturerHeader.text = "Hocalar (${filteredLecturers.size})"
+        binding.tvLecturerHeader.text = getString(R.string.data_lecturers_header_count, filteredLecturers.size)
         populateLecturerList(filteredLecturers)
 
         val filteredCourses = if (deptId != null) allCourses.filter { it.departmentId == deptId } else allCourses
         courses = filteredCourses
         populateCourseSpinner(filteredCourses)
-        binding.tvCourseHeader.text = "Dersler (${filteredCourses.size})"
-        binding.rvCourses.adapter = CourseAdapter(filteredCourses,
-            onEdit = { showEditCourseDialog(it) },
-            onDelete = { showDeleteCourseDialog(it) }
-        )
+        binding.tvCourseHeader.text = getString(R.string.data_courses_header_count, filteredCourses.size)
+        courseAdapter.submitList(filteredCourses)
+        binding.tvCoursesEmpty.visibility = if (filteredCourses.isEmpty()) View.VISIBLE else View.GONE
+        binding.rvCourses.visibility      = if (filteredCourses.isEmpty()) View.GONE else View.VISIBLE
 
         val filteredOfferings = if (deptId != null) {
             allOfferings.filter { it.courses?.departmentId == deptId }
         } else allOfferings
-        binding.tvOfferingHeader.text = "Ders Açma (${filteredOfferings.size})"
-        binding.rvOfferings.adapter = OfferingAdapter(filteredOfferings,
-            onEditClick = { showEditOfferingDialog(it) },
-            onDeleteClick = { showDeleteOfferingDialog(it) }
-        )
+        binding.tvOfferingHeader.text = getString(R.string.data_offerings_header_count, filteredOfferings.size)
+        offeringAdapter.submitList(filteredOfferings)
+        binding.tvOfferingsEmpty.visibility = if (filteredOfferings.isEmpty()) View.VISIBLE else View.GONE
+        binding.rvOfferings.visibility      = if (filteredOfferings.isEmpty()) View.GONE else View.VISIBLE
     }
 
     private fun populateLecturerList(items: List<Lecturer>) {
         binding.llLecturerList.removeAllViews()
         if (items.isEmpty()) {
             val tv = TextView(requireContext()).apply {
-                text = "Henüz hoca eklenmedi."
+                text = getString(R.string.data_lecturer_empty)
                 setPadding(0, 16, 0, 16)
             }
             binding.llLecturerList.addView(tv)
@@ -846,7 +841,7 @@ class DataFragment : Fragment() {
     }
 
     private fun populateLecturerSpinner() {
-        val names = listOf("— Atanmadı —") + lecturers.map { it.fullName }
+        val names = listOf(getString(R.string.common_not_assigned)) + lecturers.map { it.fullName }
         binding.spinnerOfferingLecturer.adapter = ArrayAdapter(
             requireContext(), android.R.layout.simple_spinner_item, names
         ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
@@ -877,34 +872,120 @@ class DataFragment : Fragment() {
         setupDefaults()
     }
 
+    // ── Import dispatch (file-type aware) ─────────────────────────────────────
+
+    private fun handleCourseImport(uri: android.net.Uri) {
+        val ctx = requireContext()
+        try {
+            val kind = FileTypeDetector.detect(ctx, uri)
+            val parseResult: CsvImporter.ParseResult<CsvImporter.CourseRow> = when (kind) {
+                FileTypeDetector.Kind.XLSX, FileTypeDetector.Kind.XLS -> {
+                    val stream = ctx.contentResolver.openInputStream(uri)
+                        ?: return showImportFatal("Dosya açılamadı.")
+                    stream.use {
+                        val r = ExcelHelper.importCourses(it)
+                        CsvImporter.ParseResult(r.valid, r.errors)
+                    }
+                }
+                FileTypeDetector.Kind.CSV -> {
+                    val stream = ctx.contentResolver.openInputStream(uri)
+                        ?: return showImportFatal("Dosya açılamadı.")
+                    val text = stream.use { it.bufferedReader().readText() }
+                    CsvImporter.parseCourses(text)
+                }
+                FileTypeDetector.Kind.UNKNOWN ->
+                    return showImportFatal("Dosya tipi tanınamadı. Lütfen .xlsx, .xls veya .csv yükleyin.")
+            }
+            logImportErrors("import_courses", uri, kind, parseResult.errors, parseResult.valid.size)
+            showCourseImportPreview(parseResult)
+        } catch (e: Exception) {
+            reportImportFatal("import_courses", uri, e)
+            showImportFatal("Dosya okuma hatası: ${e.message ?: e::class.java.simpleName}")
+        }
+    }
+
+    private fun handleLecturerImport(uri: android.net.Uri) {
+        val ctx = requireContext()
+        try {
+            val kind = FileTypeDetector.detect(ctx, uri)
+            val parseResult: CsvImporter.ParseResult<CsvImporter.LecturerRow> = when (kind) {
+                FileTypeDetector.Kind.XLSX, FileTypeDetector.Kind.XLS -> {
+                    val stream = ctx.contentResolver.openInputStream(uri)
+                        ?: return showImportFatal("Dosya açılamadı.")
+                    stream.use {
+                        val r = ExcelHelper.importLecturers(it)
+                        CsvImporter.ParseResult(r.valid, r.errors)
+                    }
+                }
+                FileTypeDetector.Kind.CSV -> {
+                    val stream = ctx.contentResolver.openInputStream(uri)
+                        ?: return showImportFatal("Dosya açılamadı.")
+                    val text = stream.use { it.bufferedReader().readText() }
+                    CsvImporter.parseLecturers(text)
+                }
+                FileTypeDetector.Kind.UNKNOWN ->
+                    return showImportFatal("Dosya tipi tanınamadı. Lütfen .xlsx, .xls veya .csv yükleyin.")
+            }
+            logImportErrors("import_lecturers", uri, kind, parseResult.errors, parseResult.valid.size)
+            showLecturerImportPreview(parseResult)
+        } catch (e: Exception) {
+            reportImportFatal("import_lecturers", uri, e)
+            showImportFatal("Dosya okuma hatası: ${e.message ?: e::class.java.simpleName}")
+        }
+    }
+
+    private fun showImportFatal(message: String) {
+        AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.import_error_title))
+            .setMessage(message)
+            .setPositiveButton(getString(R.string.common_ok), null)
+            .show()
+    }
+
+    /** Per-row validation errors → backend log so admins can see failed
+     *  imports without the user having to forward a screenshot. */
+    private fun logImportErrors(
+        action: String,
+        uri: android.net.Uri,
+        kind: FileTypeDetector.Kind,
+        errors: List<String>,
+        validCount: Int
+    ) {
+        if (errors.isEmpty()) return
+        val reporter = ErrorReporter(requireActivity().application)
+        val summary = "import: $kind, geçerli=$validCount, hatalı=${errors.size}\n" +
+                      errors.take(20).joinToString("\n") { "• $it" } +
+                      if (errors.size > 20) "\n…ve ${errors.size - 20} hata daha" else ""
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching { reporter.reportMessage("DataFragment", action, summary, stackTrace = uri.toString()) }
+        }
+    }
+
+    /** Whole-file failure (couldn't even parse) → log with stack. */
+    private fun reportImportFatal(action: String, uri: android.net.Uri, e: Throwable) {
+        val reporter = ErrorReporter(requireActivity().application)
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching { reporter.reportException("DataFragment", "$action[${uri}]", e) }
+        }
+    }
+
     override fun onDestroyView() { super.onDestroyView(); _binding = null }
 }
 
 // ── Course Adapter ─────────���─────────────────────────────────────────────────
 
 class CourseAdapter(
-    private val items: List<Course>,
     private val onEdit: (Course) -> Unit,
     private val onDelete: (Course) -> Unit
-) : RecyclerView.Adapter<CourseAdapter.VH>() {
+) : ListAdapter<Course, CourseAdapter.VH>(DIFF) {
 
     inner class VH(val binding: ItemCourseBinding) : RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
         VH(ItemCourseBinding.inflate(LayoutInflater.from(parent.context), parent, false))
 
-    override fun getItemCount() = maxOf(items.size, 1)
-
     override fun onBindViewHolder(holder: VH, position: Int) {
-        if (items.isEmpty()) {
-            holder.binding.tvCourseCode.text    = "No courses yet."
-            holder.binding.tvCourseName.text    = ""
-            holder.binding.tvCourseDetails.text = ""
-            holder.binding.btnEditCourse.visibility   = View.GONE
-            holder.binding.btnDeleteCourse.visibility = View.GONE
-            return
-        }
-        val c = items[position]
+        val c = getItem(position)
         holder.binding.tvCourseCode.text    = c.code
         holder.binding.tvCourseName.text    = c.name
         holder.binding.tvCourseDetails.text = "T:${c.theoryHours} L:${c.labHours} C:${c.credits} • ${c.departmentName}"
@@ -913,38 +994,42 @@ class CourseAdapter(
         holder.binding.btnEditCourse.setOnClickListener   { onEdit(c) }
         holder.binding.btnDeleteCourse.setOnClickListener { onDelete(c) }
     }
+
+    companion object {
+        private val DIFF = object : DiffUtil.ItemCallback<Course>() {
+            override fun areItemsTheSame(old: Course, new: Course)    = old.id == new.id
+            override fun areContentsTheSame(old: Course, new: Course) = old == new
+        }
+    }
 }
 
 
 // ── Offering Adapter ─────────────────────────────────────────────────────────
 
 class OfferingAdapter(
-    private val items: List<Offering>,
     private val onEditClick: (Offering) -> Unit,
     private val onDeleteClick: (Offering) -> Unit
-) : RecyclerView.Adapter<OfferingAdapter.VH>() {
+) : ListAdapter<Offering, OfferingAdapter.VH>(DIFF) {
 
     inner class VH(val binding: ItemOfferingBinding) : RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
         VH(ItemOfferingBinding.inflate(LayoutInflater.from(parent.context), parent, false))
 
-    override fun getItemCount() = maxOf(items.size, 1)
-
     override fun onBindViewHolder(holder: VH, position: Int) {
-        if (items.isEmpty()) {
-            holder.binding.tvOfferingName.text = "No offerings yet."
-            holder.binding.tvOfferingDetails.text = ""
-            holder.binding.btnEditOffering.visibility = View.GONE
-            holder.binding.btnDeleteOffering.visibility = View.GONE
-            return
-        }
-        val o = items[position]
+        val o = getItem(position)
         holder.binding.tvOfferingName.text = o.courseName
         holder.binding.tvOfferingDetails.text = "${o.academicYear} • ${o.term} • Year ${o.classYear} • Sec ${o.section} • Cap ${o.capacity} • ${o.lecturerName}"
         holder.binding.btnEditOffering.visibility = View.VISIBLE
         holder.binding.btnDeleteOffering.visibility = View.VISIBLE
         holder.binding.btnEditOffering.setOnClickListener { onEditClick(o) }
         holder.binding.btnDeleteOffering.setOnClickListener { onDeleteClick(o) }
+    }
+
+    companion object {
+        private val DIFF = object : DiffUtil.ItemCallback<Offering>() {
+            override fun areItemsTheSame(old: Offering, new: Offering)    = old.id == new.id
+            override fun areContentsTheSame(old: Offering, new: Offering) = old == new
+        }
     }
 }

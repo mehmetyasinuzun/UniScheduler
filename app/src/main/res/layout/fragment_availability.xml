@@ -9,7 +9,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="My Busy Times"
+        android:text="@string/availability_title"
         android:textSize="22sp"
         android:textStyle="bold"
         android:layout_marginBottom="4dp" />
@@ -17,8 +17,8 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Mark the time blocks when you are NOT available."
-        android:textColor="@color/colorOnSurfaceVariant"
+        android:text="@string/availability_subtitle"
+        android:textColor="?attr/colorOnSurfaceVariant"
         android:layout_marginBottom="12dp" />
 
     <!-- Add form -->
@@ -35,7 +35,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Day"
+                android:text="@string/common_day"
                 android:textSize="12sp" />
 
             <Spinner
@@ -56,7 +56,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="4dp"
-                    android:hint="Start">
+                    android:hint="@string/availability_start_hint">
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etStartTime"
                         android:layout_width="match_parent"
@@ -71,7 +71,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginStart="4dp"
-                    android:hint="End">
+                    android:hint="@string/availability_end_hint">
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etEndTime"
                         android:layout_width="match_parent"
@@ -86,7 +86,7 @@
                 android:id="@+id/tvSaveError"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@color/colorError"
+                android:textColor="?attr/colorError"
                 android:visibility="gone"
                 android:layout_marginTop="4dp" />
 
@@ -94,7 +94,7 @@
                 android:id="@+id/btnAdd"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Add Busy Slot"
+                android:text="@string/availability_add_button"
                 android:layout_marginTop="8dp" />
 
         </LinearLayout>
@@ -111,20 +111,20 @@
         android:id="@+id/tvError"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="@color/colorError"
+        android:textColor="?attr/colorError"
         android:visibility="gone" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnRetry"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Retry"
+        android:text="@string/common_retry"
         android:visibility="gone" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Haftalık Görünüm"
+        android:text="@string/availability_weekly_title"
         android:textSize="16sp"
         android:textStyle="bold"
         android:layout_marginTop="8dp"
@@ -133,8 +133,8 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Yeşil: Müsait  •  Kırmızı: Meşgul  •  Mavi: Atanmış Ders"
-        android:textColor="@color/colorOnSurfaceVariant"
+        android:text="@string/availability_legend"
+        android:textColor="?attr/colorOnSurfaceVariant"
         android:textSize="11sp"
         android:layout_marginBottom="8dp" />
 

@@ -9,7 +9,9 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.unischeduler.databinding.FragmentAdminHomeBinding
 import com.unischeduler.util.UiState
@@ -20,6 +22,10 @@ class AdminHomeFragment : Fragment() {
     private var _binding: FragmentAdminHomeBinding? = null
     private val binding get() = _binding!!
     private val viewModel: AdminHomeViewModel by viewModels()
+
+    private lateinit var lecturersAdapter: SimpleTextAdapter
+    private lateinit var coursesAdapter: SimpleTextAdapter
+    private lateinit var classroomsAdapter: SimpleTextAdapter
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentAdminHomeBinding.inflate(inflater, container, false)
@@ -39,6 +45,18 @@ class AdminHomeFragment : Fragment() {
         binding.rvUnassignedCourses.layoutManager    = LinearLayoutManager(requireContext())
         binding.rvAvailableClassrooms.layoutManager  = LinearLayoutManager(requireContext())
 
+        binding.rvUnassignedLecturers.isNestedScrollingEnabled  = false
+        binding.rvUnassignedCourses.isNestedScrollingEnabled    = false
+        binding.rvAvailableClassrooms.isNestedScrollingEnabled  = false
+
+        lecturersAdapter   = SimpleTextAdapter()
+        coursesAdapter     = SimpleTextAdapter()
+        classroomsAdapter  = SimpleTextAdapter()
+
+        binding.rvUnassignedLecturers.adapter  = lecturersAdapter
+        binding.rvUnassignedCourses.adapter    = coursesAdapter
+        binding.rvAvailableClassrooms.adapter  = classroomsAdapter
+
         binding.btnRetry.setOnClickListener { viewModel.loadDashboard() }
 
         collectFlow(viewModel.state) { state ->
@@ -50,17 +68,11 @@ class AdminHomeFragment : Fragment() {
                     showLoading(false)
                     val d = state.data
                     binding.tvLecturerPanelTitle.text = "Atanmamış Hocalar (${d.unassignedLecturers.size})"
-                    binding.rvUnassignedLecturers.adapter = SimpleTextAdapter(
-                        d.unassignedLecturers.map { "${it.fullName} • ${it.departmentName}" }
-                    )
+                    lecturersAdapter.submitList(d.unassignedLecturers.map { "${it.fullName} • ${it.departmentName}" })
                     binding.tvCoursePanelTitle.text = "Ders Açılmamış Dersler (${d.unassignedCourses.size})"
-                    binding.rvUnassignedCourses.adapter = SimpleTextAdapter(
-                        d.unassignedCourses.map { "${it.code} — ${it.name}" }
-                    )
+                    coursesAdapter.submitList(d.unassignedCourses.map { "${it.code} — ${it.name}" })
                     binding.tvClassroomPanelTitle.text = "Mevcut Derslikler (${d.classrooms.size})"
-                    binding.rvAvailableClassrooms.adapter = SimpleTextAdapter(
-                        d.classrooms.map { "${it.roomCode} (kap. ${it.capacity})" }
-                    )
+                    classroomsAdapter.submitList(d.classrooms.map { "${it.roomCode} (kap. ${it.capacity})" })
                 }
             }
         }
@@ -82,19 +94,21 @@ class AdminHomeFragment : Fragment() {
     override fun onDestroyView() { super.onDestroyView(); _binding = null }
 }
 
-// Minimal single-line text adapter shared across panels
-class SimpleTextAdapter(private val items: List<String>) :
-    RecyclerView.Adapter<SimpleTextAdapter.VH>() {
+class SimpleTextAdapter : ListAdapter<String, SimpleTextAdapter.VH>(DIFF) {
 
     inner class VH(val tv: TextView) : RecyclerView.ViewHolder(tv)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
         VH(TextView(parent.context).apply { setPadding(0, 8, 0, 8) })
 
-    // Always return at least 1 so the "empty" row is rendered
-    override fun getItemCount() = maxOf(items.size, 1)
-
     override fun onBindViewHolder(holder: VH, position: Int) {
-        holder.tv.text = if (items.isEmpty()) "— Yok —" else items[position]
+        holder.tv.text = getItem(position)
+    }
+
+    companion object {
+        private val DIFF = object : DiffUtil.ItemCallback<String>() {
+            override fun areItemsTheSame(old: String, new: String) = old == new
+            override fun areContentsTheSame(old: String, new: String) = old == new
+        }
     }
 }

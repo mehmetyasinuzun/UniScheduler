@@ -7,19 +7,39 @@ const DAY_TR={Monday:'Pazartesi',Tuesday:'Sali',Wednesday:'Carsamba',Thursday:'P
 const COLORS=['#1565c0','#2e7d32','#6a1b9a','#e65100','#00838f','#ad1457','#4527a0','#283593','#558b2f','#bf360c','#00695c','#880e4f'];
 
 function authHeaders(){return{'Content-Type':'application/json','Authorization':'Bearer '+authToken}}
-async function apiFetch(url,opts={}){opts.headers={...authHeaders(),...(opts.headers||{})};const r=await fetch(url,opts);if(r.status===401){showLoginScreen();throw new Error('Auth')}return r}
+
+// ── Panel error logger — sessizce POST eder, hata fırlatmaz
+function sendPanelLog(screen,action,message,stack){try{fetch('/api/log/panel',{method:'POST',headers:authHeaders(),body:JSON.stringify({screen,action,message:String(message).slice(0,2000),stack:stack?String(stack).slice(0,5000):undefined})}).catch(()=>{})}catch(_){}}
+
+async function apiFetch(url,opts={}){
+  opts.headers={...authHeaders(),...(opts.headers||{})};
+  const r=await fetch(url,opts);
+  if(r.status===401){showLoginScreen();throw new Error('Auth')}
+  if(r.status>=500){
+    const txt=await r.clone().text().catch(()=>'');
+    sendPanelLog('apiFetch',opts.method||'GET','HTTP '+r.status+' '+url,txt);
+  }
+  return r
+}
+
 function escapeHtml(v){return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
-function showAlert(id,msg,type){const el=document.getElementById(id);if(!el)return;el.innerHTML='<div class="alert-box '+type+'">'+msg+'</div>';setTimeout(()=>{if(el)el.innerHTML=''},4000)}
+function showAlert(id,msg,type){const el=document.getElementById(id);if(!el)return;el.innerHTML='<div class="alert-box '+type+'">'+msg+'</div>';setTimeout(()=>{if(el)el.innerHTML=''},5000)}
 function toMin(t){if(!t)return 0;const p=t.split(':');return(parseInt(p[0])||0)*60+(parseInt(p[1])||0)}
 function fmtTime(m){return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')}
 function colorFor(id){return COLORS[(id||0)%COLORS.length]}
 const TERM_TR={Fall:'Guz',Spring:'Bahar',Summer:'Yaz'};
 
+// ── Global org helper ────────────────────────────────────────────────
+function getCurrentOrgId(){return document.getElementById('globalOrg').value||''}
+function setCurrentOrgId(id){if(!id)return;localStorage.setItem('currentOrgId',String(id));const el=document.getElementById('globalOrg');if(el)el.value=id;['dashOrg','schedOrg','availOrg','offOrg','logOrg','adminOrg'].forEach(sid=>{const s=document.getElementById(sid);if(s)s.value=id})}
+
 // ── Auth
 async function doLogin(){const errEl=document.getElementById('loginError');errEl.textContent='';try{const u=document.getElementById('loginUser').value.trim(),p=document.getElementById('loginPass').value;if(!u||!p){errEl.textContent='Giris bilgilerini doldurun.';return}const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});const d=await r.json();if(d.token){authToken=d.token;localStorage.setItem('adminToken',authToken);hideLoginScreen();loadOrganizations()}else errEl.textContent=d.error||'Giris basarisiz.'}catch(e){errEl.textContent='Baglanti hatasi.'}}
-function doLogout(){authToken='';localStorage.removeItem('adminToken');showLoginScreen()}
-function showLoginScreen(){document.getElementById('loginOverlay').style.display='flex';document.getElementById('appSidebar').style.display='none';document.getElementById('appMain').style.display='none'}
-function hideLoginScreen(){document.getElementById('loginOverlay').style.display='none';document.getElementById('appSidebar').style.display='flex';document.getElementById('appMain').style.display='block'}
+function resetClientCaches(){orgs=[];allSchedule=[];allOfferings=[];allLecturers=[];allClassrooms=[];allDepts=[];currentAvailability=[];allAvailability=[];currentEditType=null;currentEditId=null;editingEntryId=null;currentDetailEntry=null;}
+function doLogout(){resetClientCaches();authToken='';localStorage.removeItem('adminToken');showLoginScreen()}
+function onOrgSelectChanged(){const id=getCurrentOrgId();setCurrentOrgId(id);resetClientCaches();const active=document.querySelector('.sidebar a.active');if(active&&active.id&&active.id.startsWith('nav-')){showPage(active.id.substring(4));}}
+function showLoginScreen(){document.getElementById('loginOverlay').style.display='flex';document.getElementById('appSidebar').style.display='none';document.getElementById('appMain').style.display='none';document.getElementById('globalOrgBar').style.display='none'}
+function hideLoginScreen(){document.getElementById('loginOverlay').style.display='none';document.getElementById('appSidebar').style.display='flex';document.getElementById('appMain').style.display='block';document.getElementById('globalOrgBar').style.display='flex'}
 async function checkAuth(){if(!authToken){showLoginScreen();return}try{const r=await fetch('/api/auth/check',{headers:{'Authorization':'Bearer '+authToken}});if(r.ok){hideLoginScreen();loadOrganizations()}else showLoginScreen()}catch(e){showLoginScreen()}}
 
 // ── Nav
@@ -33,20 +53,44 @@ if(page==='availability'){loadOrganizations();setTimeout(loadAvailabilityPage,10
 if(page==='logs'){loadOrganizations();setTimeout(loadErrorLogs,100)}}
 
 // ── Organizations
-async function loadOrganizations(){const r=await apiFetch('/api/organizations');orgs=await r.json();renderOrgTable();populateOrgSelects()}
+async function loadOrganizations(){try{const r=await apiFetch('/api/organizations');orgs=await r.json();renderOrgTable();populateOrgSelects()}catch(e){if(e.message!=='Auth')showAlert('orgAlert','Organizasyonlar yuklenemedi: '+e.message,'error')}}
 function renderOrgTable(){if(!orgs.length){document.getElementById('orgList').innerHTML='<div class="empty-state">Henuz organizasyon yok.</div>';return}let h='<table><tr><th>ID</th><th>Ad</th><th>Kod</th><th>Tarih</th><th></th></tr>';orgs.forEach(o=>{h+='<tr><td>'+o.id+'</td><td><strong>'+escapeHtml(o.name)+'</strong></td><td><span class="badge-blue">'+escapeHtml(o.code)+'</span></td><td>'+new Date(o.created_at).toLocaleDateString('tr-TR')+'</td><td><button class="btn btn-danger btn-sm btn-del-org" data-id="'+o.id+'">Sil</button></td></tr>'});document.getElementById('orgList').innerHTML=h+'</table>'}
-function populateOrgSelects(){const opts=orgs.map(o=>'<option value="'+o.id+'">'+escapeHtml(o.name)+'</option>').join('');['adminOrg','dashOrg','schedOrg','availOrg','offOrg'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts});const logEl=document.getElementById('logOrg');if(logEl)logEl.innerHTML='<option value="">Tum Org</option>'+opts}
+function populateOrgSelects(){
+  const opts=orgs.map(o=>'<option value="'+o.id+'">'+escapeHtml(o.name)+'</option>').join('');
+  // Global selector
+  const gEl=document.getElementById('globalOrg');
+  if(gEl){gEl.innerHTML=opts;}
+  // Hidden mirror selectors (sayfa fonksiyonları hâlâ bunları okuyabilsin)
+  ['adminOrg','dashOrg','schedOrg','availOrg','offOrg'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts});
+  const logEl=document.getElementById('logOrg');if(logEl)logEl.innerHTML='<option value="">Tum Org</option>'+opts;
+  // Logs sayfası görünür filtre
+  const logFilter=document.getElementById('logOrgFilter');if(logFilter)logFilter.innerHTML='<option value="">Tum Organizasyonlar</option>'+opts;
+  // Restore veya ilk org seç
+  const saved=localStorage.getItem('currentOrgId');
+  const firstId=orgs.length?String(orgs[0].id):'';
+  const target=saved&&orgs.find(o=>String(o.id)===saved)?saved:firstId;
+  if(target)setCurrentOrgId(target);
+}
+
+// Hata logları kaynak filtresi (client-side, yeniden fetch etmez)
+let _cachedLogData=[];
+function filterLogsBySource(){
+  const src=document.getElementById('logSourceFilter')?document.getElementById('logSourceFilter').value:'';
+  if(!_cachedLogData.length)return;
+  const filtered=src==='WEB'?_cachedLogData.filter(l=>l.screen&&l.screen.startsWith('PANEL')):src==='MOBILE'?_cachedLogData.filter(l=>!l.screen||!l.screen.startsWith('PANEL')):_cachedLogData;
+  renderLogTable(filtered);
+}
 async function addOrganization(){const name=document.getElementById('orgName').value.trim(),code=document.getElementById('orgCode').value.trim();if(!name||!code)return showAlert('orgAlert','Ad ve kod gerekli.','error');const r=await apiFetch('/api/organizations',{method:'POST',body:JSON.stringify({name,code})});const d=await r.json();if(d.error)return showAlert('orgAlert',d.error,'error');showAlert('orgAlert','Olusturuldu!','success');document.getElementById('orgName').value='';document.getElementById('orgCode').value='';loadOrganizations()}
 async function deleteOrg(id){if(!confirm('Organizasyonu silmek istediginize emin misiniz?'))return;await apiFetch('/api/organizations/'+id,{method:'DELETE'});loadOrganizations()}
 
 // ── Admins
 async function loadAdmins(){const r=await apiFetch('/api/admins');const admins=await r.json();if(!admins.length){document.getElementById('adminList').innerHTML='<div class="empty-state">Admin yok.</div>';return}let h='<table><tr><th>Kullanici</th><th>Org</th><th>Sifre</th><th>Tarih</th><th></th></tr>';admins.forEach(a=>{const on=a.organizations?a.organizations.name:'-';h+='<tr><td><strong>'+escapeHtml(a.username)+'</strong></td><td>'+escapeHtml(on)+'</td><td>'+(a.must_change_password?'<span class="badge-orange">Gecici</span>':'<span class="badge-green">OK</span>')+'</td><td>'+new Date(a.created_at).toLocaleDateString('tr-TR')+'</td><td><button class="btn btn-outline-secondary btn-sm btn-reset-pw" data-id="'+a.id+'">Sifre</button> <button class="btn btn-danger btn-sm btn-del-admin" data-id="'+a.id+'">Sil</button></td></tr>'});document.getElementById('adminList').innerHTML=h+'</table>'}
-async function addAdmin(){const orgId=document.getElementById('adminOrg').value,u=document.getElementById('adminUsername').value.trim(),p=document.getElementById('adminPassword').value.trim();if(!u||!p||!orgId)return showAlert('adminAlert','Tum alanlar gerekli.','error');if(p.length<6)return showAlert('adminAlert','Sifre min 6 karakter.','error');const r=await apiFetch('/api/admins',{method:'POST',body:JSON.stringify({username:u,password:p,orgId,mustChangePassword:true})});const d=await r.json();if(d.error)return showAlert('adminAlert',d.error,'error');showAlert('adminAlert','Olusturuldu!','success');document.getElementById('adminUsername').value='';document.getElementById('adminPassword').value='';loadAdmins()}
+async function addAdmin(){const orgId=document.getElementById('adminOrg').value||getCurrentOrgId(),u=document.getElementById('adminUsername').value.trim(),p=document.getElementById('adminPassword').value.trim();if(!u||!p||!orgId)return showAlert('adminAlert','Tum alanlar gerekli.','error');if(p.length<6)return showAlert('adminAlert','Sifre min 6 karakter.','error');const r=await apiFetch('/api/admins',{method:'POST',body:JSON.stringify({username:u,password:p,orgId,mustChangePassword:true})});const d=await r.json();if(d.error)return showAlert('adminAlert',d.error,'error');const created=d.finalUsername&&d.finalUsername!==u?'Olusturuldu! (Kullanici adi: <strong>'+escapeHtml(d.finalUsername)+'</strong> olarak kaydedildi)':'Olusturuldu!';showAlert('adminAlert',created,'success');document.getElementById('adminUsername').value='';document.getElementById('adminPassword').value='';loadAdmins()}
 async function deleteAdmin(id){if(!confirm('Silmek istediginize emin misiniz?'))return;await apiFetch('/api/admins/'+id,{method:'DELETE'});loadAdmins()}
 async function resetPassword(id){const pw=prompt('Yeni sifre (min 6):');if(!pw||pw.length<6){alert('Min 6 karakter.');return}await apiFetch('/api/admins/'+id+'/reset-password',{method:'PUT',body:JSON.stringify({password:pw})});alert('Sifre sifirlandi.');loadAdmins()}
 
 // ── Dashboard
-async function loadDashboard(){const orgId=document.getElementById('dashOrg').value;if(!orgId)return;const[rStats,rDepts,rLecs,rCourses,rClassrooms,rSettings]=await Promise.all([apiFetch('/api/stats/'+orgId),apiFetch('/api/departments/'+orgId),apiFetch('/api/lecturers/'+orgId),apiFetch('/api/courses/'+orgId),apiFetch('/api/classrooms/'+orgId),apiFetch('/api/settings/'+orgId)]);
+async function loadDashboard(){const orgId=getCurrentOrgId();if(!orgId)return;let rStats,rDepts,rLecs,rCourses,rClassrooms,rSettings;try{[rStats,rDepts,rLecs,rCourses,rClassrooms,rSettings]=await Promise.all([apiFetch('/api/stats/'+orgId),apiFetch('/api/departments/'+orgId),apiFetch('/api/lecturers/'+orgId),apiFetch('/api/courses/'+orgId),apiFetch('/api/classrooms/'+orgId),apiFetch('/api/settings/'+orgId)])}catch(e){if(e.message!=='Auth')showAlert('orgAlert','Dashboard yuklenemedi: '+e.message,'error');return;}
 const stats=await rStats.json();document.getElementById('dashStats').innerHTML=['departments/Bolum','lecturers/Akademisyen','courses/Ders','classrooms/Sinif','offerings/Acilan Ders','scheduleEntries/Program'].map(s=>{const[k,l]=s.split('/');return'<div class="stat-card"><div class="number">'+(stats[k]||0)+'</div><div class="label">'+l+'</div></div>'}).join('');
 const settings=await rSettings.json();document.getElementById('setTimeStep').value=settings.time_step_minutes||10;document.getElementById('setDayStart').value=settings.day_start||'08:00';document.getElementById('setDayEnd').value=settings.day_end||'18:00';
 const depts=await rDepts.json();['courseDept','lecDept','classroomDept'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-</option>'+depts.map(d=>'<option value="'+d.id+'">'+escapeHtml(d.name)+'</option>').join('')});
@@ -62,39 +106,39 @@ const classrooms=await rClassrooms.json();document.getElementById('countClassroo
 if(!classrooms.length)document.getElementById('classroomList').innerHTML='<div class="empty-state">Sinif yok.</div>';
 else{let h='<table><tr><th>Kod</th><th>Kap.</th><th>Tur</th><th>Bolum</th><th></th></tr>';classrooms.forEach(c=>{const ed=encodeURIComponent(JSON.stringify(c));h+='<tr><td><strong>'+escapeHtml(c.room_code)+'</strong></td><td>'+c.capacity+'</td><td><span class="'+(c.type==='lab'?'badge-purple':'badge-blue')+'">'+c.type+'</span></td><td>'+escapeHtml(c.departments?c.departments.name:'-')+'</td><td><button class="btn btn-warning btn-sm btn-edit-classroom me-1" data-data="'+ed+'">Duzenle</button><button class="btn btn-danger btn-sm btn-del-classroom" data-id="'+c.id+'">Sil</button></td></tr>'});document.getElementById('classroomList').innerHTML=h+'</table>'}}
 
-async function saveSettings(){const orgId=document.getElementById('dashOrg').value;if(!orgId)return;const r=await apiFetch('/api/settings/'+orgId,{method:'PUT',body:JSON.stringify({timeStepMinutes:document.getElementById('setTimeStep').value,dayStart:document.getElementById('setDayStart').value,dayEnd:document.getElementById('setDayEnd').value})});const d=await r.json();if(d.error)return showAlert('settingsAlert',d.error,'error');showAlert('settingsAlert','Kaydedildi!','success')}
-async function addDepartment(){const orgId=document.getElementById('dashOrg').value,name=document.getElementById('newDeptName').value.trim();if(!name)return;await apiFetch('/api/departments',{method:'POST',body:JSON.stringify({name,orgId})});document.getElementById('newDeptName').value='';loadDashboard()}
+async function saveSettings(){const orgId=getCurrentOrgId();if(!orgId)return;const r=await apiFetch('/api/settings/'+orgId,{method:'PUT',body:JSON.stringify({timeStepMinutes:document.getElementById('setTimeStep').value,dayStart:document.getElementById('setDayStart').value,dayEnd:document.getElementById('setDayEnd').value})});const d=await r.json();if(d.error)return showAlert('settingsAlert',d.error,'error');showAlert('settingsAlert','Kaydedildi!','success')}
+async function addDepartment(){const orgId=getCurrentOrgId(),name=document.getElementById('newDeptName').value.trim();if(!name)return;await apiFetch('/api/departments',{method:'POST',body:JSON.stringify({name,orgId})});document.getElementById('newDeptName').value='';loadDashboard()}
 async function deleteDept(id){if(!confirm('Silmek istediginize emin misiniz?'))return;await apiFetch('/api/departments/'+id,{method:'DELETE'});loadDashboard()}
-async function addLecturer(){const orgId=document.getElementById('dashOrg').value;const body={orgId,title:document.getElementById('lecTitle').value.trim(),firstName:document.getElementById('lecFirst').value.trim(),lastName:document.getElementById('lecLast').value.trim(),email:document.getElementById('lecEmail').value.trim(),departmentId:document.getElementById('lecDept').value||null};if(!body.firstName||!body.lastName)return showAlert('lecAlert','Ad ve soyad gerekli.','error');const r=await apiFetch('/api/lecturers',{method:'POST',body:JSON.stringify(body)});const d=await r.json();if(d.error)return showAlert('lecAlert',d.error,'error');['lecTitle','lecFirst','lecLast','lecEmail'].forEach(id=>document.getElementById(id).value='');if(d.generatedCredentials)showCredentialBanner(d.generatedCredentials.username,d.generatedCredentials.password,body.firstName+' '+body.lastName);loadDashboard()}
+async function addLecturer(){const orgId=getCurrentOrgId();const body={orgId,title:document.getElementById('lecTitle').value.trim(),firstName:document.getElementById('lecFirst').value.trim(),lastName:document.getElementById('lecLast').value.trim(),email:document.getElementById('lecEmail').value.trim(),departmentId:document.getElementById('lecDept').value||null};if(!body.firstName||!body.lastName)return showAlert('lecAlert','Ad ve soyad gerekli.','error');const r=await apiFetch('/api/lecturers',{method:'POST',body:JSON.stringify(body)});const d=await r.json();if(d.error)return showAlert('lecAlert',d.error,'error');['lecTitle','lecFirst','lecLast','lecEmail'].forEach(id=>document.getElementById(id).value='');if(d.generatedCredentials)showCredentialBanner(d.generatedCredentials.username,d.generatedCredentials.password,body.firstName+' '+body.lastName);loadDashboard()}
 async function resetLecturerPassword(id){if(!confirm('Sifreyi sifirlamak istediginize emin misiniz?'))return;const r=await apiFetch('/api/lecturers/'+id+'/reset-password',{method:'POST'});const d=await r.json();if(d.error)return alert(d.error);showCredentialBanner(d.generatedCredentials.username,d.generatedCredentials.password,'Sifre Sifirlandi');loadDashboard()}
-async function deleteLecturer(id){if(!confirm('Silmek istediginize emin misiniz?'))return;await apiFetch('/api/lecturers/'+id,{method:'DELETE'});loadDashboard()}
-async function deleteCourse(id){if(!confirm('Silmek istediginize emin misiniz?'))return;await apiFetch('/api/courses/'+id,{method:'DELETE'});loadDashboard()}
-async function addClassroom(){const orgId=document.getElementById('dashOrg').value;const r=await apiFetch('/api/classrooms',{method:'POST',body:JSON.stringify({orgId,roomCode:document.getElementById('classroomCode').value.trim(),capacity:document.getElementById('classroomCapacity').value,type:document.getElementById('classroomType').value,departmentId:document.getElementById('classroomDept').value||null})});const d=await r.json();if(d.error)return showAlert('classroomAlert',d.error,'error');showAlert('classroomAlert','Eklendi!','success');document.getElementById('classroomCode').value='';loadDashboard()}
-async function deleteClassroom(id){if(!confirm('Silmek istediginize emin misiniz?'))return;await apiFetch('/api/classrooms/'+id,{method:'DELETE'});loadDashboard()}
-async function addCourse(){const orgId=document.getElementById('dashOrg').value;const r=await apiFetch('/api/courses',{method:'POST',body:JSON.stringify({orgId,code:document.getElementById('courseCode').value.trim(),name:document.getElementById('courseName').value.trim(),theoryHours:document.getElementById('courseTheory').value,labHours:document.getElementById('courseLab').value,credits:document.getElementById('courseCredits').value,departmentId:document.getElementById('courseDept').value||null})});const d=await r.json();if(d.error)return showAlert('courseAlert',d.error,'error');showAlert('courseAlert','Eklendi!','success');document.getElementById('courseCode').value='';document.getElementById('courseName').value='';loadDashboard()}
+async function deleteLecturer(id){if(!confirm('Silmek istediginize emin misiniz?'))return;const orgId=getCurrentOrgId();await apiFetch('/api/lecturers/'+id+'?orgId='+orgId,{method:'DELETE'});loadDashboard()}
+async function deleteCourse(id){if(!confirm('Silmek istediginize emin misiniz?'))return;const orgId=getCurrentOrgId();await apiFetch('/api/courses/'+id+'?orgId='+orgId,{method:'DELETE'});loadDashboard()}
+async function addClassroom(){const orgId=getCurrentOrgId();const r=await apiFetch('/api/classrooms',{method:'POST',body:JSON.stringify({orgId,roomCode:document.getElementById('classroomCode').value.trim(),capacity:document.getElementById('classroomCapacity').value,type:document.getElementById('classroomType').value,departmentId:document.getElementById('classroomDept').value||null})});const d=await r.json();if(d.error)return showAlert('classroomAlert',d.error,'error');showAlert('classroomAlert','Eklendi!','success');document.getElementById('classroomCode').value='';loadDashboard()}
+async function deleteClassroom(id){if(!confirm('Silmek istediginize emin misiniz?'))return;const orgId=getCurrentOrgId();await apiFetch('/api/classrooms/'+id+'?orgId='+orgId,{method:'DELETE'});loadDashboard()}
+async function addCourse(){const orgId=getCurrentOrgId();const r=await apiFetch('/api/courses',{method:'POST',body:JSON.stringify({orgId,code:document.getElementById('courseCode').value.trim(),name:document.getElementById('courseName').value.trim(),theoryHours:document.getElementById('courseTheory').value,labHours:document.getElementById('courseLab').value,credits:document.getElementById('courseCredits').value,departmentId:document.getElementById('courseDept').value||null})});const d=await r.json();if(d.error)return showAlert('courseAlert',d.error,'error');showAlert('courseAlert','Eklendi!','success');document.getElementById('courseCode').value='';document.getElementById('courseName').value='';loadDashboard()}
 
 function showCredentialBanner(username,password,displayName){const t=document.getElementById('lecAlert');if(!t)return;t.innerHTML='<div class="credential-banner"><span class="cred-dismiss" onclick="this.parentElement.remove()">&times;</span><div class="cred-title">'+escapeHtml(displayName)+'</div><div class="cred-row"><span class="cred-label">Kullanici:</span><span class="cred-value">'+escapeHtml(username)+'</span><span style="margin:0 6px;color:#999;">|</span><span class="cred-label">Sifre:</span><span class="cred-value">'+escapeHtml(password)+'</span><button class="btn-copy" onclick="navigator.clipboard.writeText(\''+username+' / '+password+'\');this.textContent=\'Kopyalandi!\';setTimeout(()=>this.textContent=\'Kopyala\',2000)">Kopyala</button></div><div class="cred-note">Ilk giriste sifre degisimi istenecektir.</div></div>';const acc=document.getElementById('accLecturers');if(acc&&!acc.classList.contains('show'))new bootstrap.Collapse(acc,{toggle:true})}
 
 // ── Excel
-async function importExcel(type,file,alertId){const orgId=document.getElementById('dashOrg').value;if(!orgId){showAlert(alertId,'Org secin.','error');return}const fd=new FormData();fd.append('file',file);try{const r=await fetch('/api/import/'+type+'/'+orgId,{method:'POST',headers:{'Authorization':'Bearer '+authToken},body:fd});const d=await r.json();if(d.error){showAlert(alertId,d.error,'error');return}showAlert(alertId,(d.message||d.inserted+' kayit eklendi.'),'success');loadDashboard()}catch(e){showAlert(alertId,e.message,'error')}}
-function exportExcel(type){const orgId=document.getElementById('dashOrg').value;if(!orgId){alert('Org secin.');return}window.open('/api/export/'+type+'/'+orgId+'?token='+authToken,'_blank')}
-async function bulkResetPasswords(){const orgId=document.getElementById('dashOrg').value;if(!orgId)return;if(!confirm('TUM akademisyenlerin sifreleri sifirlanacak!'))return;try{const r=await apiFetch('/api/lecturers/bulk-reset/'+orgId,{method:'POST'});const d=await r.json();if(d.error){alert(d.error);return}if(d.credentials&&d.credentials.length){const csv='﻿'+'Ad,Soyad,Kullanici,Sifre\n'+d.credentials.map(c=>'"'+c.ad+'","'+c.soyad+'","'+c.kullanici_adi+'","'+c.yeni_sifre+'"').join('\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sifreler.csv';a.click();alert(d.reset+' sifre sifirlandi.')}loadDashboard()}catch(e){alert(e.message)}}
+async function importExcel(type,file,alertId){const orgId=getCurrentOrgId();if(!orgId){showAlert(alertId,'Org secin.','error');return}const fd=new FormData();fd.append('file',file);try{const r=await fetch('/api/import/'+type+'/'+orgId,{method:'POST',headers:{'Authorization':'Bearer '+authToken},body:fd});const d=await r.json();if(d.error){showAlert(alertId,d.error,'error');return}showAlert(alertId,(d.message||d.inserted+' kayit eklendi.'),'success');loadDashboard()}catch(e){showAlert(alertId,e.message,'error')}}
+function exportExcel(type){const orgId=getCurrentOrgId();if(!orgId){alert('Org secin.');return}window.open('/api/export/'+type+'/'+orgId+'?token='+authToken,'_blank')}
+async function bulkResetPasswords(){const orgId=getCurrentOrgId();if(!orgId)return;if(!confirm('TUM akademisyenlerin sifreleri sifirlanacak!'))return;try{const r=await apiFetch('/api/lecturers/bulk-reset/'+orgId,{method:'POST'});const d=await r.json();if(d.error){alert(d.error);return}if(d.credentials&&d.credentials.length){const csv='﻿'+'Ad,Soyad,Kullanici,Sifre\n'+d.credentials.map(c=>'"'+c.ad+'","'+c.soyad+'","'+c.kullanici_adi+'","'+c.yeni_sifre+'"').join('\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sifreler.csv';a.click();alert(d.reset+' sifre sifirlandi.')}loadDashboard()}catch(e){alert(e.message)}}
 
 // ── Offerings
-async function loadOfferingsPage(){const orgId=document.getElementById('offOrg').value;if(!orgId)return;const[rOff,rCourses,rLecs]=await Promise.all([apiFetch('/api/offerings/'+orgId),apiFetch('/api/courses/'+orgId),apiFetch('/api/lecturers/'+orgId)]);
+async function loadOfferingsPage(){const orgId=getCurrentOrgId();if(!orgId)return;let rOff,rCourses,rLecs;try{[rOff,rCourses,rLecs]=await Promise.all([apiFetch('/api/offerings/'+orgId),apiFetch('/api/courses/'+orgId),apiFetch('/api/lecturers/'+orgId)])}catch(e){if(e.message!=='Auth')showAlert('offAlert','Dersler yuklenemedi: '+e.message,'error');return;}
 allOfferings=await rOff.json();const courses=await rCourses.json();const lecs=await rLecs.json();
 document.getElementById('offCourse').innerHTML=courses.map(c=>'<option value="'+c.id+'">'+escapeHtml(c.code+' - '+c.name)+'</option>').join('');
 document.getElementById('offLecturer').innerHTML='<option value="">- Yok -</option>'+lecs.map(l=>'<option value="'+l.id+'">'+escapeHtml((l.title||'')+' '+l.first_name+' '+l.last_name)+'</option>').join('');
 renderOfferings()}
 function renderOfferings(){if(!allOfferings.length){document.getElementById('offeringList').innerHTML='<div class="empty-state">Acilan ders yok.</div>';return}let h='<table><tr><th>Ders</th><th>Hoca</th><th>Sinif/Sube</th><th>Kont.</th><th>Donem</th><th></th></tr>';allOfferings.forEach(o=>{const code=o.courses?o.courses.code:'-';const name=o.courses?o.courses.name:'';const lec=o.lecturers?(o.lecturers.title||'')+' '+o.lecturers.first_name+' '+o.lecturers.last_name:'<span class="badge-orange">Atanmamis</span>';h+='<tr><td><strong>'+escapeHtml(code)+'</strong> '+escapeHtml(name)+'</td><td>'+lec+'</td><td>'+o.class_year+'/'+escapeHtml(o.section)+'</td><td>'+o.capacity+'</td><td>'+(TERM_TR[o.term]||o.term)+' '+escapeHtml(o.academic_year)+'</td><td><button class="btn btn-danger btn-sm btn-del-offering" data-id="'+o.id+'">Sil</button></td></tr>'});document.getElementById('offeringList').innerHTML=h+'</table>'}
-async function addOffering(){const orgId=document.getElementById('offOrg').value;const r=await apiFetch('/api/offerings',{method:'POST',body:JSON.stringify({orgId,courseId:document.getElementById('offCourse').value,lecturerId:document.getElementById('offLecturer').value||null,classYear:document.getElementById('offYear').value,section:document.getElementById('offSection').value.trim()||'A',capacity:document.getElementById('offCapacity').value,term:document.getElementById('offTerm').value,academicYear:'2025-2026'})});const d=await r.json();if(d.error)return showAlert('offAlert',d.error,'error');showAlert('offAlert','Ders acildi!','success');loadOfferingsPage()}
-async function deleteOffering(id){if(!confirm('Silmek istediginize emin misiniz?'))return;await apiFetch('/api/offerings/'+id,{method:'DELETE'});loadOfferingsPage()}
+async function addOffering(){const orgId=getCurrentOrgId();const r=await apiFetch('/api/offerings',{method:'POST',body:JSON.stringify({orgId,courseId:document.getElementById('offCourse').value,lecturerId:document.getElementById('offLecturer').value||null,classYear:document.getElementById('offYear').value,section:document.getElementById('offSection').value.trim()||'A',capacity:document.getElementById('offCapacity').value,term:document.getElementById('offTerm').value,academicYear:'2025-2026'})});const d=await r.json();if(d.error)return showAlert('offAlert',d.error,'error');showAlert('offAlert','Ders acildi!','success');loadOfferingsPage()}
+async function deleteOffering(id){if(!confirm('Silmek istediginize emin misiniz?'))return;const orgId=getCurrentOrgId();await apiFetch('/api/offerings/'+id+'?orgId='+orgId,{method:'DELETE'});loadOfferingsPage()}
 
 // ══════════════════════════════════════════════════════════════════
 // WEEKLY SCHEDULE GRID
 // ══════════════════════════════════════════════════════════════════
-async function loadSchedulePage(){const orgId=document.getElementById('schedOrg').value;if(!orgId)return;
-const[rSched,rSettings,rLecs,rDepts,rClass,rOff,rAvail]=await Promise.all([apiFetch('/api/schedule/'+orgId),apiFetch('/api/settings/'+orgId),apiFetch('/api/lecturers/'+orgId),apiFetch('/api/departments/'+orgId),apiFetch('/api/classrooms/'+orgId),apiFetch('/api/offerings/'+orgId),apiFetch('/api/availability/'+orgId)]);
+async function loadSchedulePage(){const orgId=getCurrentOrgId();if(!orgId)return;
+let rSched,rSettings,rLecs,rDepts,rClass,rOff,rAvail;try{[rSched,rSettings,rLecs,rDepts,rClass,rOff,rAvail]=await Promise.all([apiFetch('/api/schedule/'+orgId),apiFetch('/api/settings/'+orgId),apiFetch('/api/lecturers/'+orgId),apiFetch('/api/departments/'+orgId),apiFetch('/api/classrooms/'+orgId),apiFetch('/api/offerings/'+orgId),apiFetch('/api/availability/'+orgId)])}catch(e){if(e.message!=='Auth')showAlert('seAlert','Program yuklenemedi: '+e.message,'error');return;}
 allSchedule=await rSched.json();schedSettings=await rSettings.json();allLecturers=await rLecs.json();allClassrooms=await rClass.json();allOfferings=await rOff.json();allDepts=await rDepts.json();allAvailability=await rAvail.json();
 document.getElementById('filterLecturer').innerHTML='<option value="">Tumu</option>'+allLecturers.map(l=>'<option value="'+l.id+'">'+escapeHtml((l.title||'')+' '+l.first_name+' '+l.last_name)+'</option>').join('');
 document.getElementById('filterDept').innerHTML='<option value="">Tumu</option>'+allDepts.map(d=>'<option value="'+d.id+'">'+escapeHtml(d.name)+'</option>').join('');
@@ -164,7 +208,7 @@ if(lecId){const busySlots=(allAvailability||[]).filter(a=>a.lecturer_id===lecId&
 if(busySlots.length){warnings.push('<div class="alert-box" style="background:#fff3e0;color:#e65100;margin-bottom:4px"><strong>Musaitlik Uyarisi:</strong> Hoca bu saatlerde mesgul olarak isaretlenmis</div>')}}
 if(warnings.length){warnEl.style.display='block';warnEl.innerHTML=warnings.join('')}else{warnEl.style.display='none';warnEl.innerHTML=''}}
 
-async function saveScheduleEntry(){const orgId=document.getElementById('schedOrg').value;const body={orgId,offeringId:document.getElementById('seOffering').value,lecturerId:document.getElementById('seLecturer').value||null,classroomId:document.getElementById('seClassroom').value,day:document.getElementById('seDay').value,startTime:document.getElementById('seStart').value,endTime:document.getElementById('seEnd').value};
+async function saveScheduleEntry(){const orgId=getCurrentOrgId();const body={orgId,offeringId:document.getElementById('seOffering').value,lecturerId:document.getElementById('seLecturer').value||null,classroomId:document.getElementById('seClassroom').value,day:document.getElementById('seDay').value,startTime:document.getElementById('seStart').value,endTime:document.getElementById('seEnd').value};
 if(!body.offeringId||!body.classroomId||!body.day||!body.startTime||!body.endTime)return showAlert('seAlert','Tum alanlari doldurun.','error');
 if(body.startTime>=body.endTime)return showAlert('seAlert','Bitis baslangictan sonra olmali.','error');
 const warnEl=document.getElementById('seConflictWarning');if(warnEl&&warnEl.style.display==='block'&&!warnEl.dataset.forced){warnEl.dataset.forced='1';return showAlert('seAlert','Cakisma var! Yine de kaydetmek icin tekrar tikladiniz.','error')}
@@ -173,7 +217,7 @@ const r=await apiFetch(url,{method,body:JSON.stringify(body)});const d=await r.j
 if(warnEl)warnEl.dataset.forced='';
 bootstrap.Modal.getInstance(document.getElementById('scheduleModal')).hide();editingEntryId=null;loadSchedulePage()}
 
-async function deleteScheduleEntry(id){await apiFetch('/api/schedule/'+id,{method:'DELETE'});loadSchedulePage()}
+async function deleteScheduleEntry(id){const orgId=getCurrentOrgId();await apiFetch('/api/schedule/'+id+'?orgId='+orgId,{method:'DELETE'});loadSchedulePage()}
 
 // ══════════════════════════════════════════════════════════════════
 // AUTO-SCHEDULE GENERATOR (port from mobile ScheduleGenerator.kt)
@@ -238,7 +282,7 @@ function generateAlternatives(count,offerings,classrooms,busySlots,existing,sett
 const results=[];for(let i=0;i<count;i++){results.push(generateAutoSchedule(offerings,classrooms,busySlots,existing,settings,prefs,i*31+7))}
 return results.sort((a,b)=>(b.assigned.length*1000+b.score)-(a.assigned.length*1000+a.score))}
 
-async function runAutoSchedule(){const orgId=document.getElementById('schedOrg').value;if(!orgId)return;
+async function runAutoSchedule(){const orgId=getCurrentOrgId();if(!orgId)return;
 const prefs={compactness:document.querySelector('input[name="asCompact"]:checked').value,maxDaily:parseInt(document.getElementById('asMaxDaily').value)||0,dayBalance:document.getElementById('asDayBalance').checked,preferredStartTime:document.getElementById('asPrefStart').value||'',preferredEndTime:document.getElementById('asPrefEnd').value||''};
 const altCount=parseInt(document.getElementById('asAltCount').value)||3;
 
@@ -268,13 +312,13 @@ bootstrap.Modal.getInstance(document.getElementById('autoScheduleModal')).hide()
 // ══════════════════════════════════════════════════════════════════
 // AVAILABILITY GRID
 // ══════════════════════════════════════════════════════════════════
-async function loadAvailabilityPage(){const orgId=document.getElementById('availOrg').value;if(!orgId)return;
-const[rLecs,rSettings]=await Promise.all([apiFetch('/api/lecturers/'+orgId),apiFetch('/api/settings/'+orgId)]);
+async function loadAvailabilityPage(){const orgId=getCurrentOrgId();if(!orgId)return;
+let rLecs,rSettings;try{[rLecs,rSettings]=await Promise.all([apiFetch('/api/lecturers/'+orgId),apiFetch('/api/settings/'+orgId)])}catch(e){if(e.message!=='Auth')showAlert('availAlert','Musaitlik yuklenemedi: '+e.message,'error');return;}
 allLecturers=await rLecs.json();schedSettings=await rSettings.json();
 document.getElementById('availLecturer').innerHTML='<option value="">- Secin -</option>'+allLecturers.map(l=>'<option value="'+l.id+'">'+escapeHtml((l.title||'')+' '+l.first_name+' '+l.last_name)+'</option>').join('');
 document.getElementById('availabilityContent').style.display='none'}
 
-async function loadLecturerAvailability(){const lecId=document.getElementById('availLecturer').value;const orgId=document.getElementById('availOrg').value;if(!lecId){document.getElementById('availabilityContent').style.display='none';return}
+async function loadLecturerAvailability(){const lecId=document.getElementById('availLecturer').value;const orgId=getCurrentOrgId();if(!lecId){document.getElementById('availabilityContent').style.display='none';return}
 document.getElementById('availabilityContent').style.display='block';
 const[rAvail,rSched]=await Promise.all([apiFetch('/api/availability/'+orgId+'?lecturerId='+lecId),apiFetch('/api/schedule/'+orgId)]);
 currentAvailability=await rAvail.json();const sched=await rSched.json();const lecSched=sched.filter(e=>e.lecturer_id==lecId);
@@ -297,7 +341,7 @@ const code=e.offerings&&e.offerings.courses?e.offerings.courses.code:'?';
 const block=document.createElement('div');block.className='avail-sched-block';block.style.cssText='top:'+top+'px;height:'+Math.max(h,16)+'px';block.innerHTML=escapeHtml(code)+' '+e.start_time+'-'+e.end_time;
 cols[0].style.position='relative';cols[0].appendChild(block)})}
 
-async function addAvailability(){const lecId=document.getElementById('availLecturer').value;const orgId=document.getElementById('availOrg').value;const day=document.getElementById('availDay').value;const st=document.getElementById('availStart').value;const et=document.getElementById('availEnd').value;
+async function addAvailability(){const lecId=document.getElementById('availLecturer').value;const orgId=getCurrentOrgId();const day=document.getElementById('availDay').value;const st=document.getElementById('availStart').value;const et=document.getElementById('availEnd').value;
 if(!lecId||!day||!st||!et)return showAlert('availAlert','Tum alanlari doldurun.','error');
 if(st>=et)return showAlert('availAlert','Bitis baslangictan sonra olmali.','error');
 const r=await apiFetch('/api/availability',{method:'POST',body:JSON.stringify({lecturerId:lecId,day,startTime:st,endTime:et,orgId})});const d=await r.json();if(d.error)return showAlert('availAlert',d.error,'error');
@@ -305,12 +349,20 @@ showAlert('availAlert','Mesgul blok eklendi.','success');loadLecturerAvailabilit
 async function deleteAvailability(id){await apiFetch('/api/availability/'+id,{method:'DELETE'});loadLecturerAvailability()}
 
 // ── Error Logs
-async function loadErrorLogs(){const orgId=document.getElementById('logOrg').value;const url=orgId?'/api/error-logs?orgId='+orgId:'/api/error-logs';const r=await apiFetch(url);const data=await r.json();
+function renderLogTable(data){
+  if(!data||!data.length){document.getElementById('logList').innerHTML='<div class="empty-state">Log yok.</div>';return}
+  let h='<table><tr><th>Tarih</th><th>Kaynak</th><th>Kullanici</th><th>Rol</th><th>Cihaz</th><th>Versiyon</th><th>Ekran</th><th>Aksiyon</th><th>Mesaj</th><th>Detay</th></tr>';
+  data.forEach((l,i)=>{const isPanel=l.screen&&l.screen.startsWith('PANEL');const sourceBadge=isPanel?'<span class="badge-purple">WEB</span>':'<span class="badge-blue">MOBiL</span>';const roleBadge=l.role==='super_admin'?'badge-orange':l.role==='admin'?'badge-blue':l.role==='lecturer'?'badge-purple':'badge-orange';h+='<tr><td style="white-space:nowrap">'+new Date(l.created_at).toLocaleString('tr-TR')+'</td><td>'+sourceBadge+'</td><td>'+(l.username?'<span class="'+roleBadge+'">'+escapeHtml(l.username)+'</span>':'-')+'</td><td>'+(l.role||'-')+'</td><td>'+(l.device_model?escapeHtml(l.device_model):'-')+'</td><td>'+(l.app_version||'-')+'</td><td>'+escapeHtml(l.screen||'-')+'</td><td>'+escapeHtml(l.action||'-')+'</td><td style="max-width:260px;word-break:break-word">'+escapeHtml(l.message||'')+'</td><td>'+(l.stack_trace?'<button class="btn btn-outline-secondary btn-sm btn-show-stack" data-idx="'+i+'">Stack</button>':'')+'</td></tr>'});
+  document.getElementById('logList').innerHTML=h+'</table>';
+}
+async function loadErrorLogs(){const orgId=document.getElementById('logOrg').value||'';const url=orgId?'/api/error-logs?orgId='+orgId:'/api/error-logs';const r=await apiFetch(url);const data=await r.json();
+_cachedLogData=Array.isArray(data)?data:[];
 const statsEl=document.getElementById('logStats');
-if(!Array.isArray(data)||!data.length){document.getElementById('logList').innerHTML='<div class="empty-state">Log yok.</div>';if(statsEl)statsEl.innerHTML='';return}
-const uniqueUsers=new Set(data.map(l=>l.username).filter(Boolean));const uniqueScreens=new Set(data.map(l=>l.screen).filter(Boolean));const uniqueDevices=new Set(data.map(l=>l.device_model).filter(Boolean));const todayLogs=data.filter(l=>{const d=new Date(l.created_at);const today=new Date();return d.toDateString()===today.toDateString()});
-if(statsEl)statsEl.innerHTML='<div class="stat-card"><div class="number">'+data.length+'</div><div class="label">Toplam Log</div></div><div class="stat-card"><div class="number">'+todayLogs.length+'</div><div class="label">Bugun</div></div><div class="stat-card"><div class="number">'+uniqueUsers.size+'</div><div class="label">Kullanici</div></div><div class="stat-card"><div class="number">'+uniqueDevices.size+'</div><div class="label">Cihaz</div></div>';
-let h='<table><tr><th>Tarih</th><th>Kullanici</th><th>Rol</th><th>Cihaz</th><th>OS</th><th>Versiyon</th><th>Ekran</th><th>Aksiyon</th><th>Mesaj</th><th>Detay</th></tr>';data.forEach((l,i)=>{const badge=l.role==='admin'?'badge-blue':l.role==='lecturer'?'badge-purple':'badge-orange';h+='<tr><td style="white-space:nowrap">'+new Date(l.created_at).toLocaleString('tr-TR')+'</td><td>'+(l.username?'<span class="'+badge+'">'+escapeHtml(l.username)+'</span>':'-')+'</td><td>'+(l.role||'-')+'</td><td>'+(l.device_model?escapeHtml(l.device_model):'-')+'</td><td>'+(l.os_version?'Android '+escapeHtml(l.os_version):'-')+'</td><td>'+(l.app_version||'-')+'</td><td>'+escapeHtml(l.screen||'-')+'</td><td>'+escapeHtml(l.action||'-')+'</td><td style="max-width:300px;word-break:break-word">'+escapeHtml(l.message||'')+'</td><td>'+(l.stack_trace?'<button class="btn btn-outline-secondary btn-sm btn-show-stack" data-idx="'+i+'">Stack</button>':'')+'</td></tr>'});document.getElementById('logList').innerHTML=h+'</table>';
+if(!_cachedLogData.length){document.getElementById('logList').innerHTML='<div class="empty-state">Log yok.</div>';if(statsEl)statsEl.innerHTML='';return}
+const todayLogs=_cachedLogData.filter(l=>{const d=new Date(l.created_at);const today=new Date();return d.toDateString()===today.toDateString()});
+const panelLogs=_cachedLogData.filter(l=>l.screen&&l.screen.startsWith('PANEL'));const mobileLogs=_cachedLogData.filter(l=>!l.screen||!l.screen.startsWith('PANEL'));
+if(statsEl)statsEl.innerHTML='<div class="stat-card"><div class="number">'+_cachedLogData.length+'</div><div class="label">Toplam Log</div></div><div class="stat-card"><div class="number">'+todayLogs.length+'</div><div class="label">Bugun</div></div><div class="stat-card"><div class="number">'+mobileLogs.length+'</div><div class="label">Mobil</div></div><div class="stat-card" style="border-top-color:#6a1b9a"><div class="number" style="color:#6a1b9a">'+panelLogs.length+'</div><div class="label">Web Panel</div></div>';
+renderLogTable(_cachedLogData);
 document.querySelectorAll('.btn-show-stack').forEach(btn=>{btn.addEventListener('click',()=>{const idx=parseInt(btn.dataset.idx);const log=data[idx];if(!log||!log.stack_trace)return;const modal=document.createElement('div');modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';modal.innerHTML='<div style="background:#fff;border-radius:12px;padding:20px;max-width:800px;width:100%;max-height:80vh;overflow-y:auto"><div style="display:flex;justify-content:space-between;margin-bottom:12px"><strong>Stack Trace — '+escapeHtml(log.screen||'')+' / '+escapeHtml(log.action||'')+'</strong><span style="cursor:pointer;font-size:20px" class="close-modal">&times;</span></div><pre style="font-size:11px">'+escapeHtml(log.stack_trace)+'</pre></div>';document.body.appendChild(modal);modal.querySelector('.close-modal').addEventListener('click',()=>modal.remove());modal.addEventListener('click',e=>{if(e.target===modal)modal.remove()})})})}
 
 // ── Edit Modal
@@ -330,16 +382,18 @@ try{await apiFetch(endpoint,{method:'PUT',body:JSON.stringify(payload)});bootstr
 setInterval(()=>{const grid=document.getElementById('weeklyGrid');if(!grid||!grid.children.length)return;const dayStart=toMin(schedSettings.day_start||'08:00');const dayEnd=toMin(schedSettings.day_end||'18:00');drawCurrentTimeLine(grid,dayStart,dayEnd,1)},60000);
 
 // ── Init
+// ── Global error handlers — panel hatalarını sessizce logla
+window.addEventListener('error',e=>{sendPanelLog('window','error',e.message||(e.error&&e.error.message)||'Unknown error',e.error&&e.error.stack)});
+window.addEventListener('unhandledrejection',e=>{const r=e.reason;const msg=r instanceof Error?r.message:String(r);const stk=r instanceof Error?r.stack:null;sendPanelLog('window','unhandledrejection',msg,stk)});
+
 document.addEventListener('DOMContentLoaded',()=>{
 document.getElementById('loginForm').addEventListener('submit',e=>{e.preventDefault();doLogin()});
 document.getElementById('btnLogout').addEventListener('click',doLogout);
 document.querySelectorAll('.sidebar a[data-page]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();showPage(a.getAttribute('data-page'))}));
-document.getElementById('dashOrg').addEventListener('change',loadDashboard);
-document.getElementById('schedOrg').addEventListener('change',loadSchedulePage);
-document.getElementById('availOrg').addEventListener('change',loadAvailabilityPage);
-document.getElementById('availLecturer').addEventListener('change',loadLecturerAvailability);
+// Global org selector — tüm sayfalar buradan dinlenir
+document.getElementById('globalOrg').addEventListener('change',onOrgSelectChanged);
 document.getElementById('logOrg').addEventListener('change',loadErrorLogs);
-document.getElementById('offOrg').addEventListener('change',loadOfferingsPage);
+document.getElementById('availLecturer').addEventListener('change',loadLecturerAvailability);
 ['filterLecturer','filterDept','filterClassroom','filterYear'].forEach(id=>document.getElementById(id).addEventListener('change',renderWeeklyGrid));
 document.getElementById('btnAddOrg').addEventListener('click',addOrganization);
 document.getElementById('btnAddAdmin').addEventListener('click',addAdmin);

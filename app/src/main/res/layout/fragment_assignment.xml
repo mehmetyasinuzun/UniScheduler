@@ -21,7 +21,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Ders Atama"
+                android:text="@string/assignment_title"
                 android:textSize="22sp"
                 android:textStyle="bold" />
 
@@ -30,7 +30,7 @@
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Otomatik"
+                android:text="@string/assignment_auto_button"
                 android:textSize="12sp" />
         </LinearLayout>
 
@@ -45,24 +45,24 @@
             android:id="@+id/tvError"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/colorError"
+            android:textColor="?attr/colorError"
             android:visibility="gone" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRetry"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Retry"
+            android:text="Yeniden Dene"
             android:visibility="gone" />
 
         <!-- Searchable Dropdowns -->
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Offering" android:textStyle="bold" android:layout_marginTop="8dp"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/assignment_offering_label" android:textStyle="bold" android:layout_marginTop="8dp"/>
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:hint="Search offering...">
+            android:hint="@string/assignment_offering_hint">
             <AutoCompleteTextView
                 android:id="@+id/actvOffering"
                 android:layout_width="match_parent"
@@ -70,13 +70,13 @@
                 android:inputType="none" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Lecturer" android:textStyle="bold"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/assignment_lecturer_label" android:textStyle="bold"/>
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:hint="Search lecturer...">
+            android:hint="@string/assignment_lecturer_hint">
             <AutoCompleteTextView
                 android:id="@+id/actvLecturer"
                 android:layout_width="match_parent"
@@ -84,13 +84,13 @@
                 android:inputType="none" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Classroom" android:textStyle="bold"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/assignment_classroom_label" android:textStyle="bold"/>
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:hint="Search classroom...">
+            android:hint="@string/assignment_classroom_hint">
             <AutoCompleteTextView
                 android:id="@+id/actvClassroom"
                 android:layout_width="match_parent"
@@ -98,7 +98,7 @@
                 android:inputType="none" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Day" android:textStyle="bold"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/assignment_day_label" android:textStyle="bold"/>
         <Spinner android:id="@+id/spinnerDay" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="8dp"/>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -106,7 +106,7 @@
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Start Time (HH:mm)">
+            android:hint="@string/assignment_start_hint">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etStartTime"
                 android:layout_width="match_parent"
@@ -121,7 +121,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:hint="End Time (HH:mm)">
+            android:hint="@string/assignment_end_hint">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etEndTime"
                 android:layout_width="match_parent"
@@ -134,21 +134,21 @@
             android:id="@+id/tvSaveError"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/colorError"
+            android:textColor="?attr/colorError"
             android:visibility="gone" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnAssign"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Assign"
+            android:text="@string/assignment_assign_button"
             android:layout_marginBottom="24dp" />
 
         <!-- Current assignments -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Current Assignments"
+            android:text="@string/assignment_current_title"
             android:textStyle="bold"
             android:textSize="16sp"
             android:layout_marginBottom="8dp" />

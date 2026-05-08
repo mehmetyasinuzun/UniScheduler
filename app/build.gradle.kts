@@ -20,17 +20,47 @@ android {
         applicationId = "com.unischeduler"
         minSdk        = 26
         targetSdk     = 34
-        versionCode   = 1
-        versionName   = "1.0"
+        versionCode   = 2
+        versionName   = "1.0.1"
 
         buildConfigField("String", "SUPABASE_URL",      "\"${localProps["SUPABASE_URL"] ?: ""}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProps["SUPABASE_ANON_KEY"] ?: ""}\"")
     }
 
+    signingConfigs {
+        // Release signing reads from local.properties so the keystore credentials
+        // never end up in version control. See TESLIM_REHBERI.md for setup.
+        create("release") {
+            val keystorePath  = localProps["KEYSTORE_FILE"] as String?
+            val keystorePass  = localProps["KEYSTORE_PASSWORD"] as String?
+            val keyAliasValue = localProps["KEY_ALIAS"] as String?
+            val keyPassValue  = localProps["KEY_PASSWORD"] as String?
+            if (!keystorePath.isNullOrBlank() && !keystorePass.isNullOrBlank()
+                && !keyAliasValue.isNullOrBlank() && !keyPassValue.isNullOrBlank()) {
+                storeFile     = file(keystorePath)
+                storePassword = keystorePass
+                keyAlias      = keyAliasValue
+                keyPassword   = keyPassValue
+            }
+        }
+    }
+
     buildTypes {
-        release {
+        debug {
             isMinifyEnabled = false
+            isDebuggable    = true
+        }
+        release {
+            isMinifyEnabled    = true
+            isShrinkResources  = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Use the user's release keystore if configured. Otherwise fall back
+            // to the debug keystore so the resulting APK is at least installable
+            // for internal testing — Android refuses to install unsigned APKs.
+            // Production releases MUST set KEYSTORE_FILE in local.properties.
+            val rel = signingConfigs.getByName("release")
+            signingConfig = if (rel.storeFile != null) rel
+                            else signingConfigs.getByName("debug")
         }
     }
 

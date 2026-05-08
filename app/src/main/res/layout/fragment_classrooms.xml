@@ -9,7 +9,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Classrooms"
+        android:text="@string/classroom_title"
         android:textSize="22sp"
         android:textStyle="bold"
         android:layout_marginBottom="12dp" />
@@ -28,7 +28,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Add Classroom"
+                android:text="@string/classroom_add_section"
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp" />
 
@@ -37,7 +37,7 @@
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Room Code (e.g. A101)">
+                android:hint="@string/classroom_code_hint">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etRoomCode"
                     android:layout_width="match_parent"
@@ -50,7 +50,7 @@
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Capacity"
+                android:hint="@string/classroom_capacity_hint"
                 android:layout_marginTop="8dp">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etCapacity"
@@ -62,7 +62,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Type"
+                android:text="@string/classroom_type_label"
                 android:textSize="12sp"
                 android:layout_marginTop="8dp" />
 
@@ -75,7 +75,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Department (optional)"
+                android:text="@string/classroom_dept_optional"
                 android:textSize="12sp"
                 android:layout_marginTop="8dp" />
 
@@ -89,7 +89,7 @@
                 android:id="@+id/tvAddError"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@color/colorError"
+                android:textColor="?attr/colorError"
                 android:visibility="gone"
                 android:layout_marginTop="4dp" />
 
@@ -106,7 +106,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="4dp"
-                    android:text="Add" />
+                    android:text="@string/common_add" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnImportClassrooms"
@@ -116,7 +116,7 @@
                     android:layout_weight="1"
                     android:layout_marginStart="4dp"
                     android:layout_marginEnd="4dp"
-                    android:text="Import" />
+                    android:text="@string/common_import" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnExportClassrooms"
@@ -125,7 +125,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginStart="4dp"
-                    android:text="Export" />
+                    android:text="@string/common_export" />
 
             </LinearLayout>
         </LinearLayout>
@@ -136,7 +136,7 @@
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Manage Assignments"
+        android:text="@string/classroom_go_assignment"
         android:layout_marginBottom="12dp" />
 
     <ProgressBar
@@ -150,14 +150,14 @@
         android:id="@+id/tvError"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="@color/colorError"
+        android:textColor="?attr/colorError"
         android:visibility="gone" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnRetry"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Retry"
+        android:text="@string/common_retry"
         android:visibility="gone" />
 
     <androidx.recyclerview.widget.RecyclerView

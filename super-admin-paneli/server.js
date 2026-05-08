@@ -21,7 +21,39 @@ const app = express();
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+
+// Disable caching on every API response so the panel never serves stale data
+// after switching organizations. Browsers / proxies otherwise hold onto the
+// previous org's payload until the URL changes.
+app.use('/api', (req, res, next) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    res.set('Surrogate-Control', 'no-store');
+    next();
+});
+
+app.use(express.static('public', {
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+    }
+}));
+
+// Validate that any `:orgId` path parameter is a positive integer before it
+// reaches a handler. Catches typos / tampering early and prevents accidental
+// `eq('org_id', 'NaN')` queries that return zero rows or full-table scans.
+function requireValidOrgId(req, res, next) {
+    if (!('orgId' in req.params)) return next();
+    const n = Number.parseInt(req.params.orgId, 10);
+    if (!Number.isFinite(n) || n <= 0) {
+        return res.status(400).json({ error: 'Invalid orgId.' });
+    }
+    req.params.orgId = String(n); // normalize
+    next();
+}
+app.param('orgId', requireValidOrgId);
 
 // ── Session / Auth Config ────────────────────────────────────────────
 // Simple token-based auth. On login, server issues a random token stored in-memory.
@@ -121,6 +153,39 @@ function checkRateLimit(ip) {
     return entry.count <= MAX_ATTEMPTS;
 }
 
+// ── General API rate limiter: 100 req / 60s per IP ───────────────────
+const apiRateMap = new Map();
+const API_MAX_REQ   = 100;
+const API_WINDOW_MS = 60 * 1000; // 1 min
+
+function apiRateLimiter(req, res, next) {
+    const ip = req.ip || req.connection.remoteAddress;
+    const now = Date.now();
+    const entry = apiRateMap.get(ip) || { count: 0, start: now };
+    if (now - entry.start > API_WINDOW_MS) {
+        apiRateMap.set(ip, { count: 1, start: now });
+        return next();
+    }
+    entry.count++;
+    apiRateMap.set(ip, entry);
+    if (entry.count > API_MAX_REQ) {
+        return res.status(429).json({ error: 'Too many requests. Try again later.' });
+    }
+    next();
+}
+app.use('/api', apiRateLimiter);
+
+// Cleanup stale rate limit entries every 5 minutes to prevent memory leak
+setInterval(() => {
+    const now = Date.now();
+    for (const [ip, entry] of apiRateMap) {
+        if (now - entry.start > API_WINDOW_MS * 2) apiRateMap.delete(ip);
+    }
+    for (const [ip, entry] of loginAttempts) {
+        if (now - entry.start > WINDOW_MS * 2) loginAttempts.delete(ip);
+    }
+}, 5 * 60 * 1000);
+
 // ═══ Organizations ═══════════════════════════════════════════════════
 app.get('/api/organizations', async (req, res) => {
     const { data, error } = await supabase.from('organizations').select('*').order('id');
@@ -163,13 +228,27 @@ app.get('/api/admins', async (req, res) => {
     res.json(data);
 });
 
+async function generateUniqueAdminUsername(base) {
+    const normalized = normalizeText(base);
+    let username = normalized;
+    let counter = 2;
+    while (true) {
+        const { data } = await supabase.from('users').select('id').eq('username', username).single();
+        if (!data) return username;
+        username = `${normalized}_${counter}`;
+        counter++;
+    }
+}
+
 app.post('/api/admins', async (req, res) => {
     const { username, password, orgId, mustChangePassword = true } = req.body;
     if (!username || !password || !orgId) return res.status(400).json({ error: 'All fields required.' });
     if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
 
     try {
-        const email = usernameToEmail(username);
+        // Normalize + deduplicate username to avoid UNIQUE(username) constraint failures
+        const finalUsername = await generateUniqueAdminUsername(username);
+        const email = usernameToEmail(finalUsername);
 
         // 1. Create Supabase Auth user via Admin API
         const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
@@ -177,13 +256,18 @@ app.post('/api/admins', async (req, res) => {
             password: password,
             email_confirm: true // auto-confirm
         });
-        if (authError) return res.status(400).json({ error: authError.message });
+        if (authError) {
+            if (authError.message && authError.message.toLowerCase().includes('already registered')) {
+                return res.status(400).json({ error: `Bu kullanıcı adı (${finalUsername}) zaten alınmış. Farklı bir kullanıcı adı deneyin.` });
+            }
+            return res.status(400).json({ error: authError.message });
+        }
 
         // 2. Insert public.users profile
         const { data, error } = await supabase.from('users').insert({
             id: authUser.user.id,
             org_id: parseInt(orgId),
-            username: username.trim(),
+            username: finalUsername,
             role: 'admin',
             must_change_password: mustChangePassword
         }).select().single();
@@ -194,7 +278,7 @@ app.post('/api/admins', async (req, res) => {
             return res.status(400).json({ error: error.message });
         }
 
-        res.json(data);
+        res.json({ ...data, finalUsername });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
@@ -353,6 +437,17 @@ app.put('/api/courses/:id', async (req, res) => {
     res.json(data);
 });
 
+app.delete('/api/courses/:id', async (req, res) => {
+    const orgId = req.query.orgId;
+    if (!orgId) return res.status(400).json({ error: 'orgId query parameter is required.' });
+    const { data: row } = await supabase.from('courses').select('org_id').eq('id', req.params.id).single();
+    if (!row) return res.status(404).json({ error: 'Not found.' });
+    if (String(row.org_id) !== String(orgId)) return res.status(403).json({ error: 'org_id mismatch.' });
+    const { error } = await supabase.from('courses').delete().eq('id', req.params.id);
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ ok: true });
+});
+
 // ═══ Classrooms ══════════════════════════════════════════════════════
 app.get('/api/classrooms/:orgId', async (req, res) => {
     const { data, error } = await supabase
@@ -377,6 +472,11 @@ app.post('/api/classrooms', async (req, res) => {
 });
 
 app.delete('/api/classrooms/:id', async (req, res) => {
+    const orgId = req.query.orgId;
+    if (!orgId) return res.status(400).json({ error: 'orgId query parameter is required.' });
+    const { data: row } = await supabase.from('classrooms').select('org_id').eq('id', req.params.id).single();
+    if (!row) return res.status(404).json({ error: 'Not found.' });
+    if (String(row.org_id) !== String(orgId)) return res.status(403).json({ error: 'org_id mismatch.' });
     const { error } = await supabase.from('classrooms').delete().eq('id', req.params.id);
     if (error) return res.status(400).json({ error: error.message });
     res.json({ ok: true });
@@ -493,8 +593,12 @@ app.post('/api/lecturers/:id/reset-password', async (req, res) => {
 
 app.delete('/api/lecturers/:id', async (req, res) => {
     try {
-        const { data: lec } = await supabase.from('lecturers').select('user_id').eq('id', req.params.id).single();
-        if (lec && lec.user_id) {
+        const orgId = req.query.orgId;
+        if (!orgId) return res.status(400).json({ error: 'orgId query parameter is required.' });
+        const { data: lec } = await supabase.from('lecturers').select('user_id, org_id').eq('id', req.params.id).single();
+        if (!lec) return res.status(404).json({ error: 'Not found.' });
+        if (String(lec.org_id) !== String(orgId)) return res.status(403).json({ error: 'org_id mismatch.' });
+        if (lec.user_id) {
             await supabase.auth.admin.deleteUser(lec.user_id).catch(() => {});
             await supabase.from('users').delete().eq('id', lec.user_id).catch(() => {});
         }
@@ -730,6 +834,11 @@ app.put('/api/offerings/:id', async (req, res) => {
 });
 
 app.delete('/api/offerings/:id', async (req, res) => {
+    const orgId = req.query.orgId;
+    if (!orgId) return res.status(400).json({ error: 'orgId query parameter is required.' });
+    const { data: row } = await supabase.from('offerings').select('org_id').eq('id', req.params.id).single();
+    if (!row) return res.status(404).json({ error: 'Not found.' });
+    if (String(row.org_id) !== String(orgId)) return res.status(403).json({ error: 'org_id mismatch.' });
     const { error } = await supabase.from('offerings').delete().eq('id', req.params.id);
     if (error) return res.status(400).json({ error: error.message });
     res.json({ ok: true });
@@ -790,6 +899,11 @@ app.put('/api/schedule/:id', async (req, res) => {
 });
 
 app.delete('/api/schedule/:id', async (req, res) => {
+    const orgId = req.query.orgId;
+    if (!orgId) return res.status(400).json({ error: 'orgId query parameter is required.' });
+    const { data: row } = await supabase.from('schedule_entries').select('org_id').eq('id', req.params.id).single();
+    if (!row) return res.status(404).json({ error: 'Not found.' });
+    if (String(row.org_id) !== String(orgId)) return res.status(403).json({ error: 'org_id mismatch.' });
     const { error } = await supabase.from('schedule_entries').delete().eq('id', req.params.id);
     if (error) return res.status(400).json({ error: error.message });
     res.json({ ok: true });
@@ -827,9 +941,33 @@ app.get('/api/error-logs', async (req, res) => {
     const { orgId } = req.query;
     let query = supabase.from('client_error_logs').select('*, organizations(name)');
     if (orgId) query = query.eq('org_id', orgId);
-    const { data, error } = await query.order('created_at', { ascending: false }).limit(100);
+    const { data, error } = await query.order('created_at', { ascending: false }).limit(200);
     if (error) return res.status(500).json({ error: error.message });
     res.json(data);
+});
+
+// ═══ Panel Error Log (web panel kendine ait hataları buraya yazar) ══════
+app.post('/api/log/panel', async (req, res) => {
+    const { screen, action, message, stack } = req.body;
+    if (!message) return res.status(400).json({ error: 'message required.' });
+
+    const screenValue = screen ? `PANEL/${screen}` : 'PANEL';
+
+    const { error } = await supabase.from('client_error_logs').insert({
+        org_id: null,
+        username: 'super_admin',
+        role: 'super_admin',
+        screen: screenValue,
+        action: action || null,
+        message: String(message).slice(0, 2000),
+        stack_trace: stack ? String(stack).slice(0, 5000) : null,
+        device_model: 'Web Panel',
+        os_version: null,
+        app_version: 'panel'
+    });
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ ok: true });
 });
 
 // ═══ Startup: ensure all existing orgs have org_settings ═════════════
@@ -846,6 +984,34 @@ async function ensureOrgSettings() {
         console.log(`  ✓ org_settings created for org #${org.id}`);
     }
 }
+
+// ═══ Process-level crash handlers ═══════════════════════════════════
+function logProcessError(type, err) {
+    const msg = err && err.message ? err.message : String(err);
+    const stack = err && err.stack ? err.stack : null;
+    console.error(`[${type}]`, msg, stack || '');
+    // Best-effort Supabase insert — do NOT await (process may be dying)
+    supabase.from('client_error_logs').insert({
+        org_id: null,
+        username: 'super_admin',
+        role: 'super_admin',
+        screen: `PANEL/process`,
+        action: type,
+        message: msg.slice(0, 2000),
+        stack_trace: stack ? stack.slice(0, 5000) : null,
+        device_model: 'Web Panel (Node)',
+        os_version: null,
+        app_version: 'panel'
+    }).then(() => {}).catch(() => {});
+}
+
+process.on('uncaughtException', (err) => {
+    logProcessError('uncaughtException', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+    logProcessError('unhandledRejection', reason instanceof Error ? reason : new Error(String(reason)));
+});
 
 // ═══ Start Server ════════════════════════════════════════════════════
 const PORT = process.env.PORT || 3000;

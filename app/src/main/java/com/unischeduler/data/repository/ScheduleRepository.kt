@@ -8,6 +8,7 @@ import com.unischeduler.data.model.ScheduleEntryInsert
 import com.unischeduler.data.remote.SupabaseClient.client
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.realtime.PostgresAction
 import io.github.jan.supabase.realtime.channel
 import io.github.jan.supabase.realtime.postgresChangeFlow
@@ -38,6 +39,9 @@ class ScheduleRepository {
         client.postgrest["schedule_entries"]
             .select(joinColumns) {
                 filter { eq("org_id", orgId) }
+                order(column = "day", order = Order.ASCENDING)
+                order(column = "start_time", order = Order.ASCENDING)
+                limit(20000)
             }
             .decodeList<ScheduleEntry>()
 
@@ -48,6 +52,9 @@ class ScheduleRepository {
                     eq("lecturer_id", lecturerId)
                     eq("org_id", orgId)
                 }
+                order(column = "day", order = Order.ASCENDING)
+                order(column = "start_time", order = Order.ASCENDING)
+                limit(10000)
             }
             .decodeList<ScheduleEntry>()
 

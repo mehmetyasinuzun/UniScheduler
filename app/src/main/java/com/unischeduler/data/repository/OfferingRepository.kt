@@ -6,6 +6,7 @@ import com.unischeduler.data.model.OfferingInsert
 import com.unischeduler.data.remote.SupabaseClient.client
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.postgrest.query.Order
 
 class OfferingRepository {
 
@@ -17,6 +18,8 @@ class OfferingRepository {
         client.postgrest["offerings"]
             .select(joinColumns) {
                 filter { eq("org_id", orgId) }
+                order(column = "academic_year", order = Order.DESCENDING)
+                limit(10000)
             }
             .decodeList<Offering>()
 

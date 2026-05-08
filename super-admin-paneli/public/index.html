@@ -38,6 +38,13 @@
         <div class="sidebar-footer"><button class="btn btn-outline-danger btn-sm w-100" id="btnLogout"><i class="bi bi-box-arrow-left"></i> Cikis Yap</button></div>
     </div>
 
+    <!-- Global sticky org selector — tüm sayfalarda aktif org buradan izlenir -->
+    <div id="globalOrgBar" class="global-org-bar" style="display:none;">
+        <i class="bi bi-building"></i>
+        <label for="globalOrg">Organizasyon:</label>
+        <select id="globalOrg" class="form-select form-select-sm"></select>
+    </div>
+
     <div class="main" id="appMain">
         <!-- Organizations -->
         <div id="page-organizations" class="page-content">
@@ -60,7 +67,7 @@
             <div class="card">
                 <h3>Yeni Admin Olustur</h3>
                 <div class="row g-2 align-items-end">
-                    <div class="col-md-3"><label class="form-label">Organizasyon</label><select class="form-select" id="adminOrg"></select></div>
+                    <div class="col-md-3"><label class="form-label">Organizasyon</label><select class="form-select" id="adminOrg" onchange="onOrgSelectChanged()"></select></div>
                     <div class="col-md-3"><label class="form-label">Kullanici Adi</label><input type="text" class="form-control" id="adminUsername" placeholder="admin"></div>
                     <div class="col-md-3"><label class="form-label">Sifre (min 6)</label><input type="text" class="form-control" id="adminPassword" placeholder="Admin123"></div>
                     <div class="col-auto"><button class="btn btn-primary" id="btnAddAdmin">Olustur</button></div>
@@ -73,7 +80,7 @@
         <!-- Dashboard -->
         <div id="page-dashboard" class="page-content d-none">
             <div class="page-header"><div><h1 class="page-title">Dashboard</h1><p class="page-subtitle">Organizasyon verileri</p></div></div>
-            <div class="org-selector"><label>Organizasyon:</label><select class="form-select" id="dashOrg"></select></div>
+            <select id="dashOrg" style="display:none;"></select>
             <div id="dashStats" class="stats-grid"></div>
             <div id="credentialBanner" style="display:none;"></div>
             <div class="accordion" id="dashAccordion">
@@ -173,7 +180,7 @@
         <!-- Offerings -->
         <div id="page-offerings" class="page-content d-none">
             <div class="page-header"><div><h1 class="page-title">Acilan Dersler</h1><p class="page-subtitle">Donem icin acilan ders sube kayitlari</p></div></div>
-            <div class="org-selector"><label>Organizasyon:</label><select class="form-select" id="offOrg"></select></div>
+            <select id="offOrg" style="display:none;"></select>
             <div class="card">
                 <h3>Yeni Ders Ac</h3>
                 <div class="row g-2 align-items-end">
@@ -199,9 +206,9 @@
                     <button class="btn btn-primary btn-sm" id="btnAddEntry"><i class="bi bi-plus-lg"></i> Manuel Ekle</button>
                 </div>
             </div>
+            <select id="schedOrg" style="display:none;"></select>
             <div class="org-selector">
-                <label>Org:</label><select class="form-select" id="schedOrg" style="max-width:200px;"></select>
-                <label class="ms-2">Hoca:</label>
+                <label class="ms-0">Hoca:</label>
                 <select class="form-select" id="filterLecturer" style="max-width:200px;"><option value="">Tumu</option></select>
                 <label class="ms-2">Bolum:</label>
                 <select class="form-select" id="filterDept" style="max-width:180px;"><option value="">Tumu</option></select>
@@ -220,8 +227,8 @@
         <!-- Availability -->
         <div id="page-availability" class="page-content d-none">
             <div class="page-header"><div><h1 class="page-title">Musaitlik Yonetimi</h1><p class="page-subtitle">Akademisyen mesgul saatlerini goruntule ve duzenle</p></div></div>
+            <select id="availOrg" style="display:none;"></select>
             <div class="org-selector">
-                <label>Org:</label><select class="form-select" id="availOrg" style="max-width:250px;"></select>
                 <label>Akademisyen:</label><select class="form-select" id="availLecturer" style="max-width:300px;"><option value="">- Secin -</option></select>
             </div>
             <div id="availabilityContent" style="display:none;">
@@ -254,9 +261,15 @@
         <!-- Error Logs -->
         <div id="page-logs" class="page-content d-none">
             <div class="page-header"><div><h1 class="page-title">Hata Loglari</h1><p class="page-subtitle">Uygulama hata kayitlari — cihaz, kullanici ve detayli hata bilgisi</p></div></div>
-            <div class="org-selector"><label>Organizasyon:</label><select class="form-select" id="logOrg"></select></div>
+            <select id="logOrg" style="display:none;"></select>
+            <div class="org-selector">
+                <label>Org filtresi:</label>
+                <select class="form-select" id="logOrgFilter" style="max-width:260px;" onchange="document.getElementById('logOrg').value=this.value;loadErrorLogs()"><option value="">Tum Organizasyonlar</option></select>
+                <label class="ms-3">Kaynak:</label>
+                <select class="form-select" id="logSourceFilter" style="max-width:160px;" onchange="filterLogsBySource()"><option value="">Tumu</option><option value="WEB">Web Panel</option><option value="MOBILE">Mobil</option></select>
+            </div>
             <div id="logStats" class="stats-grid mb-3"></div>
-            <div class="card"><h3>Son 100 Log</h3><div id="logList"><div class="loading">Yukleniyor...</div></div></div>
+            <div class="card"><h3>Son 200 Log</h3><div id="logList"><div class="loading">Yukleniyor...</div></div></div>
         </div>
     </div>
 

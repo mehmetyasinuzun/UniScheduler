@@ -1,21 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#3F51B5</color>
-    <color name="colorPrimaryDark">#303F9F</color>
-    <color name="colorAccent">#FF4081</color>
+    <!-- Light theme colors -->
+    <color name="colorPrimary">#1976D2</color>
+    <color name="colorPrimaryDark">#1565C0</color>
+    <color name="colorAccent">#2196F3</color>
     <color name="colorError">#B00020</color>
     <color name="colorOnSurfaceVariant">#757575</color>
+
+    <!-- Light theme surface/background -->
+    <color name="surface">#FFFFFF</color>
+    <color name="onSurface">#1C1B1F</color>
+    <color name="background">#FAFAFA</color>
+    <color name="onSurfaceVariant">#49454F</color>
     <color name="white">#FFFFFF</color>
+
+    <!-- Login screen - light mode -->
     <color name="login_bg_start">#F4F6FB</color>
     <color name="login_bg_end">#E7ECF7</color>
     <color name="login_card">#FFFFFF</color>
     <color name="login_title">#1B2B5A</color>
     <color name="login_subtitle">#54627A</color>
-    <color name="login_primary">#2C5BEA</color>
+    <color name="login_primary">#1976D2</color>
     <color name="login_on_primary">#FFFFFF</color>
     <color name="login_field_bg">#F8FAFF</color>
     <color name="login_field_stroke">#9FB5E6</color>
     <color name="login_hint">#6A7A92</color>
     <color name="login_text">#1B2333</color>
     <color name="login_error">#B00020</color>
+
+    <!-- Status colors (theme-agnostic semantic) -->
+    <color name="color_success">#2E7D32</color>
+    <color name="color_warning">#E65100</color>
+    <color name="color_conflict">#B71C1C</color>
+    <color name="color_error_dark">#C62828</color>
 </resources>

@@ -1,4 +1,310 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">UniScheduler</string>
+
+    <!-- LOGOUT -->
+    <string name="logout_button">Çıkış Yap</string>
+    <string name="logout_confirm_title">Çıkış Yap</string>
+    <string name="logout_confirm_message">Hesabınızdan çıkış yapmak istediğinize emin misiniz?</string>
+    <string name="offline_banner">⚠ İnternet bağlantısı yok</string>
+
+    <!-- THEME (tema ajanından) -->
+    <string name="theme_settings_title">Tema</string>
+    <string name="theme_system">Sistem</string>
+    <string name="theme_light">Aydınlık</string>
+    <string name="theme_dark">Karanlık</string>
+
+    <!-- COMMON -->
+    <string name="common_add">Ekle</string>
+    <string name="common_save">Kaydet</string>
+    <string name="common_cancel">İptal</string>
+    <string name="common_delete">Sil</string>
+    <string name="common_remove">Kaldır</string>
+    <string name="common_edit">Düzenle</string>
+    <string name="common_retry">Yeniden Dene</string>
+    <string name="common_ok">Tamam</string>
+    <string name="common_import">İçe Aktar</string>
+    <string name="common_export">Dışa Aktar</string>
+    <string name="common_close">Kapat</string>
+    <string name="common_confirm">Onayla</string>
+    <string name="common_none">Hiçbiri</string>
+    <string name="common_select_all">Tümünü Seç</string>
+    <string name="common_copy_to_clipboard">Panoya Kopyala</string>
+    <string name="common_copy_clipboard">Panoya Kopyala</string>
+    <string name="common_copied_clipboard">Panoya kopyalandı.</string>
+    <string name="common_expand">Genişlet</string>
+    <string name="common_all_departments">Tüm Bölümler</string>
+    <string name="common_unassigned">Atanmamış</string>
+    <string name="common_not_assigned">— Atanmadı —</string>
+    <string name="common_start">Başlangıç</string>
+    <string name="common_end">Bitiş</string>
+    <string name="common_day">Gün</string>
+    <string name="common_none_option">— Atanmadı —</string>
+    <string name="common_select_time">Saat Seç</string>
+
+    <!-- AUTH -->
+    <string name="auth_app_title">UniScheduler</string>
+    <string name="auth_login_subtitle">Devam etmek için giriş yapın</string>
+    <string name="auth_welcome_back">Tekrar hoş geldiniz</string>
+    <string name="auth_login_with_account">Hesabınızla giriş yapın</string>
+    <string name="auth_username_hint">Kullanıcı Adı</string>
+    <string name="auth_password_hint">Şifre</string>
+    <string name="auth_login_button">Giriş Yap</string>
+
+    <!-- PASSWORD CHANGE -->
+    <string name="pw_title">Şifre Değiştir</string>
+    <string name="pw_subtitle">Devam etmeden önce yeni bir şifre belirlemelisiniz.</string>
+    <string name="pw_current_hint">Mevcut Şifre</string>
+    <string name="pw_new_hint">Yeni Şifre</string>
+    <string name="pw_confirm_hint">Yeni Şifre (Tekrar)</string>
+
+    <!-- CLASSROOMS -->
+    <string name="classroom_title">Derslikler</string>
+    <string name="classroom_add_section">Yeni Derslik Ekle</string>
+    <string name="classroom_code_hint">Derslik Kodu (örn. A101)</string>
+    <string name="classroom_capacity_hint">Kapasite</string>
+    <string name="classroom_type_label">Tür</string>
+    <string name="classroom_dept_optional">Bölüm (opsiyonel)</string>
+    <string name="classroom_go_assignment">Atama / Programı Yönet</string>
+    <string name="classroom_export_success">Derslikler başarıyla dışa aktarıldı.</string>
+    <string name="classroom_export_fail">Dışa aktarma başarısız: %s</string>
+    <string name="classroom_added">Derslik eklendi.</string>
+    <string name="classroom_updated">Derslik güncellendi.</string>
+    <string name="classroom_delete_title">Dersliği Sil</string>
+    <string name="classroom_delete_message">%s silinsin mi? İlişkili tüm program kayıtları da silinecek.</string>
+    <string name="classroom_edit_title">Dersliği Düzenle</string>
+    <string name="classroom_import_count">%d derslik içe aktarıldı.</string>
+    <string name="classroom_type_lab">Laboratuvar</string>
+    <string name="classroom_type_theory">Teorik</string>
+    <string name="classroom_edit_code_hint">Derslik Kodu</string>
+    <string name="classroom_edit_capacity_hint">Kapasite</string>
+    <string name="classroom_edit_type_label">Tür</string>
+    <string name="classroom_edit_dept_label">Bölüm</string>
+    <string name="classroom_unassigned_option">— Atanmamış —</string>
+    <string name="classroom_import_subtitle">Kapasite: %1$s  •  %2$s</string>
+
+    <!-- DATA / LECTURERS -->
+    <string name="data_title">Veri Yönetimi</string>
+    <string name="data_departments_button">Bölümler</string>
+    <string name="data_dept_label">Bölüm:</string>
+    <string name="data_lecturers_header">Hocalar</string>
+    <string name="data_lecturers_header_count">Hocalar (%d)</string>
+    <string name="data_title_label">Unvan</string>
+    <string name="data_first_name_hint">Ad</string>
+    <string name="data_last_name_hint">Soyad</string>
+    <string name="data_dept_spinner_label">Bölüm</string>
+    <string name="data_lecturer_added_title">Hoca Eklendi</string>
+    <string name="data_lecturer_credentials_message">Hocaya paylaşmak için bu bilgileri kullanın:\n\nKullanıcı Adı: %1$s\nŞifre: %2$s\n\nİlk girişte hoca şifresini değiştirmek zorunda kalacak.</string>
+    <string name="data_credentials_copied">Panoya kopyalandı.</string>
+    <string name="data_all_users_copied">Tüm kullanıcılar panoya kopyalandı.</string>
+    <string name="data_copy_users">Kullanıcıları Kopyala</string>
+    <string name="data_lecturer_deleted">Hoca silindi.</string>
+    <string name="data_lecturer_updated">Hoca güncellendi.</string>
+    <string name="data_lecturer_delete_title">Hocayı Sil</string>
+    <string name="data_lecturer_delete_message">%s silinsin mi? Hocanın giriş hesabı da silinir.</string>
+    <string name="data_lecturer_edit_title">Hocayı Düzenle</string>
+    <string name="data_lecturer_empty">Henüz hoca eklenmedi.</string>
+    <string name="data_no_dept_error">Henüz bölüm yok. Ayarlar\'dan bölüm ekleyin.</string>
+    <string name="data_lecturer_export_success">Hocalar başarıyla dışa aktarıldı.</string>
+    <string name="data_export_fail">Dışa aktarma başarısız: %s</string>
+
+    <!-- DATA / COURSES -->
+    <string name="data_courses_header">Dersler</string>
+    <string name="data_courses_header_count">Dersler (%d)</string>
+    <string name="data_course_code_hint">Ders Kodu (ör. CNG342)</string>
+    <string name="data_course_name_hint">Ders Adı</string>
+    <string name="data_theory_hours_hint">Teori S.</string>
+    <string name="data_lab_hours_hint">Lab S.</string>
+    <string name="data_credits_hint">Kredi</string>
+    <string name="data_course_dept_label">Bölüm</string>
+    <string name="data_course_empty">Henüz ders eklenmedi.</string>
+    <string name="data_course_added">Ders kaydedildi.</string>
+    <string name="data_course_edit_title">Dersi Düzenle</string>
+    <string name="data_course_delete_title">Dersi Sil</string>
+    <string name="data_course_delete_message">%1$s — %2$s silinsin mi?\nİlgili açılan dersler de silinecek.</string>
+    <string name="data_no_courses_error">Henüz ders yok. Önce ders ekleyin.</string>
+    <string name="data_course_export_success">Dersler başarıyla dışa aktarıldı.</string>
+    <string name="data_course_import_count">%d ders içe aktarıldı.</string>
+
+    <!-- DATA / OFFERINGS -->
+    <string name="data_offerings_header">Ders Açma</string>
+    <string name="data_offerings_header_count">Ders Açma (%d)</string>
+    <string name="data_offering_course_label">Ders</string>
+    <string name="data_offering_lecturer_optional">Hoca (opsiyonel)</string>
+    <string name="data_offering_academic_year_hint">Akademik Yıl (ör. 2025-2026)</string>
+    <string name="data_offering_term_label">Dönem</string>
+    <string name="data_offering_class_year_label">Sınıf</string>
+    <string name="data_offering_section_hint">Şube (A, B…)</string>
+    <string name="data_offering_quota_hint">Kontenjan</string>
+    <string name="data_offering_add_button">Ders Aç</string>
+    <string name="data_offering_empty">Henüz açılmış ders yok.</string>
+    <string name="data_offering_added">Açılan ders eklendi.</string>
+    <string name="data_offering_updated">Açılan ders güncellendi.</string>
+    <string name="data_offering_edit_title">Açılan Dersi Düzenle</string>
+    <string name="data_offering_delete_title">Açılan Dersi Sil</string>
+    <string name="data_offering_delete_message">%1$s %2$s silinsin mi? İlgili program kayıtları da silinecek.</string>
+
+    <!-- ASSIGNMENT -->
+    <string name="assignment_title">Ders Atama</string>
+    <string name="assignment_auto_button">Otomatik</string>
+    <string name="assignment_offering_label">Açılan Ders</string>
+    <string name="assignment_offering_hint">Ders ara…</string>
+    <string name="assignment_lecturer_label">Hoca</string>
+    <string name="assignment_lecturer_hint">Hoca ara…</string>
+    <string name="assignment_classroom_label">Derslik</string>
+    <string name="assignment_classroom_hint">Derslik ara…</string>
+    <string name="assignment_day_label">Gün</string>
+    <string name="assignment_start_hint">Başlangıç Saati (SS:dd)</string>
+    <string name="assignment_end_hint">Bitiş Saati (SS:dd)</string>
+    <string name="assignment_assign_button">Ata</string>
+    <string name="assignment_current_title">Mevcut Atamalar</string>
+    <string name="assignment_success">Atama başarılı.</string>
+    <string name="assignment_invalid_selection">Lütfen geçerli bir ders ve sınıf seçin.</string>
+    <string name="assignment_select_time">Saat Seç</string>
+    <string name="assignment_delete_title">Atamayı Sil</string>
+    <string name="assignment_delete_message">%1$s (%2$s %3$s) atama kaldırılsın mı?</string>
+    <string name="assignment_conflict_title">Çakışma Tespit Edildi</string>
+    <string name="assignment_force_assign">Yine de Ata</string>
+    <string name="assignment_lecturer_short">Hoca: %s</string>
+    <string name="assignment_classroom_short">Sınıf: %s</string>
+
+    <!-- AVAILABILITY -->
+    <string name="availability_title">Meşgul Olduğum Saatler</string>
+    <string name="availability_subtitle">Müsait OLMADIĞINIZ saat aralıklarını işaretleyin.</string>
+    <string name="availability_add_button">Meşgul Saat Ekle</string>
+    <string name="availability_weekly_title">Haftalık Görünüm</string>
+    <string name="availability_legend">Yeşil: Müsait  •  Kırmızı: Meşgul  •  Mavi: Atanmış Ders</string>
+    <string name="availability_added">Meşgul zaman eklendi.</string>
+    <string name="availability_slot_added">Meşgul zaman eklendi.</string>
+    <string name="availability_remove_title">Meşgul Slot Kaldır</string>
+    <string name="availability_remove_message">%1$s %2$s meşgul zamanını kaldırmak istiyor musunuz?</string>
+    <string name="availability_remove_button">Kaldır</string>
+    <string name="availability_start_hint">Başlangıç</string>
+    <string name="availability_end_hint">Bitiş</string>
+    <string name="availability_select_time">Saat Seç</string>
+    <string name="availability_time_pick_title">Saat Seç</string>
+
+    <!-- LECTURER HOME -->
+    <string name="lecturer_home_this_week">Bu Hafta</string>
+    <string name="lecturer_home_assigned_courses">atanmış ders</string>
+    <string name="lecturer_home_welcome">Hoş geldiniz, %s</string>
+
+    <!-- ADMIN HOME -->
+    <string name="admin_home_title">Yönetim Paneli</string>
+    <string name="admin_home_unassigned_lecturers">Atanmamış Hocalar</string>
+    <string name="admin_home_unassigned_courses">Ders Açılmamış Dersler</string>
+    <string name="admin_home_available_classrooms">Mevcut Derslikler</string>
+
+    <!-- SETTINGS / DEPARTMENTS -->
+    <string name="settings_title">Bölümler</string>
+    <string name="settings_add_dept">Yeni Bölüm Ekle</string>
+    <string name="settings_dept_name_hint">Bölüm Adı</string>
+    <string name="settings_existing_depts">Mevcut Bölümler</string>
+    <string name="settings_dept_added">Bölüm eklendi.</string>
+    <string name="settings_dept_updated">Bölüm güncellendi.</string>
+    <string name="settings_dept_deleted">Bölüm silindi.</string>
+    <string name="settings_dept_edit_title">Bölümü Düzenle</string>
+    <string name="settings_dept_delete_title">Bölümü Sil</string>
+    <string name="settings_dept_delete_message">\"%s\" silinsin mi? İlgili hoca ve dersler etkilenebilir.</string>
+
+    <!-- SETTINGS / LANGUAGE SWITCHER -->
+    <string name="settings_language_card_title">Dil</string>
+    <string name="settings_language_card_subtitle">Uygulama dilini seçin</string>
+    <string name="settings_language_system">Sistem</string>
+    <string name="settings_language_turkish">Türkçe</string>
+    <string name="settings_language_english">English</string>
+
+    <!-- AUTO SCHEDULE -->
+    <string name="auto_schedule_toolbar_title">Otomatik Program Oluştur</string>
+    <string name="auto_schedule_algorithm_settings">Algoritma Ayarları</string>
+    <string name="auto_schedule_algorithm_desc">Henüz programa eklenmemiş dersler için otomatik yerleştirme. Ayarları ihtiyacınıza göre düzenleyin.</string>
+    <string name="auto_schedule_compactness_title">Öğrenci Ders Düzeni</string>
+    <string name="auto_schedule_compactness_desc">Aynı sınıf-şube öğrencilerinin günlük ders düzeni</string>
+    <string name="auto_schedule_compact">Dersleri birleştir (aralıksız veya az aralıklı)</string>
+    <string name="auto_schedule_spread">Dersleri güne yay (aralar bırak)</string>
+    <string name="auto_schedule_no_preference">Tercih yok (serbest yerleştir)</string>
+    <string name="auto_schedule_max_daily_title">Hoca Günlük Ders Limiti</string>
+    <string name="auto_schedule_max_daily_desc">Bir hocanın aynı günde alacağı maksimum ders sayısı (0 = sınırsız)</string>
+    <string name="auto_schedule_no_limit">Yok</string>
+    <string name="auto_schedule_day_balance_title">Gün Dengeleme</string>
+    <string name="auto_schedule_day_balance_desc">Dersleri haftanın günlerine dengeli dağıt</string>
+    <string name="auto_schedule_pref_time_title">Tercih Edilen Saat Aralığı</string>
+    <string name="auto_schedule_pref_time_desc">Bu aralıktaki saatler öncelikli kullanılır (boş bırakılırsa tüm saatler eşit)</string>
+    <string name="auto_schedule_alt_count_title">Alternatif Sayısı</string>
+    <string name="auto_schedule_alt_count_desc">Kaç farklı program alternatifi üretilsin</string>
+    <string name="auto_schedule_generate_button">Programı Oluştur</string>
+    <string name="auto_schedule_loading_title">Program oluşturuluyor…</string>
+    <string name="auto_schedule_loading_desc">Kısıtlar kontrol ediliyor, en uygun yerleşim aranıyor</string>
+    <string name="auto_schedule_unplaceable_title">Yerleştirilemeyen Dersler</string>
+    <string name="auto_schedule_approve_title">Programı Onayla</string>
+    <string name="auto_schedule_approve_message">Oluşturulan program kaydedilecek. Devam etmek istiyor musunuz?</string>
+    <string name="auto_schedule_approve_confirm">Onayla ve Kaydet</string>
+    <string name="auto_schedule_cancel">Vazgeç</string>
+    <string name="auto_schedule_regenerate">Yeniden Oluştur</string>
+    <string name="auto_schedule_retry">Tekrar Dene</string>
+    <string name="auto_schedule_saving">Kaydediliyor…</string>
+    <string name="auto_schedule_saved_count">%d ders başarıyla kaydedildi!</string>
+    <string name="auto_schedule_save_success">%d ders başarıyla kaydedildi!</string>
+    <string name="auto_schedule_ready">Program Hazır</string>
+    <string name="auto_schedule_result_full">Program Hazır</string>
+    <string name="auto_schedule_partial">Kısmi Program Oluşturuldu</string>
+    <string name="auto_schedule_result_partial">Kısmi Program Oluşturuldu</string>
+    <string name="auto_schedule_assigned_count">Yerleşen: %d ders</string>
+    <string name="auto_schedule_unassigned_count">Yerleşemeyen: %d ders</string>
+    <string name="auto_schedule_score">Başarı: %1$d%% • Kalite puanı: %2$d/100</string>
+    <string name="auto_schedule_score_text">Başarı: %%%1$d • Kalite puanı: %2$d/100</string>
+    <string name="auto_schedule_alt_info">Alternatif %1$d / %2$d</string>
+    <string name="auto_schedule_pinned_label"> [SABİT]</string>
+    <string name="auto_schedule_pin">Sabitle (Yeniden oluşturmada korunsun)</string>
+    <string name="auto_schedule_pin_action">Sabitle (Yeniden oluşturmada korunsun)</string>
+    <string name="auto_schedule_unpin">Sabitlemeyi Kaldır</string>
+    <string name="auto_schedule_unpin_action">Sabitlemeyi Kaldır</string>
+    <string name="auto_schedule_remove_action">Kaldır</string>
+    <string name="auto_schedule_class_info">%1$d. Sınıf %2$s</string>
+
+    <!-- WEEKLY SCHEDULE -->
+    <string name="weekly_schedule_title">Ders Programı</string>
+    <string name="weekly_schedule_empty">Henüz ders ataması yapılmamış.</string>
+
+    <!-- CONFLICT DIALOG -->
+    <string name="conflict_availability_title">Müsaitlik Uyarısı</string>
+    <string name="conflict_lecturer_title">Hoca Çakışması</string>
+    <string name="conflict_classroom_title">Derslik Çakışması</string>
+
+    <!-- IMPORT PREVIEW DIALOG -->
+    <string name="import_preview_found_rows">%d satır bulundu</string>
+    <string name="import_preview_select_all">Tümünü Seç</string>
+    <string name="import_preview_select_none">Hiçbiri</string>
+    <string name="import_preview_selected_count">%1$d / %2$d seçili</string>
+    <string name="import_preview_import_button">Seçilenleri İçe Aktar</string>
+    <string name="import_preview_no_rows">Dosyada içe aktarılacak satır bulunamadı.</string>
+    <string name="import_preview_no_valid_rows">Geçerli satır yok. %d satır atlandı:</string>
+    <string name="import_preview_title_classrooms">Derslikleri İçe Aktar</string>
+    <string name="import_preview_title_courses">Dersleri İçe Aktar</string>
+    <string name="import_preview_title_lecturers">Hocaları İçe Aktar</string>
+    <string name="import_preview_dept_target">Bölüm: %s</string>
+    <string name="import_dialog_title">İçe Aktarma</string>
+    <string name="import_error_title">İçe Aktarma Hatası</string>
+    <string name="import_result_title">İçe Aktarma Tamamlandı</string>
+    <string name="import_result_credentials_header">Oluşturulan kullanıcı bilgileri:</string>
+    <string name="import_result_errors_header">Hatalar:</string>
+    <string name="import_copy_users">Kullanıcıları Kopyala</string>
+    <string name="import_all_copied">Tüm kullanıcılar panoya kopyalandı.</string>
+    <string name="import_lecturer_target">Bölüm: %1$s  •  Kullanıcı adı + geçici şifre otomatik üretilecek</string>
+    <string name="import_load_depts_first">Önce bölümleri yükleyin.</string>
+
+    <!-- ITEM LABELS -->
+    <string name="item_delete">Sil</string>
+    <string name="item_remove">Kaldır</string>
+    <string name="item_edit_description">Düzenle</string>
+    <string name="item_delete_description">Sil</string>
+
+    <!-- DAYS -->
+    <string name="day_monday">Pazartesi</string>
+    <string name="day_tuesday">Salı</string>
+    <string name="day_wednesday">Çarşamba</string>
+    <string name="day_thursday">Perşembe</string>
+    <string name="day_friday">Cuma</string>
+    <string name="day_saturday">Cumartesi</string>
+    <string name="day_sunday">Pazar</string>
 </resources>

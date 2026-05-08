@@ -6,6 +6,7 @@ import com.unischeduler.data.model.OrgSettings
 import com.unischeduler.data.remote.SupabaseClient.client
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -22,6 +23,8 @@ class ClassroomRepository {
         client.postgrest["classrooms"]
             .select(Columns.raw("*, departments(*)")) {
                 filter { eq("org_id", orgId) }
+                order(column = "room_code", order = Order.ASCENDING)
+                limit(10000)
             }
             .decodeList<Classroom>()
 
@@ -35,6 +38,16 @@ class ClassroomRepository {
                 type = type
             )
         )
+    }
+
+    suspend fun updateClassroom(id: Int, roomCode: String, capacity: Int, departmentId: Int?, type: String, orgId: Int) {
+        client.postgrest["classrooms"]
+            .update({
+                set("room_code", roomCode)
+                set("capacity", capacity)
+                set("type", type)
+                set("department_id", departmentId)
+            }) { filter { eq("id", id); eq("org_id", orgId) } }
     }
 
     suspend fun deleteClassroom(id: Int, orgId: Int) {

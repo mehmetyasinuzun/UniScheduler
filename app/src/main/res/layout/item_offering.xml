@@ -19,14 +19,14 @@
             android:layout_height="wrap_content"
             android:textSize="14sp"
             android:textStyle="bold"
-            android:textColor="@android:color/black" />
+            android:textColor="?attr/colorOnSurface" />
 
         <TextView
             android:id="@+id/tvOfferingDetails"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="12sp"
-            android:textColor="#666666" />
+            android:textColor="?attr/colorOnSurfaceVariant" />
     </LinearLayout>
 
     <ImageButton
@@ -36,7 +36,7 @@
         android:layout_marginEnd="4dp"
         android:src="@android:drawable/ic_menu_edit"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="Edit" />
+        android:contentDescription="@string/item_edit_description" />
 
     <ImageButton
         android:id="@+id/btnDeleteOffering"
@@ -44,6 +44,6 @@
         android:layout_height="36dp"
         android:src="@android:drawable/ic_menu_delete"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="Delete" />
+        android:contentDescription="@string/item_delete_description" />
 
 </LinearLayout>

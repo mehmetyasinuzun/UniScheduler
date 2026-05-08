@@ -5,6 +5,7 @@ import com.unischeduler.data.model.Department
 import com.unischeduler.data.model.DepartmentInsert
 import com.unischeduler.data.remote.SupabaseClient.client
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Order
 
 class DepartmentRepository {
 
@@ -12,6 +13,8 @@ class DepartmentRepository {
         client.postgrest["departments"]
             .select {
                 filter { eq("org_id", orgId) }
+                order(column = "name", order = Order.ASCENDING)
+                limit(1000)
             }
             .decodeList<Department>()
 

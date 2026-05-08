@@ -62,10 +62,10 @@ class AutoScheduleFragment : Fragment() {
 
         binding.btnApprove.setOnClickListener {
             AlertDialog.Builder(requireContext())
-                .setTitle("Programı Onayla")
-                .setMessage("Oluşturulan program kaydedilecek. Devam etmek istiyor musunuz?")
-                .setPositiveButton("Onayla ve Kaydet") { _, _ -> viewModel.saveSchedule() }
-                .setNegativeButton("Vazgeç", null)
+                .setTitle(getString(R.string.auto_schedule_approve_title))
+                .setMessage(getString(R.string.auto_schedule_approve_message))
+                .setPositiveButton(getString(R.string.auto_schedule_approve_confirm)) { _, _ -> viewModel.saveSchedule() }
+                .setNegativeButton(getString(R.string.common_cancel), null)
                 .show()
         }
 
@@ -93,7 +93,7 @@ class AutoScheduleFragment : Fragment() {
                     binding.btnApprove.text = "Kaydediliyor..."
                 }
                 is UiState.Success -> {
-                    Toast.makeText(requireContext(), "${state.data} ders başarıyla kaydedildi!", Toast.LENGTH_LONG).show()
+                    Toast.makeText(requireContext(), getString(R.string.auto_schedule_save_success, state.data), Toast.LENGTH_LONG).show()
                     findNavController().popBackStack()
                 }
                 is UiState.Error -> {
@@ -175,11 +175,11 @@ class AutoScheduleFragment : Fragment() {
         val pct = if (total > 0) (result.assigned.size * 100 / total) else 0
 
         binding.tvResultTitle.text = if (result.unassigned.isEmpty())
-            "Program Hazır" else "Kısmi Program Oluşturuldu"
+            getString(R.string.auto_schedule_result_full) else getString(R.string.auto_schedule_result_partial)
 
-        binding.tvAssignedCount.text = "Yerleşen: ${result.assigned.size} ders"
-        binding.tvUnassignedCount.text = "Yerleşemeyen: ${result.unassigned.size} ders"
-        binding.tvScore.text = "Başarı: %$pct • Kalite puanı: ${result.score}/100"
+        binding.tvAssignedCount.text = getString(R.string.auto_schedule_assigned_count, result.assigned.size)
+        binding.tvUnassignedCount.text = getString(R.string.auto_schedule_unassigned_count, result.unassigned.size)
+        binding.tvScore.text = getString(R.string.auto_schedule_score_text, pct, result.score)
 
         val alts = viewModel.alternatives.value
         if (alts.size > 1) {
@@ -269,7 +269,7 @@ class AutoScheduleFragment : Fragment() {
         val courseName = entry.offering.courses?.name ?: ""
         val lecturerName = entry.offering.lecturerName
         val roomCode = entry.classroom.roomCode
-        val classInfo = "${entry.offering.classYear}. Sınıf ${entry.offering.section}"
+        val classInfo = getString(R.string.auto_schedule_class_info, entry.offering.classYear, entry.offering.section)
 
         val pinLabel = if (viewModel.isPinned(entry)) " [SABİT]" else ""
         val tvTitle = TextView(requireContext()).apply {
@@ -308,19 +308,19 @@ class AutoScheduleFragment : Fragment() {
             val actions = mutableListOf<() -> Unit>()
 
             if (viewModel.isPinned(entry)) {
-                items.add("Sabitlemeyi Kaldır")
+                items.add(getString(R.string.auto_schedule_unpin))
                 actions.add { viewModel.unpinEntry(entry); displayResult(viewModel.state.value.let { (it as? UiState.Success)?.data } ?: return@add) }
             } else {
-                items.add("Sabitle (Yeniden oluşturmada korunsun)")
+                items.add(getString(R.string.auto_schedule_pin))
                 actions.add { viewModel.pinEntry(entry); displayResult(viewModel.state.value.let { (it as? UiState.Success)?.data } ?: return@add) }
             }
-            items.add("Kaldır")
+            items.add(getString(R.string.common_remove))
             actions.add { viewModel.removeEntry(entry) }
 
             AlertDialog.Builder(requireContext())
                 .setTitle("$courseCode — ${entry.startTime}-${entry.endTime}")
                 .setItems(items.toTypedArray()) { _, which -> actions[which]() }
-                .setNegativeButton("Vazgeç", null)
+                .setNegativeButton(getString(R.string.common_cancel), null)
                 .show()
         }
 

@@ -34,7 +34,7 @@
                 android:id="@+id/tvSlot"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/colorOnSurfaceVariant"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:layout_marginTop="2dp" />
 
         </LinearLayout>
@@ -44,8 +44,8 @@
             style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Delete"
-            android:textColor="#B00020"
+            android:text="@string/item_delete"
+            android:textColor="?attr/colorError"
             android:textSize="12sp" />
 
     </LinearLayout>

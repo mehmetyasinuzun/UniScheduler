@@ -1,5 +1,7 @@
 # UniScheduler
 
+> 🇹🇷 **Hızlı başlangıç (kurulum, deployment, test, sorun giderme):** [TESLIM_REHBERI.md](TESLIM_REHBERI.md)
+
 ## Overview
 UniScheduler is a comprehensive, native Android application engineered to solve one of the most notoriously complex administrative challenges in higher education: **academic course scheduling**. 
 
@@ -49,14 +51,13 @@ Recognizing that universities operate heavily on spreadsheets, the system suppor
 The application requires Supabase credentials to communicate with the backend. These must be provided securely via a `local.properties` file.
 
 1. Clone the repository.
-2. In the root directory of the project, create a file named `local.properties` if it does not already exist.
-3. Add your Supabase project credentials to the file:
-   ```properties
-   SUPABASE_URL=https://your-project-id.supabase.co
-   SUPABASE_ANON_KEY=your-anon-key
-   ```
-4. Sync the project with Gradle files.
-5. Build and run the application on an emulator or physical device running Android 8.0 (API level 26) or higher.
+2. Copy `local.properties.example` to `local.properties`.
+3. Fill in `SUPABASE_URL` and `SUPABASE_ANON_KEY` (and optionally release-signing keystore values).
+4. Run the SQL files in `supabase/` against your Supabase project (see [TESLIM_REHBERI.md §3](TESLIM_REHBERI.md)).
+5. Build:
+   - Debug: `./gradlew assembleDebug`
+   - Release (signed, minified): `./gradlew assembleRelease`
+6. Companion **super-admin web panel** lives in `super-admin-paneli/` — see [TESLIM_REHBERI.md §4](TESLIM_REHBERI.md).
 
 ## License
 

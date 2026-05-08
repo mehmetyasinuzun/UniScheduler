@@ -22,20 +22,24 @@ object CsvImporter {
         val name: String,
         val theoryHours: Int,   // default 0
         val labHours: Int,      // default 0
-        val credits: Int        // default 0
+        val credits: Int,       // default 0
+        val departmentName: String? = null  // optional — lookup against existing depts
     )
 
     data class LecturerRow(
         val title: String,      // default "Lect."
         val firstName: String,
         val lastName: String,
-        val email: String?      // optional
+        val email: String?,     // optional
+        val departmentName: String? = null,  // optional
+        val username: String? = null         // optional — if present, use as-is
     )
 
     data class ClassroomRow(
         val roomCode: String,
         val capacity: Int,
-        val type: String        // "theory" | "lab", default "theory"
+        val type: String,       // "theory" | "lab", default "theory"
+        val departmentName: String? = null   // optional
     )
 
     // ── Parsers ───────────────────────────────────────────────────────────────

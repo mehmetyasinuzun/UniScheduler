@@ -31,6 +31,9 @@ class ClassroomsViewModel(app: Application) : AndroidViewModel(app) {
     private val _addState = MutableStateFlow<UiState<Unit>>(UiState.Idle)
     val addState: StateFlow<UiState<Unit>> = _addState
 
+    private val _editState = MutableStateFlow<UiState<Unit>>(UiState.Idle)
+    val editState: StateFlow<UiState<Unit>> = _editState
+
     private val _importState = MutableStateFlow<UiState<Int>>(UiState.Idle)
     val importState: StateFlow<UiState<Int>> = _importState
 
@@ -91,24 +94,32 @@ class ClassroomsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun importClassrooms(rows: List<CsvImporter.ClassroomRow>, departmentId: Int?) {
+    /**
+     * Import classrooms. Each row's [CsvImporter.ClassroomRow.departmentName] takes
+     * precedence over [fallbackDepartmentId] when matched by case-insensitive
+     * name; otherwise the fallback (or null) is used.
+     */
+    fun importClassrooms(rows: List<CsvImporter.ClassroomRow>, fallbackDepartmentId: Int?) {
         if (rows.isEmpty()) {
-            _importState.value = UiState.Error("No valid rows to import.", retryable = false)
-            reportValidationError("importClassrooms", "No valid rows to import.")
+            _importState.value = UiState.Error("İçe aktarılacak geçerli satır yok.", retryable = false)
+            reportValidationError("importClassrooms", "İçe aktarılacak geçerli satır yok.")
             return
         }
         viewModelScope.launch {
             _importState.value = UiState.Loading
             runCatching {
                 withContext(Dispatchers.IO) {
-                    val orgId   = session.orgId
+                    val orgId    = session.orgId
+                    val depts    = departmentRepo.getAllDepartments(orgId)
+                    val byName   = depts.associateBy { it.name.lowercase().trim() }
                     var imported = 0
                     for (row in rows) {
+                        val deptId = row.departmentName?.lowercase()?.trim()
+                            ?.let { byName[it]?.id } ?: fallbackDepartmentId
                         runCatching {
-                            classroomRepo.insertClassroom(row.roomCode, row.capacity, departmentId, orgId)
+                            classroomRepo.insertClassroom(row.roomCode, row.capacity, deptId, orgId, type = row.type)
                             imported++
                         }
-                        // Skip duplicates silently
                     }
                     imported
                 }
@@ -119,6 +130,30 @@ class ClassroomsViewModel(app: Application) : AndroidViewModel(app) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 _importState.value = UiState.Error(ErrorMessages.map(e), retryable = false)
                 reportError("importClassrooms", e)
+            }
+        }
+    }
+
+    fun updateClassroom(id: Int, roomCode: String, capacity: String, departmentId: Int?, type: String) {
+        val cap = capacity.toIntOrNull()
+        if (roomCode.isBlank() || cap == null || cap <= 0) {
+            _editState.value = UiState.Error("Geçerli bir derslik kodu ve kapasite girin.", retryable = false)
+            reportValidationError("updateClassroom", "Geçersiz girdi.")
+            return
+        }
+        viewModelScope.launch {
+            _editState.value = UiState.Loading
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    classroomRepo.updateClassroom(id, roomCode.trim(), cap, departmentId, type, session.orgId)
+                }
+            }.onSuccess {
+                _editState.value = UiState.Success(Unit)
+                loadClassrooms()
+            }.onFailure { e ->
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                _editState.value = UiState.Error(ErrorMessages.map(e), retryable = false)
+                reportError("updateClassroom", e)
             }
         }
     }
@@ -137,6 +172,7 @@ class ClassroomsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun resetAddState()    { _addState.value    = UiState.Idle }
+    fun resetEditState()   { _editState.value   = UiState.Idle }
     fun resetImportState() { _importState.value = UiState.Idle }
 
     private fun reportError(action: String, e: Throwable) {

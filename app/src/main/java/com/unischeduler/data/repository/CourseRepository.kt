@@ -8,6 +8,7 @@ import com.unischeduler.data.model.CourseInsert
 import com.unischeduler.data.remote.SupabaseClient.client
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.realtime.PostgresAction
 import io.github.jan.supabase.realtime.channel
 import io.github.jan.supabase.realtime.postgresChangeFlow
@@ -22,11 +23,16 @@ import kotlinx.coroutines.launch
 
 class CourseRepository {
 
-    // One-shot fetch — used by Task 1 pattern
+    // One-shot fetch — used by Task 1 pattern.
+    // Explicit limit guards against the silent 1000-row Supabase default; the
+    // org-scoped data set should never approach this in practice but the cap
+    // keeps very large orgs predictable.
     suspend fun getAllCourses(orgId: Int): List<Course> =
         client.postgrest["courses"]
             .select(Columns.raw("*, departments(*)")) {
                 filter { eq("org_id", orgId) }
+                order(column = "code", order = Order.ASCENDING)
+                limit(10000)
             }
             .decodeList<Course>()
 
@@ -37,6 +43,8 @@ class CourseRepository {
                     eq("department_id", departmentId)
                     eq("org_id", orgId)
                 }
+                order(column = "code", order = Order.ASCENDING)
+                limit(10000)
             }
             .decodeList<Course>()
 

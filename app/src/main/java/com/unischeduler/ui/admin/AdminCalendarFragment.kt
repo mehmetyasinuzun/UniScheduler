@@ -8,6 +8,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.google.android.material.chip.Chip
+import com.unischeduler.R
 import com.unischeduler.data.model.ScheduleEntry
 import com.unischeduler.databinding.FragmentWeeklyScheduleBinding
 import com.unischeduler.ui.lecturer.CalendarViewModel
@@ -140,7 +141,7 @@ class AdminCalendarFragment : Fragment() {
         AlertDialog.Builder(requireContext())
             .setTitle(title)
             .setItems(items.toTypedArray()) { _, which -> onSelect(items[which]) }
-            .setNegativeButton("İptal", null)
+            .setNegativeButton(getString(R.string.common_cancel), null)
             .show()
     }
 
@@ -171,7 +172,7 @@ class AdminCalendarFragment : Fragment() {
         AlertDialog.Builder(requireContext())
             .setTitle("${entry.day} — ${entry.courseCode}")
             .setMessage(msg)
-            .setPositiveButton("Tamam", null)
+            .setPositiveButton(getString(R.string.common_ok), null)
             .show()
     }
 

@@ -1,5 +1,6 @@
 package com.unischeduler.ui.admin
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -7,10 +8,17 @@ import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import androidx.core.os.LocaleListCompat
+import com.unischeduler.App
+import com.unischeduler.MainActivity
+import com.unischeduler.R
 import com.unischeduler.data.model.Department
 import com.unischeduler.databinding.FragmentSettingsBinding
 import com.unischeduler.databinding.ItemDepartmentBinding
@@ -23,6 +31,8 @@ class SettingsFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: SettingsViewModel by viewModels()
 
+    private lateinit var departmentAdapter: DepartmentAdapter
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentSettingsBinding.inflate(inflater, container, false)
         return binding.root
@@ -32,10 +42,30 @@ class SettingsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.rvDepartments.layoutManager = LinearLayoutManager(requireContext())
+        binding.rvDepartments.isNestedScrollingEnabled = false
+        departmentAdapter = DepartmentAdapter(
+            onEditClick   = { showEditDialog(it) },
+            onDeleteClick = { showDeleteDialog(it) }
+        )
+        binding.rvDepartments.adapter = departmentAdapter
         binding.btnRetry.setOnClickListener { viewModel.loadDepartments() }
 
         binding.btnAddDept.setOnClickListener {
             viewModel.addDepartment(binding.etDeptName.text?.toString().orEmpty())
+        }
+
+        setupThemeSelector()
+        setupLanguageSelector()
+
+        binding.btnLogout.setOnClickListener {
+            AlertDialog.Builder(requireContext())
+                .setTitle(R.string.logout_confirm_title)
+                .setMessage(R.string.logout_confirm_message)
+                .setPositiveButton(R.string.logout_button) { _, _ ->
+                    (requireActivity() as? MainActivity)?.logout()
+                }
+                .setNegativeButton(R.string.common_cancel, null)
+                .show()
         }
 
         collectFlow(viewModel.state) { state ->
@@ -45,11 +75,7 @@ class SettingsFragment : Fragment() {
                 is UiState.Error   -> showError(state.message, state.retryable)
                 is UiState.Success -> {
                     showLoading(false)
-                    binding.rvDepartments.adapter = DepartmentAdapter(
-                        state.data,
-                        onEditClick = { showEditDialog(it) },
-                        onDeleteClick = { showDeleteDialog(it) }
-                    )
+                    departmentAdapter.submitList(state.data)
                 }
             }
         }
@@ -67,7 +93,7 @@ class SettingsFragment : Fragment() {
                     binding.btnAddDept.isEnabled      = true
                     binding.tvDeptAddError.visibility = View.GONE
                     binding.etDeptName.text?.clear()
-                    Toast.makeText(requireContext(), "Department added.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.settings_dept_added), Toast.LENGTH_SHORT).show()
                     viewModel.resetAddState()
                 }
             }
@@ -82,7 +108,7 @@ class SettingsFragment : Fragment() {
                     viewModel.resetEditState()
                 }
                 is UiState.Success -> {
-                    Toast.makeText(requireContext(), "Department updated.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.settings_dept_updated), Toast.LENGTH_SHORT).show()
                     viewModel.resetEditState()
                 }
             }
@@ -97,10 +123,59 @@ class SettingsFragment : Fragment() {
                     viewModel.resetDeleteState()
                 }
                 is UiState.Success -> {
-                    Toast.makeText(requireContext(), "Department deleted.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.settings_dept_deleted), Toast.LENGTH_SHORT).show()
                     viewModel.resetDeleteState()
                 }
             }
+        }
+    }
+
+    private fun setupThemeSelector() {
+        val prefs = requireContext().getSharedPreferences(App.PREFS_NAME, Context.MODE_PRIVATE)
+        val currentMode = prefs.getInt(App.KEY_THEME_MODE, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+
+        val checkedId = when (currentMode) {
+            AppCompatDelegate.MODE_NIGHT_NO  -> binding.rbThemeLight.id
+            AppCompatDelegate.MODE_NIGHT_YES -> binding.rbThemeDark.id
+            else                             -> binding.rbThemeSystem.id
+        }
+        binding.rgTheme.check(checkedId)
+
+        binding.rgTheme.setOnCheckedChangeListener { _, id ->
+            val mode = when (id) {
+                binding.rbThemeLight.id -> AppCompatDelegate.MODE_NIGHT_NO
+                binding.rbThemeDark.id  -> AppCompatDelegate.MODE_NIGHT_YES
+                else                    -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+            }
+            prefs.edit().putInt(App.KEY_THEME_MODE, mode).apply()
+            AppCompatDelegate.setDefaultNightMode(mode)
+        }
+    }
+
+    private fun setupLanguageSelector() {
+        val prefs = requireContext().getSharedPreferences(App.PREFS_NAME, Context.MODE_PRIVATE)
+        val currentLang = prefs.getString(App.KEY_LANGUAGE, null)
+
+        val checkedId = when (currentLang) {
+            "tr" -> binding.rbLangTurkish.id
+            "en" -> binding.rbLangEnglish.id
+            else -> binding.rbLangSystem.id
+        }
+        binding.rgLanguage.check(checkedId)
+
+        binding.rgLanguage.setOnCheckedChangeListener { _, id ->
+            val lang = when (id) {
+                binding.rbLangTurkish.id -> "tr"
+                binding.rbLangEnglish.id -> "en"
+                else -> null
+            }
+            prefs.edit().putString(App.KEY_LANGUAGE, lang).apply()
+            val locales = if (lang != null) {
+                LocaleListCompat.forLanguageTags(lang)
+            } else {
+                LocaleListCompat.getEmptyLocaleList()
+            }
+            AppCompatDelegate.setApplicationLocales(locales)
         }
     }
 
@@ -110,21 +185,21 @@ class SettingsFragment : Fragment() {
             setPadding(48, 32, 48, 16)
         }
         AlertDialog.Builder(requireContext())
-            .setTitle("Edit Department")
+            .setTitle(getString(R.string.settings_dept_edit_title))
             .setView(input)
-            .setPositiveButton("Save") { _, _ ->
+            .setPositiveButton(getString(R.string.common_save)) { _, _ ->
                 viewModel.editDepartment(dept.id, input.text.toString())
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(getString(R.string.common_cancel), null)
             .show()
     }
 
     private fun showDeleteDialog(dept: Department) {
         AlertDialog.Builder(requireContext())
-            .setTitle("Delete Department")
-            .setMessage("Delete \"${dept.name}\"? Related lecturers and courses may be affected.")
-            .setPositiveButton("Delete") { _, _ -> viewModel.deleteDepartment(dept.id) }
-            .setNegativeButton("Cancel", null)
+            .setTitle(getString(R.string.settings_dept_delete_title))
+            .setMessage(getString(R.string.settings_dept_delete_message, dept.name))
+            .setPositiveButton(getString(R.string.common_delete)) { _, _ -> viewModel.deleteDepartment(dept.id) }
+            .setNegativeButton(getString(R.string.common_cancel), null)
             .show()
     }
 
@@ -145,30 +220,28 @@ class SettingsFragment : Fragment() {
 }
 
 class DepartmentAdapter(
-    private val items: List<Department>,
     private val onEditClick: (Department) -> Unit,
     private val onDeleteClick: (Department) -> Unit
-) : RecyclerView.Adapter<DepartmentAdapter.VH>() {
+) : ListAdapter<Department, DepartmentAdapter.VH>(DIFF) {
 
     inner class VH(val binding: ItemDepartmentBinding) : RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
         VH(ItemDepartmentBinding.inflate(LayoutInflater.from(parent.context), parent, false))
 
-    override fun getItemCount() = maxOf(items.size, 1)
-
     override fun onBindViewHolder(holder: VH, position: Int) {
-        if (items.isEmpty()) {
-            holder.binding.tvDeptName.text = "No departments yet."
-            holder.binding.btnEditDept.visibility = View.GONE
-            holder.binding.btnDeleteDept.visibility = View.GONE
-            return
-        }
-        val d = items[position]
+        val d = getItem(position)
         holder.binding.tvDeptName.text = d.name
         holder.binding.btnEditDept.visibility = View.VISIBLE
         holder.binding.btnDeleteDept.visibility = View.VISIBLE
         holder.binding.btnEditDept.setOnClickListener { onEditClick(d) }
         holder.binding.btnDeleteDept.setOnClickListener { onDeleteClick(d) }
+    }
+
+    companion object {
+        private val DIFF = object : DiffUtil.ItemCallback<Department>() {
+            override fun areItemsTheSame(old: Department, new: Department) = old.id == new.id
+            override fun areContentsTheSame(old: Department, new: Department) = old == new
+        }
     }
 }

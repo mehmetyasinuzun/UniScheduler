@@ -1,8 +1,7 @@
 package com.unischeduler
 
+import android.content.Intent
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -10,7 +9,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
-import com.unischeduler.data.repository.AuthRepository
+import com.unischeduler.data.remote.SupabaseClient
 import com.unischeduler.databinding.ActivityMainBinding
 import com.unischeduler.util.NetworkMonitor
 import com.unischeduler.util.SessionManager
@@ -42,6 +41,13 @@ class MainActivity : AppCompatActivity() {
 
         session = SessionManager(this)
 
+        // Honor a pending logout from a previous activity instance: if we got here
+        // via the FORCE_LOGOUT extra, ignore any persisted session and land on login.
+        val forceLogout = intent?.getBooleanExtra(EXTRA_FORCE_LOGOUT, false) == true
+        if (forceLogout) {
+            session.clear()
+        }
+
         val navHost = supportFragmentManager
             .findFragmentById(R.id.navHostFragment) as NavHostFragment
         navController = navHost.navController
@@ -58,7 +64,6 @@ class MainActivity : AppCompatActivity() {
             ensureNavSetup()
             val isAuthScreen = destination.id in noNavDestinations
             updateNavVisibility(isAuthScreen)
-            invalidateOptionsMenu()
         }
 
         // Network monitor — offline banner
@@ -94,45 +99,32 @@ class MainActivity : AppCompatActivity() {
         binding.bottomNavLecturer.visibility = if (!isAuthScreen && session.isLecturer) View.VISIBLE else View.GONE
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.menu_overflow, menu)
-        return true
-    }
+    // Logout is reachable through SettingsFragment (admin) and LecturerHomeFragment
+    // (lecturer) buttons. The activity has no ActionBar, so no overflow menu.
 
-    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        menu.findItem(R.id.action_logout)?.isVisible = session.isLoggedIn
-        return super.onPrepareOptionsMenu(menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == R.id.action_logout) {
-            logout()
-            return true
-        }
-        return super.onOptionsItemSelected(item)
-    }
-
-    private fun logout() {
-        // Sign out from Supabase Auth — wait for it to complete before clearing local session
+    fun logout() {
+        // Two-phase teardown so the next login starts from a clean slate:
+        //   1. Tear down every Realtime channel and sign out from GoTrue so no
+        //      cached JWT or live subscription leaks across accounts.
+        //   2. Clear EncryptedSharedPreferences.
+        //   3. Restart the activity stack — this destroys every ViewModel
+        //      (including in-memory lists like allCourses/allLecturers) which
+        //      otherwise survive a simple navigate-to-login.
         lifecycleScope.launch {
             withContext(Dispatchers.IO) {
-                runCatching { AuthRepository().signOut() }
+                runCatching { SupabaseClient.resetForLogout() }
             }
             session.clear()
-            // Reset nav-setup flags so the next login re-wires the correct nav
             adminNavReady    = false
             lecturerNavReady = false
-            // Hide navs immediately
-            binding.bottomNavAdmin.visibility    = View.GONE
-            binding.bottomNavLecturer.visibility = View.GONE
-            // Clear the whole back stack and land on login
-            navController.navigate(
-                R.id.loginFragment,
-                null,
-                NavOptions.Builder()
-                    .setPopUpTo(navController.graph.id, true)
-                    .build()
-            )
+
+            val restart = Intent(this@MainActivity, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                putExtra(EXTRA_FORCE_LOGOUT, true)
+            }
+            startActivity(restart)
+            finish()
+            overridePendingTransition(0, 0)
         }
     }
 
@@ -140,5 +132,9 @@ class MainActivity : AppCompatActivity() {
         !session.isLoggedIn -> R.id.loginFragment
         session.isAdmin     -> R.id.adminHomeFragment
         else                -> R.id.lecturerHomeFragment
+    }
+
+    companion object {
+        private const val EXTRA_FORCE_LOGOUT = "force_logout"
     }
 }

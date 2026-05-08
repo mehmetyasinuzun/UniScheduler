@@ -14,6 +14,7 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -28,6 +29,8 @@ class LecturerRepository {
         val response = client.postgrest["lecturers"]
             .select(joinColumns) {
                 filter { eq("org_id", orgId) }
+                order(column = "last_name", order = Order.ASCENDING)
+                limit(10000)
             }
         val raw = response.data
         Log.d("LecturerRepo", "getAllLecturers orgId=$orgId rawLength=${raw.length} first200=${raw.take(200)}")
@@ -43,6 +46,8 @@ class LecturerRepository {
                     eq("department_id", departmentId)
                     eq("org_id", orgId)
                 }
+                order(column = "last_name", order = Order.ASCENDING)
+                limit(10000)
             }
             .decodeList<Lecturer>()
 

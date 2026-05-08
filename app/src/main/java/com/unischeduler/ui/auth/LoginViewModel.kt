@@ -33,11 +33,19 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
 
+        // Wipe any persisted session before attempting a new login. Without this,
+        // a failed login (or one that throws after JWT issue) could leave the old
+        // session key/orgId in place and subsequent screens would query the wrong
+        // org.
+        session.clear()
+
         viewModelScope.launch {
             _state.value = UiState.Loading
             runCatching {
                 withContext(Dispatchers.IO) {
-                    // 1. Sign in via Supabase GoTrue — obtains JWT
+                    // 1. Sign in via Supabase GoTrue — obtains JWT.
+                    //    AuthRepository.signIn() also tears down stale Realtime
+                    //    subscriptions and the previous JWT before authenticating.
                     try {
                         repo.signIn(attemptedUsername, password)
                     } catch (e: Exception) {

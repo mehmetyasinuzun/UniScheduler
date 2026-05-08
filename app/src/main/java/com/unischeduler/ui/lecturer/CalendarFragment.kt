@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import com.unischeduler.R
 import com.unischeduler.data.model.ScheduleEntry
 import com.unischeduler.databinding.FragmentWeeklyScheduleBinding
 import com.unischeduler.ui.shared.ScheduleViewConfig
@@ -89,7 +90,7 @@ class CalendarFragment : Fragment() {
         AlertDialog.Builder(requireContext())
             .setTitle("${entry.day} — ${entry.courseCode}")
             .setMessage(msg)
-            .setPositiveButton("Tamam", null)
+            .setPositiveButton(getString(R.string.common_ok), null)
             .show()
     }
 

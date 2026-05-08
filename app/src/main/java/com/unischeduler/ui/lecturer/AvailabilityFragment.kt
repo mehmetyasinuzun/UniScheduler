@@ -11,6 +11,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
+import com.unischeduler.R
 import com.unischeduler.data.model.DAYS
 import com.unischeduler.databinding.FragmentAvailabilityBinding
 import com.unischeduler.ui.shared.AvailabilityGridConfig
@@ -42,10 +43,10 @@ class AvailabilityFragment : Fragment() {
 
         binding.availabilityGrid.setOnBusySlotClickListener { slot ->
             AlertDialog.Builder(requireContext())
-                .setTitle("Meşgul Slot Kaldır")
-                .setMessage("${slot.day} ${slot.timeRange} meşgul zamanını kaldırmak istiyor musunuz?")
-                .setPositiveButton("Kaldır") { _, _ -> viewModel.deleteSlot(slot.id) }
-                .setNegativeButton("İptal", null)
+                .setTitle(getString(R.string.availability_remove_title))
+                .setMessage(getString(R.string.availability_remove_message, slot.day, slot.timeRange))
+                .setPositiveButton(getString(R.string.common_remove)) { _, _ -> viewModel.deleteSlot(slot.id) }
+                .setNegativeButton(getString(R.string.common_cancel), null)
                 .show()
         }
 
@@ -93,7 +94,7 @@ class AvailabilityFragment : Fragment() {
                     binding.tvSaveError.visibility = View.GONE
                     binding.etStartTime.text?.clear()
                     binding.etEndTime.text?.clear()
-                    Toast.makeText(requireContext(), "Meşgul zaman eklendi.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.availability_slot_added), Toast.LENGTH_SHORT).show()
                     viewModel.resetSaveState()
                 }
             }
@@ -112,7 +113,7 @@ class AvailabilityFragment : Fragment() {
         val picker = MaterialTimePicker.Builder()
             .setTimeFormat(TimeFormat.CLOCK_24H)
             .setHour(9).setMinute(0)
-            .setTitleText("Saat Seç")
+            .setTitleText(getString(R.string.availability_time_pick_title))
             .build()
         picker.addOnPositiveButtonClickListener {
             onSelected(String.format("%02d:%02d", picker.hour, picker.minute))

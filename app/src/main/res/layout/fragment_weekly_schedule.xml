@@ -19,7 +19,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Ders Programı"
+            android:text="@string/weekly_schedule_title"
             android:textSize="20sp"
             android:textStyle="bold" />
 
@@ -56,7 +56,7 @@
             android:id="@+id/tvError"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/colorError"
+            android:textColor="?attr/colorError"
             android:visibility="gone"
             android:padding="16dp"
             android:gravity="center" />
@@ -65,12 +65,12 @@
             android:id="@+id/tvEmpty"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Henüz ders ataması yapılmamış."
+            android:text="@string/weekly_schedule_empty"
             android:visibility="gone"
             android:padding="32dp"
             android:gravity="center"
             android:textSize="16sp"
-            android:textColor="@color/colorOnSurfaceVariant" />
+            android:textColor="?attr/colorOnSurfaceVariant" />
 
         <ScrollView
             android:layout_width="match_parent"

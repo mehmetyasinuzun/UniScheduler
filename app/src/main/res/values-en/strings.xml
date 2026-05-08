@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">UniScheduler</string>
+
+    <!-- LOGOUT -->
+    <string name="logout_button">Log Out</string>
+    <string name="logout_confirm_title">Log Out</string>
+    <string name="logout_confirm_message">Are you sure you want to log out of your account?</string>
+    <string name="offline_banner">⚠ No internet connection</string>
+
+    <!-- THEME -->
+    <string name="theme_settings_title">Theme</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+
+    <!-- COMMON -->
+    <string name="common_add">Add</string>
+    <string name="common_save">Save</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_delete">Delete</string>
+    <string name="common_remove">Remove</string>
+    <string name="common_edit">Edit</string>
+    <string name="common_retry">Retry</string>
+    <string name="common_ok">OK</string>
+    <string name="common_import">Import</string>
+    <string name="common_export">Export</string>
+    <string name="common_close">Close</string>
+    <string name="common_confirm">Confirm</string>
+    <string name="common_none">None</string>
+    <string name="common_select_all">Select All</string>
+    <string name="common_copy_to_clipboard">Copy to Clipboard</string>
+    <string name="common_copy_clipboard">Copy to Clipboard</string>
+    <string name="common_copied_clipboard">Copied to clipboard.</string>
+    <string name="common_expand">Expand</string>
+    <string name="common_all_departments">All Departments</string>
+    <string name="common_unassigned">Unassigned</string>
+    <string name="common_not_assigned">— Not Assigned —</string>
+    <string name="common_start">Start</string>
+    <string name="common_end">End</string>
+    <string name="common_day">Day</string>
+    <string name="common_none_option">— None —</string>
+    <string name="common_select_time">Select Time</string>
+
+    <!-- AUTH -->
+    <string name="auth_app_title">UniScheduler</string>
+    <string name="auth_login_subtitle">Sign in to continue</string>
+    <string name="auth_welcome_back">Welcome back</string>
+    <string name="auth_login_with_account">Sign in with your account</string>
+    <string name="auth_username_hint">Username</string>
+    <string name="auth_password_hint">Password</string>
+    <string name="auth_login_button">Sign In</string>
+
+    <!-- PASSWORD CHANGE -->
+    <string name="pw_title">Change Password</string>
+    <string name="pw_subtitle">You must set a new password before continuing.</string>
+    <string name="pw_current_hint">Current Password</string>
+    <string name="pw_new_hint">New Password</string>
+    <string name="pw_confirm_hint">New Password (Confirm)</string>
+
+    <!-- CLASSROOMS -->
+    <string name="classroom_title">Classrooms</string>
+    <string name="classroom_add_section">Add New Classroom</string>
+    <string name="classroom_code_hint">Room Code (e.g. A101)</string>
+    <string name="classroom_capacity_hint">Capacity</string>
+    <string name="classroom_type_label">Type</string>
+    <string name="classroom_dept_optional">Department (optional)</string>
+    <string name="classroom_go_assignment">Assignment / Schedule Management</string>
+    <string name="classroom_export_success">Classrooms exported successfully.</string>
+    <string name="classroom_export_fail">Export failed: %s</string>
+    <string name="classroom_added">Classroom added.</string>
+    <string name="classroom_updated">Classroom updated.</string>
+    <string name="classroom_delete_title">Delete Classroom</string>
+    <string name="classroom_delete_message">Delete %s? All related schedule entries will also be deleted.</string>
+    <string name="classroom_edit_title">Edit Classroom</string>
+    <string name="classroom_import_count">%d classroom(s) imported.</string>
+    <string name="classroom_type_lab">Laboratory</string>
+    <string name="classroom_type_theory">Theory</string>
+    <string name="classroom_edit_code_hint">Room Code</string>
+    <string name="classroom_edit_capacity_hint">Capacity</string>
+    <string name="classroom_edit_type_label">Type</string>
+    <string name="classroom_edit_dept_label">Department</string>
+    <string name="classroom_unassigned_option">— Unassigned —</string>
+    <string name="classroom_import_subtitle">Capacity: %1$s  •  %2$s</string>
+
+    <!-- DATA / LECTURERS -->
+    <string name="data_title">Data Management</string>
+    <string name="data_departments_button">Departments</string>
+    <string name="data_dept_label">Department:</string>
+    <string name="data_lecturers_header">Lecturers</string>
+    <string name="data_lecturers_header_count">Lecturers (%d)</string>
+    <string name="data_title_label">Title</string>
+    <string name="data_first_name_hint">First Name</string>
+    <string name="data_last_name_hint">Last Name</string>
+    <string name="data_dept_spinner_label">Department</string>
+    <string name="data_lecturer_added_title">Lecturer Added</string>
+    <string name="data_lecturer_credentials_message">Share these credentials with the lecturer:\n\nUsername: %1$s\nPassword: %2$s\n\nThe lecturer will be required to change their password on first login.</string>
+    <string name="data_credentials_copied">Copied to clipboard.</string>
+    <string name="data_all_users_copied">All users copied to clipboard.</string>
+    <string name="data_copy_users">Copy Users</string>
+    <string name="data_lecturer_deleted">Lecturer deleted.</string>
+    <string name="data_lecturer_updated">Lecturer updated.</string>
+    <string name="data_lecturer_delete_title">Delete Lecturer</string>
+    <string name="data_lecturer_delete_message">Delete %s? The lecturer\'s login account will also be deleted.</string>
+    <string name="data_lecturer_edit_title">Edit Lecturer</string>
+    <string name="data_lecturer_empty">No lecturers added yet.</string>
+    <string name="data_no_dept_error">No departments yet. Add one in Settings.</string>
+    <string name="data_lecturer_export_success">Lecturers exported successfully.</string>
+    <string name="data_export_fail">Export failed: %s</string>
+
+    <!-- DATA / COURSES -->
+    <string name="data_courses_header">Courses</string>
+    <string name="data_courses_header_count">Courses (%d)</string>
+    <string name="data_course_code_hint">Course Code (e.g. CNG342)</string>
+    <string name="data_course_name_hint">Course Name</string>
+    <string name="data_theory_hours_hint">Theory Hrs</string>
+    <string name="data_lab_hours_hint">Lab Hrs</string>
+    <string name="data_credits_hint">Credits</string>
+    <string name="data_course_dept_label">Department</string>
+    <string name="data_course_empty">No courses added yet.</string>
+    <string name="data_course_added">Course saved.</string>
+    <string name="data_course_edit_title">Edit Course</string>
+    <string name="data_course_delete_title">Delete Course</string>
+    <string name="data_course_delete_message">Delete %1$s — %2$s?\nRelated offerings will also be deleted.</string>
+    <string name="data_no_courses_error">No courses yet. Add a course first.</string>
+    <string name="data_course_export_success">Courses exported successfully.</string>
+    <string name="data_course_import_count">%d course(s) imported.</string>
+
+    <!-- DATA / OFFERINGS -->
+    <string name="data_offerings_header">Course Offerings</string>
+    <string name="data_offerings_header_count">Course Offerings (%d)</string>
+    <string name="data_offering_course_label">Course</string>
+    <string name="data_offering_lecturer_optional">Lecturer (optional)</string>
+    <string name="data_offering_academic_year_hint">Academic Year (e.g. 2025-2026)</string>
+    <string name="data_offering_term_label">Term</string>
+    <string name="data_offering_class_year_label">Class Year</string>
+    <string name="data_offering_section_hint">Section (A, B…)</string>
+    <string name="data_offering_quota_hint">Capacity</string>
+    <string name="data_offering_add_button">Create Offering</string>
+    <string name="data_offering_empty">No offerings created yet.</string>
+    <string name="data_offering_added">Offering created.</string>
+    <string name="data_offering_updated">Offering updated.</string>
+    <string name="data_offering_edit_title">Edit Offering</string>
+    <string name="data_offering_delete_title">Delete Offering</string>
+    <string name="data_offering_delete_message">Delete %1$s %2$s? Related schedule entries will also be deleted.</string>
+
+    <!-- ASSIGNMENT -->
+    <string name="assignment_title">Course Assignment</string>
+    <string name="assignment_auto_button">Auto</string>
+    <string name="assignment_offering_label">Course Offering</string>
+    <string name="assignment_offering_hint">Search course…</string>
+    <string name="assignment_lecturer_label">Lecturer</string>
+    <string name="assignment_lecturer_hint">Search lecturer…</string>
+    <string name="assignment_classroom_label">Classroom</string>
+    <string name="assignment_classroom_hint">Search classroom…</string>
+    <string name="assignment_day_label">Day</string>
+    <string name="assignment_start_hint">Start Time (HH:mm)</string>
+    <string name="assignment_end_hint">End Time (HH:mm)</string>
+    <string name="assignment_assign_button">Assign</string>
+    <string name="assignment_current_title">Current Assignments</string>
+    <string name="assignment_success">Assignment saved.</string>
+    <string name="assignment_invalid_selection">Please select a valid course and classroom.</string>
+    <string name="assignment_select_time">Select Time</string>
+    <string name="assignment_delete_title">Delete Assignment</string>
+    <string name="assignment_delete_message">Remove %1$s (%2$s %3$s)?</string>
+    <string name="assignment_conflict_title">Conflict Detected</string>
+    <string name="assignment_force_assign">Assign Anyway</string>
+    <string name="assignment_lecturer_short">Lecturer: %s</string>
+    <string name="assignment_classroom_short">Classroom: %s</string>
+
+    <!-- AVAILABILITY -->
+    <string name="availability_title">My Busy Hours</string>
+    <string name="availability_subtitle">Mark the time slots when you are NOT available.</string>
+    <string name="availability_add_button">Add Busy Slot</string>
+    <string name="availability_weekly_title">Weekly View</string>
+    <string name="availability_legend">Green: Available  •  Red: Busy  •  Blue: Assigned Course</string>
+    <string name="availability_added">Busy slot added.</string>
+    <string name="availability_slot_added">Busy slot added.</string>
+    <string name="availability_remove_title">Remove Busy Slot</string>
+    <string name="availability_remove_message">Remove %1$s %2$s busy slot?</string>
+    <string name="availability_remove_button">Remove</string>
+    <string name="availability_start_hint">Start</string>
+    <string name="availability_end_hint">End</string>
+    <string name="availability_select_time">Select Time</string>
+    <string name="availability_time_pick_title">Select Time</string>
+
+    <!-- LECTURER HOME -->
+    <string name="lecturer_home_this_week">This Week</string>
+    <string name="lecturer_home_assigned_courses">assigned courses</string>
+    <string name="lecturer_home_welcome">Welcome, %s</string>
+
+    <!-- ADMIN HOME -->
+    <string name="admin_home_title">Admin Panel</string>
+    <string name="admin_home_unassigned_lecturers">Unassigned Lecturers</string>
+    <string name="admin_home_unassigned_courses">Courses Without Offerings</string>
+    <string name="admin_home_available_classrooms">Available Classrooms</string>
+
+    <!-- SETTINGS / DEPARTMENTS -->
+    <string name="settings_title">Departments</string>
+    <string name="settings_add_dept">Add New Department</string>
+    <string name="settings_dept_name_hint">Department Name</string>
+    <string name="settings_existing_depts">Existing Departments</string>
+    <string name="settings_dept_added">Department added.</string>
+    <string name="settings_dept_updated">Department updated.</string>
+    <string name="settings_dept_deleted">Department deleted.</string>
+    <string name="settings_dept_edit_title">Edit Department</string>
+    <string name="settings_dept_delete_title">Delete Department</string>
+    <string name="settings_dept_delete_message">Delete \"%s\"? Related lecturers and courses may be affected.</string>
+
+    <!-- SETTINGS / LANGUAGE SWITCHER -->
+    <string name="settings_language_card_title">Language</string>
+    <string name="settings_language_card_subtitle">Choose app language</string>
+    <string name="settings_language_system">System</string>
+    <string name="settings_language_turkish">Türkçe</string>
+    <string name="settings_language_english">English</string>
+
+    <!-- AUTO SCHEDULE -->
+    <string name="auto_schedule_toolbar_title">Auto-Generate Schedule</string>
+    <string name="auto_schedule_algorithm_settings">Algorithm Settings</string>
+    <string name="auto_schedule_algorithm_desc">Automatically place courses not yet in the schedule. Adjust settings as needed.</string>
+    <string name="auto_schedule_compactness_title">Student Schedule Layout</string>
+    <string name="auto_schedule_compactness_desc">Daily course layout for students in the same class and section</string>
+    <string name="auto_schedule_compact">Compact (back-to-back or minimal gaps)</string>
+    <string name="auto_schedule_spread">Spread (gaps between courses)</string>
+    <string name="auto_schedule_no_preference">No preference (free placement)</string>
+    <string name="auto_schedule_max_daily_title">Lecturer Daily Course Limit</string>
+    <string name="auto_schedule_max_daily_desc">Maximum courses a lecturer can teach in one day (0 = unlimited)</string>
+    <string name="auto_schedule_no_limit">None</string>
+    <string name="auto_schedule_day_balance_title">Day Balancing</string>
+    <string name="auto_schedule_day_balance_desc">Distribute courses evenly across weekdays</string>
+    <string name="auto_schedule_pref_time_title">Preferred Time Range</string>
+    <string name="auto_schedule_pref_time_desc">Slots in this range are prioritized (leave empty to treat all slots equally)</string>
+    <string name="auto_schedule_alt_count_title">Number of Alternatives</string>
+    <string name="auto_schedule_alt_count_desc">How many alternative schedules to generate</string>
+    <string name="auto_schedule_generate_button">Generate Schedule</string>
+    <string name="auto_schedule_loading_title">Generating schedule…</string>
+    <string name="auto_schedule_loading_desc">Checking constraints, finding best placement</string>
+    <string name="auto_schedule_unplaceable_title">Unplaceable Courses</string>
+    <string name="auto_schedule_approve_title">Approve Schedule</string>
+    <string name="auto_schedule_approve_message">The generated schedule will be saved. Do you want to continue?</string>
+    <string name="auto_schedule_approve_confirm">Approve and Save</string>
+    <string name="auto_schedule_cancel">Cancel</string>
+    <string name="auto_schedule_regenerate">Regenerate</string>
+    <string name="auto_schedule_retry">Try Again</string>
+    <string name="auto_schedule_saving">Saving…</string>
+    <string name="auto_schedule_saved_count">%d course(s) saved successfully!</string>
+    <string name="auto_schedule_save_success">%d course(s) saved successfully!</string>
+    <string name="auto_schedule_ready">Schedule Ready</string>
+    <string name="auto_schedule_result_full">Schedule Ready</string>
+    <string name="auto_schedule_partial">Partial Schedule Generated</string>
+    <string name="auto_schedule_result_partial">Partial Schedule Generated</string>
+    <string name="auto_schedule_assigned_count">Placed: %d courses</string>
+    <string name="auto_schedule_unassigned_count">Unplaced: %d courses</string>
+    <string name="auto_schedule_score">Success: %1$d%% • Quality score: %2$d/100</string>
+    <string name="auto_schedule_score_text">Success: %1$d%% • Quality score: %2$d/100</string>
+    <string name="auto_schedule_alt_info">Alternative %1$d / %2$d</string>
+    <string name="auto_schedule_pinned_label"> [PINNED]</string>
+    <string name="auto_schedule_pin">Pin (keep on regeneration)</string>
+    <string name="auto_schedule_pin_action">Pin (keep on regeneration)</string>
+    <string name="auto_schedule_unpin">Unpin</string>
+    <string name="auto_schedule_unpin_action">Unpin</string>
+    <string name="auto_schedule_remove_action">Remove</string>
+    <string name="auto_schedule_class_info">Year %1$d, Section %2$s</string>
+
+    <!-- WEEKLY SCHEDULE -->
+    <string name="weekly_schedule_title">Course Schedule</string>
+    <string name="weekly_schedule_empty">No course assignments yet.</string>
+
+    <!-- CONFLICT DIALOG -->
+    <string name="conflict_availability_title">Availability Warning</string>
+    <string name="conflict_lecturer_title">Lecturer Conflict</string>
+    <string name="conflict_classroom_title">Classroom Conflict</string>
+
+    <!-- IMPORT PREVIEW DIALOG -->
+    <string name="import_preview_found_rows">%d rows found</string>
+    <string name="import_preview_select_all">Select All</string>
+    <string name="import_preview_select_none">None</string>
+    <string name="import_preview_selected_count">%1$d / %2$d selected</string>
+    <string name="import_preview_import_button">Import Selected</string>
+    <string name="import_preview_no_rows">No importable rows found in file.</string>
+    <string name="import_preview_no_valid_rows">No valid rows. %d rows skipped:</string>
+    <string name="import_preview_title_classrooms">Import Classrooms</string>
+    <string name="import_preview_title_courses">Import Courses</string>
+    <string name="import_preview_title_lecturers">Import Lecturers</string>
+    <string name="import_preview_dept_target">Department: %s</string>
+    <string name="import_dialog_title">Import</string>
+    <string name="import_error_title">Import Error</string>
+    <string name="import_result_title">Import Complete</string>
+    <string name="import_result_credentials_header">Generated credentials:</string>
+    <string name="import_result_errors_header">Errors:</string>
+    <string name="import_copy_users">Copy Users</string>
+    <string name="import_all_copied">All users copied to clipboard.</string>
+    <string name="import_lecturer_target">Department: %1$s  •  Username + temporary password will be auto-generated</string>
+    <string name="import_load_depts_first">Load departments first.</string>
+
+    <!-- ITEM LABELS -->
+    <string name="item_delete">Delete</string>
+    <string name="item_remove">Remove</string>
+    <string name="item_edit_description">Edit</string>
+    <string name="item_delete_description">Delete</string>
+
+    <!-- DAYS -->
+    <string name="day_monday">Monday</string>
+    <string name="day_tuesday">Tuesday</string>
+    <string name="day_wednesday">Wednesday</string>
+    <string name="day_thursday">Thursday</string>
+    <string name="day_friday">Friday</string>
+    <string name="day_saturday">Saturday</string>
+    <string name="day_sunday">Sunday</string>
+</resources>

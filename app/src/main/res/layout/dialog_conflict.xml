@@ -24,10 +24,10 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Müsaitlik Uyarısı"
+                android:text="@string/conflict_availability_title"
                 android:textStyle="bold"
                 android:textSize="14sp"
-                android:textColor="#E65100"
+                android:textColor="@color/color_warning"
                 android:drawablePadding="6dp" />
 
             <TextView
@@ -36,7 +36,7 @@
                 android:layout_height="wrap_content"
                 android:textSize="13sp"
                 android:layout_marginTop="6dp"
-                android:textColor="#424242" />
+                android:textColor="?attr/colorOnSurface" />
         </LinearLayout>
 
         <LinearLayout
@@ -52,10 +52,10 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Hoca Çakışması"
+                android:text="@string/conflict_lecturer_title"
                 android:textStyle="bold"
                 android:textSize="14sp"
-                android:textColor="#B71C1C" />
+                android:textColor="@color/color_conflict" />
 
             <LinearLayout
                 android:id="@+id/containerLecturerConflicts"
@@ -78,10 +78,10 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Derslik Çakışması"
+                android:text="@string/conflict_classroom_title"
                 android:textStyle="bold"
                 android:textSize="14sp"
-                android:textColor="#B71C1C" />
+                android:textColor="@color/color_conflict" />
 
             <LinearLayout
                 android:id="@+id/containerClassroomConflicts"

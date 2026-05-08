@@ -12,7 +12,9 @@ import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.unischeduler.R
 import com.unischeduler.data.model.Classroom
@@ -21,9 +23,15 @@ import com.unischeduler.databinding.FragmentClassroomsBinding
 import com.unischeduler.databinding.ItemClassroomBinding
 import com.unischeduler.util.CsvExporter
 import com.unischeduler.util.CsvImporter
+import com.unischeduler.util.ErrorReporter
 import com.unischeduler.util.ExcelHelper
+import com.unischeduler.util.FileTypeDetector
+import com.unischeduler.util.ImportPreviewDialog
 import com.unischeduler.util.UiState
 import com.unischeduler.util.collectFlow
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class ClassroomsFragment : Fragment() {
 
@@ -35,6 +43,8 @@ class ClassroomsFragment : Fragment() {
     private var classrooms: List<Classroom>   = emptyList()
     private val classroomTypes = listOf("theory", "lab")
 
+    private lateinit var classroomAdapter: ClassroomAdapter
+
     private lateinit var classroomImportLauncher: ActivityResultLauncher<String>
     private lateinit var classroomExportLauncher: ActivityResultLauncher<String>
 
@@ -43,29 +53,17 @@ class ClassroomsFragment : Fragment() {
 
         classroomImportLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             uri ?: return@registerForActivityResult
-            val inputStream = requireContext().contentResolver.openInputStream(uri) ?: return@registerForActivityResult
-
-            if (isExcelFile(uri)) {
-                val result = ExcelHelper.importClassrooms(inputStream)
-                inputStream.close()
-                showImportPreview(CsvImporter.ParseResult(result.valid, result.errors))
-            } else {
-                val text = inputStream.bufferedReader().readText()
-                inputStream.close()
-                val result = CsvImporter.parseClassrooms(text)
-                showImportPreview(result)
-            }
+            handleClassroomImport(uri)
         }
 
         classroomExportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) { uri ->
             uri ?: return@registerForActivityResult
             try {
                 val outputStream = requireContext().contentResolver.openOutputStream(uri) ?: return@registerForActivityResult
-                ExcelHelper.exportClassrooms(classrooms, outputStream)
-                outputStream.close()
-                Toast.makeText(requireContext(), "Classrooms exported successfully.", Toast.LENGTH_SHORT).show()
+                outputStream.use { ExcelHelper.exportClassrooms(classrooms, it) }
+                Toast.makeText(requireContext(), getString(R.string.classroom_export_success), Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), getString(R.string.classroom_export_fail, e.message), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -79,6 +77,12 @@ class ClassroomsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.rvClassrooms.layoutManager = LinearLayoutManager(requireContext())
+        binding.rvClassrooms.isNestedScrollingEnabled = false
+        classroomAdapter = ClassroomAdapter(
+            onEditClick   = { showEditDialog(it) },
+            onDeleteClick = { showDeleteDialog(it) }
+        )
+        binding.rvClassrooms.adapter = classroomAdapter
 
         // Type spinner (theory/lab)
         binding.spinnerType.adapter = ArrayAdapter(
@@ -93,7 +97,7 @@ class ClassroomsFragment : Fragment() {
 
         collectFlow(viewModel.departments) { depts ->
             departments = depts
-            val names = listOf("— None —") + depts.map { it.name }
+            val names = listOf(getString(R.string.common_none_option)) + depts.map { it.name }
             binding.spinnerDept.adapter = ArrayAdapter(
                 requireContext(), android.R.layout.simple_spinner_item, names
             ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
@@ -107,7 +111,7 @@ class ClassroomsFragment : Fragment() {
                 is UiState.Success -> {
                     showLoading(false)
                     classrooms = state.data
-                    binding.rvClassrooms.adapter = ClassroomAdapter(state.data) { showDeleteDialog(it) }
+                    classroomAdapter.submitList(state.data)
                 }
             }
         }
@@ -128,8 +132,23 @@ class ClassroomsFragment : Fragment() {
                     binding.etCapacity.text?.clear()
                     binding.spinnerType.setSelection(0)
                     binding.spinnerDept.setSelection(0)
-                    Toast.makeText(requireContext(), "Classroom added.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.classroom_added), Toast.LENGTH_SHORT).show()
                     viewModel.resetAddState()
+                }
+            }
+        }
+
+        collectFlow(viewModel.editState) { state ->
+            when (state) {
+                is UiState.Idle    -> Unit
+                is UiState.Loading -> Unit
+                is UiState.Error   -> {
+                    Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
+                    viewModel.resetEditState()
+                }
+                is UiState.Success -> {
+                    Toast.makeText(requireContext(), getString(R.string.classroom_updated), Toast.LENGTH_SHORT).show()
+                    viewModel.resetEditState()
                 }
             }
         }
@@ -145,7 +164,7 @@ class ClassroomsFragment : Fragment() {
                 }
                 is UiState.Success -> {
                     binding.btnImportClassrooms.isEnabled = true
-                    Toast.makeText(requireContext(), "${state.data} classroom(s) imported.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.classroom_import_count, state.data), Toast.LENGTH_SHORT).show()
                     viewModel.resetImportState()
                 }
             }
@@ -167,10 +186,63 @@ class ClassroomsFragment : Fragment() {
 
     private fun showDeleteDialog(classroom: Classroom) {
         AlertDialog.Builder(requireContext())
-            .setTitle("Delete Classroom")
-            .setMessage("Delete ${classroom.roomCode}? Any related schedule entries will also be removed.")
-            .setPositiveButton("Delete") { _, _ -> viewModel.deleteClassroom(classroom.id) }
-            .setNegativeButton("Cancel", null)
+            .setTitle(getString(R.string.classroom_delete_title))
+            .setMessage(getString(R.string.classroom_delete_message, classroom.roomCode))
+            .setPositiveButton(getString(R.string.common_delete)) { _, _ -> viewModel.deleteClassroom(classroom.id) }
+            .setNegativeButton(getString(R.string.common_cancel), null)
+            .show()
+    }
+
+    private fun showEditDialog(classroom: Classroom) {
+        val container = android.widget.LinearLayout(requireContext()).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(48, 32, 48, 16)
+        }
+        val etCode = android.widget.EditText(requireContext()).apply {
+            setText(classroom.roomCode); hint = getString(R.string.classroom_edit_code_hint)
+        }
+        val etCap = android.widget.EditText(requireContext()).apply {
+            setText(classroom.capacity.toString())
+            hint = getString(R.string.classroom_edit_capacity_hint)
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+        }
+        val typeSpinner = android.widget.Spinner(requireContext()).apply {
+            adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item,
+                classroomTypes.map { if (it == "lab") getString(R.string.classroom_type_lab) else getString(R.string.classroom_type_theory) }
+            ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+            setSelection(classroomTypes.indexOf(classroom.type).coerceAtLeast(0))
+        }
+        val deptSpinner = android.widget.Spinner(requireContext()).apply {
+            val names = listOf(getString(R.string.classroom_unassigned_option)) + departments.map { it.name }
+            adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, names)
+                .also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+            val curIdx = departments.indexOfFirst { it.id == classroom.departmentId }
+            setSelection(if (curIdx >= 0) curIdx + 1 else 0)
+        }
+
+        container.addView(etCode)
+        container.addView(etCap)
+        container.addView(android.widget.TextView(requireContext()).apply { text = getString(R.string.classroom_edit_type_label) })
+        container.addView(typeSpinner)
+        container.addView(android.widget.TextView(requireContext()).apply { text = getString(R.string.classroom_edit_dept_label) })
+        container.addView(deptSpinner)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.classroom_edit_title))
+            .setView(container)
+            .setPositiveButton(getString(R.string.common_save)) { _, _ ->
+                val deptIdx = deptSpinner.selectedItemPosition
+                val deptId  = if (deptIdx > 0) departments.getOrNull(deptIdx - 1)?.id else null
+                val type    = classroomTypes[typeSpinner.selectedItemPosition]
+                viewModel.updateClassroom(
+                    id = classroom.id,
+                    roomCode = etCode.text.toString(),
+                    capacity = etCap.text.toString(),
+                    departmentId = deptId,
+                    type = type
+                )
+            }
+            .setNegativeButton(getString(R.string.common_cancel), null)
             .show()
     }
 
@@ -179,24 +251,28 @@ class ClassroomsFragment : Fragment() {
         val deptName     = if (selectedPos > 0) departments.getOrNull(selectedPos - 1)?.name else null
         val departmentId = if (selectedPos > 0) departments.getOrNull(selectedPos - 1)?.id else null
 
-        val msg = buildString {
-            append("Found ${result.valid.size} valid row(s).")
-            if (result.errors.isNotEmpty()) {
-                append("\n\nSkipped ${result.errors.size} row(s):")
-                result.errors.take(5).forEach { append("\n• $it") }
-            }
-            append("\n\nDepartment: ${deptName ?: "None (unassigned)"}")
-            append("\nImport now?")
+        if (result.valid.isEmpty()) {
+            val errMsg = if (result.errors.isEmpty()) getString(R.string.import_preview_no_rows)
+            else "Geçerli satır yok. ${result.errors.size} satır atlandı:\n" +
+                 result.errors.take(5).joinToString("\n") { "• $it" }
+            AlertDialog.Builder(requireContext())
+                .setTitle(getString(R.string.import_dialog_title))
+                .setMessage(errMsg)
+                .setPositiveButton(getString(R.string.common_ok), null)
+                .show()
+            return
         }
 
-        AlertDialog.Builder(requireContext())
-            .setTitle("Import Classrooms")
-            .setMessage(msg)
-            .setPositiveButton("Import") { _, _ ->
-                if (result.valid.isNotEmpty()) viewModel.importClassrooms(result.valid, departmentId)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        ImportPreviewDialog.show(
+            context = requireContext(),
+            title = getString(R.string.import_preview_title_classrooms),
+            targetDescription = getString(R.string.import_preview_dept_target, deptName ?: getString(R.string.common_unassigned)),
+            rows = result.valid,
+            errors = result.errors,
+            titleProvider = { it.roomCode },
+            subtitleProvider = { "Kapasite: ${it.capacity}  •  ${if (it.type == "lab") "Laboratuvar" else "Teorik"}" },
+            onImport = { chosen -> viewModel.importClassrooms(chosen, departmentId) }
+        )
     }
 
     private fun showLoading(loading: Boolean) {
@@ -212,42 +288,97 @@ class ClassroomsFragment : Fragment() {
         binding.btnRetry.visibility    = if (retryable) View.VISIBLE else View.GONE
     }
 
-    private fun isExcelFile(uri: android.net.Uri): Boolean {
-        val uriStr = uri.toString().lowercase()
-        if (uriStr.endsWith(".xlsx") || uriStr.endsWith(".xls") ||
-            uriStr.contains(".xlsx") || uriStr.contains(".xls")) return true
-        val mime = requireContext().contentResolver.getType(uri)?.lowercase() ?: ""
-        return mime.contains("spreadsheet") || mime.contains("excel") || mime.contains("ms-excel")
+    private fun handleClassroomImport(uri: android.net.Uri) {
+        val ctx = requireContext()
+        try {
+            val kind = FileTypeDetector.detect(ctx, uri)
+            val parseResult: CsvImporter.ParseResult<CsvImporter.ClassroomRow> = when (kind) {
+                FileTypeDetector.Kind.XLSX, FileTypeDetector.Kind.XLS -> {
+                    val stream = ctx.contentResolver.openInputStream(uri)
+                        ?: return showImportFatal("Dosya açılamadı.")
+                    stream.use {
+                        val r = ExcelHelper.importClassrooms(it)
+                        CsvImporter.ParseResult(r.valid, r.errors)
+                    }
+                }
+                FileTypeDetector.Kind.CSV -> {
+                    val stream = ctx.contentResolver.openInputStream(uri)
+                        ?: return showImportFatal("Dosya açılamadı.")
+                    val text = stream.use { it.bufferedReader().readText() }
+                    CsvImporter.parseClassrooms(text)
+                }
+                FileTypeDetector.Kind.UNKNOWN ->
+                    return showImportFatal("Dosya tipi tanınamadı. Lütfen .xlsx, .xls veya .csv yükleyin.")
+            }
+            logImportErrors("import_classrooms", uri, kind, parseResult.errors, parseResult.valid.size)
+            showImportPreview(parseResult)
+        } catch (e: Exception) {
+            reportImportFatal("import_classrooms", uri, e)
+            showImportFatal("Dosya okuma hatası: ${e.message ?: e::class.java.simpleName}")
+        }
+    }
+
+    private fun showImportFatal(message: String) {
+        AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.import_error_title))
+            .setMessage(message)
+            .setPositiveButton(getString(R.string.common_ok), null)
+            .show()
+    }
+
+    private fun logImportErrors(
+        action: String,
+        uri: android.net.Uri,
+        kind: FileTypeDetector.Kind,
+        errors: List<String>,
+        validCount: Int
+    ) {
+        if (errors.isEmpty()) return
+        val reporter = ErrorReporter(requireActivity().application)
+        val summary = "import: $kind, geçerli=$validCount, hatalı=${errors.size}\n" +
+                      errors.take(20).joinToString("\n") { "• $it" } +
+                      if (errors.size > 20) "\n…ve ${errors.size - 20} hata daha" else ""
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching { reporter.reportMessage("ClassroomsFragment", action, summary, stackTrace = uri.toString()) }
+        }
+    }
+
+    private fun reportImportFatal(action: String, uri: android.net.Uri, e: Throwable) {
+        val reporter = ErrorReporter(requireActivity().application)
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching { reporter.reportException("ClassroomsFragment", "$action[${uri}]", e) }
+        }
     }
 
     override fun onDestroyView() { super.onDestroyView(); _binding = null }
 }
 
 class ClassroomAdapter(
-    private val items: List<Classroom>,
+    private val onEditClick: (Classroom) -> Unit,
     private val onDeleteClick: (Classroom) -> Unit
-) : RecyclerView.Adapter<ClassroomAdapter.VH>() {
+) : ListAdapter<Classroom, ClassroomAdapter.VH>(DIFF) {
 
     inner class VH(val binding: ItemClassroomBinding) : RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
         VH(ItemClassroomBinding.inflate(LayoutInflater.from(parent.context), parent, false))
 
-    override fun getItemCount() = maxOf(items.size, 1)
-
     override fun onBindViewHolder(holder: VH, position: Int) {
-        if (items.isEmpty()) {
-            holder.binding.tvRoomCode.text   = "No classrooms yet."
-            holder.binding.tvCapacity.text   = ""
-            holder.binding.tvDepartment.text = ""
-            holder.binding.btnDeleteClassroom.visibility = View.GONE
-            return
-        }
-        val c = items[position]
+        val c = getItem(position)
         holder.binding.tvRoomCode.text   = c.roomCode
-        holder.binding.tvCapacity.text   = "Capacity: ${c.capacity}  •  ${c.type}"
+        val typeLabel = if (c.type == "lab") "Laboratuvar" else "Teorik"
+        holder.binding.tvCapacity.text   = "Kapasite: ${c.capacity}  •  $typeLabel"
         holder.binding.tvDepartment.text = c.departmentName
+        holder.binding.btnEditClassroom.visibility   = View.VISIBLE
         holder.binding.btnDeleteClassroom.visibility = View.VISIBLE
+        holder.binding.btnEditClassroom.setOnClickListener   { onEditClick(c) }
         holder.binding.btnDeleteClassroom.setOnClickListener { onDeleteClick(c) }
+    }
+
+    companion object {
+        private val DIFF = object : DiffUtil.ItemCallback<Classroom>() {
+            override fun areItemsTheSame(old: Classroom, new: Classroom) = old.id == new.id
+            override fun areContentsTheSame(old: Classroom, new: Classroom) = old == new
+        }
     }
 }
