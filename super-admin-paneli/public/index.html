@@ -35,6 +35,7 @@
         <a href="#" data-page="availability" id="nav-availability"><i class="bi bi-calendar-check"></i> Musaitlik</a>
         <div class="section-title">Izleme</div>
         <a href="#" data-page="logs" id="nav-logs"><i class="bi bi-exclamation-triangle"></i> Hata Loglari</a>
+        <a href="#" data-page="security" id="nav-security"><i class="bi bi-shield-lock"></i> Giris Denemeleri</a>
         <div class="sidebar-footer"><button class="btn btn-outline-danger btn-sm w-100" id="btnLogout"><i class="bi bi-box-arrow-left"></i> Cikis Yap</button></div>
     </div>
 
@@ -51,10 +52,24 @@
             <div class="page-header"><div><h1 class="page-title">Organizasyonlar</h1><p class="page-subtitle">Universiteleri yonetin</p></div></div>
             <div class="card">
                 <h3>Yeni Organizasyon Ekle</h3>
-                <div class="row g-2 align-items-end">
-                    <div class="col-md-4"><label class="form-label">Ad</label><input type="text" class="form-control" id="orgName" placeholder="Marmara Universitesi"></div>
-                    <div class="col-md-4"><label class="form-label">Kod</label><input type="text" class="form-control" id="orgCode" placeholder="marmara"></div>
-                    <div class="col-auto"><button class="btn btn-primary" id="btnAddOrg">Ekle</button></div>
+                <!-- align-items-start so each column's label sits at the
+                     same Y; the help text under the code input no longer
+                     pushes the name field's input out of horizontal
+                     alignment. The submit button gets a top margin equal
+                     to the label height so it lines up with the inputs. -->
+                <div class="row g-2 align-items-start">
+                    <div class="col-md-5">
+                        <label class="form-label">Ad</label>
+                        <input type="text" class="form-control" id="orgName" placeholder="Marmara Üniversitesi">
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label">Kısa Kod</label>
+                        <input type="text" class="form-control" id="orgCode" placeholder="MARMARA" maxlength="20">
+                        <small class="text-muted d-block mt-1">2-20 karakter • büyük harf, rakam, _ ve -</small>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end" style="padding-top: 30px;">
+                        <button class="btn btn-primary w-100" id="btnAddOrg">Ekle</button>
+                    </div>
                 </div>
                 <div id="orgAlert" class="mt-2"></div>
             </div>
@@ -270,6 +285,106 @@
             </div>
             <div id="logStats" class="stats-grid mb-3"></div>
             <div class="card"><h3>Son 200 Log</h3><div id="logList"><div class="loading">Yukleniyor...</div></div></div>
+        </div>
+
+        <!-- Security / threat-intel page (P3) -->
+        <div id="page-security" class="page-content d-none">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Giris Denemeleri (CTI)</h1>
+                    <p class="page-subtitle">Tum giris hareketleri — cihaz parmak izi, IP, kullanici, basari/basarisizlik</p>
+                </div>
+            </div>
+
+            <div class="org-selector">
+                <label>Pencere:</label>
+                <select class="form-select" id="secWindow" style="max-width:160px;">
+                    <option value="1h">Son 1 saat</option>
+                    <option value="24h">Son 24 saat</option>
+                    <option value="7d" selected>Son 7 gun</option>
+                    <option value="30d">Son 30 gun</option>
+                </select>
+                <label class="ms-3">Kullanici:</label>
+                <input type="text" class="form-control" id="secUser" style="max-width:200px;" placeholder="(filtre - tum)">
+                <label class="ms-3">
+                    <input type="checkbox" id="secOnlyFailed"> Sadece basarisiz
+                </label>
+                <button class="btn btn-sm btn-primary ms-3" id="btnSecRefresh">
+                    <i class="bi bi-arrow-clockwise"></i> Yenile
+                </button>
+            </div>
+
+            <!-- Risk threshold tuning (analyst can adjust without redeploy) -->
+            <div class="card">
+                <h3>
+                    <i class="bi bi-sliders"></i> Risk Eşikleri
+                    <small class="text-muted ms-2" style="font-size:0.8rem;font-weight:normal">
+                        Sadece izleme/skorlama icin — bloklama yok, sadece işaretleme
+                    </small>
+                </h3>
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label" title="Risk skoru +20 (sari) eşiği">Sari (orta) — Basarisiz Sayisi</label>
+                        <input type="number" class="form-control form-control-sm" id="thFailMid" value="5" min="1" max="50">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label" title="Risk skoru +40 (kirmizi) eşiği">Kirmizi (yuksek) — Basarisiz Sayisi</label>
+                        <input type="number" class="form-control form-control-sm" id="thFailHigh" value="10" min="1" max="100">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Cihaz Basina Kullanici (sari)</label>
+                        <input type="number" class="form-control form-control-sm" id="thChurnMid" value="3" min="1" max="50">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Cihaz Basina Kullanici (kirmizi)</label>
+                        <input type="number" class="form-control form-control-sm" id="thChurnHigh" value="5" min="1" max="100">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Pencere (dakika)</label>
+                        <input type="number" class="form-control form-control-sm" id="thWindowMin" value="15" min="5" max="1440">
+                    </div>
+                    <div class="col-md-2 d-flex">
+                        <button class="btn btn-sm btn-outline-secondary w-100" id="btnSecResetThresholds">
+                            <i class="bi bi-arrow-counterclockwise"></i> Varsayilana Don
+                        </button>
+                    </div>
+                </div>
+                <small class="text-muted d-block mt-2">
+                    Değişiklikler "Yenile" tuşuna basildiğinda uygulanir. <strong>Bu sayfa sadece super admin tarafindan görulur</strong> — admin'lere acik değildir.
+                </small>
+            </div>
+
+            <!-- Stats grid -->
+            <div id="secStats" class="stats-grid mb-3"></div>
+
+            <!-- Top threats -->
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <div class="card">
+                        <h3>Saldiriya Ugrayan Kullanicilar</h3>
+                        <div id="secTopUsers"><div class="loading">Yukleniyor...</div></div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <h3>Supheli Cihazlar</h3>
+                        <small class="text-muted d-block mb-2">3+ farkli kullanici denemis ya da 3+ basarisiz giris</small>
+                        <div id="secSusDevices"><div class="loading">Yukleniyor...</div></div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <h3>IP Yogunlugu</h3>
+                        <div id="secTopIps"><div class="loading">Yukleniyor...</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed log -->
+            <div class="card">
+                <h3>Tum Denemeler</h3>
+                <div id="secAttempts"><div class="loading">Yukleniyor...</div></div>
+            </div>
         </div>
     </div>
 

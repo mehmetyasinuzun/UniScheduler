@@ -10,6 +10,7 @@ import com.unischeduler.util.ErrorMessages
 import com.unischeduler.util.ErrorReporter
 import com.unischeduler.util.SessionManager
 import com.unischeduler.util.UiState
+import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,32 +42,50 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
 
         viewModelScope.launch {
             _state.value = UiState.Loading
+            // attemptStep tracks which phase we were in when something
+            // failed — used by the audit logger so an admin can see
+            // "auth failed" vs. "profile fetch failed" without parsing
+            // the message text.
+            var attemptStep = "signIn"
             runCatching {
                 withContext(Dispatchers.IO) {
                     // 1. Sign in via Supabase GoTrue — obtains JWT.
-                    //    AuthRepository.signIn() also tears down stale Realtime
-                    //    subscriptions and the previous JWT before authenticating.
-                    try {
-                        repo.signIn(attemptedUsername, password)
-                    } catch (e: Exception) {
-                        throw IllegalArgumentException("Invalid username or password.")
-                    }
+                    //    Critically, we DO NOT swallow the Supabase
+                    //    exception here. The original message ("Invalid
+                    //    login credentials" / "Email not confirmed" /
+                    //    "Network is unreachable" / etc.) is what the
+                    //    user needs to see; ErrorMessages.map will
+                    //    translate it to Turkish. Wrapping it as a
+                    //    generic "Invalid username or password" was
+                    //    masking real problems (e.g. mis-confirmed
+                    //    auth users, expired projects).
+                    repo.signIn(attemptedUsername, password)
 
+                    attemptStep = "fetchProfile"
                     // 2. Fetch user profile from public.users
                     val user = repo.getCurrentUserProfile()
-                        ?: throw IllegalStateException("User profile not found. Contact admin.")
+                        ?: throw IllegalStateException(
+                            "Kimlik doğrulandı ama public.users içinde profil yok. " +
+                            "Süper admin panelinden bu kullanıcıyı yeniden ekleyin."
+                        )
 
                     val orgId = user.orgId
                     if (orgId <= 0) {
-                        throw IllegalStateException("Organization is missing for this account.")
+                        throw IllegalStateException(
+                            "Bu hesap bir kuruma bağlı değil (org_id=$orgId). Yöneticiyle iletişime geçin."
+                        )
                     }
 
+                    attemptStep = "fetchLecturer"
                     // 3. If lecturer, fetch lecturer profile
                     val lecturer = if (user.role == "lecturer") {
                         repo.getLecturerByUserId(user.id, orgId)
-                            ?: throw IllegalStateException("Lecturer profile not found. Please contact admin.")
+                            ?: throw IllegalStateException(
+                                "Hocaya ait bir profil bulunamadı. Yöneticiyle iletişime geçin."
+                            )
                     } else null
 
+                    attemptStep = "persistSession"
                     // 4. Save session
                     session.userId     = user.id
                     session.orgId      = orgId
@@ -78,10 +97,13 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }.onSuccess { result ->
                 _state.value = UiState.Success(result)
+                // Successful login — record the attempt for audit/CTI.
+                recordLoginAttempt(attemptedUsername, succeeded = true)
             }.onFailure { e ->
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 _state.value = UiState.Error(ErrorMessages.map(e), retryable = false)
-                reportError("login", e, attemptedUsername)
+                reportError("login.$attemptStep", e, attemptedUsername)
+                recordLoginAttempt(attemptedUsername, succeeded = false, failureStep = attemptStep)
             }
         }
     }
@@ -91,6 +113,85 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
             errorReporter.reportException("LoginViewModel", action, e, usernameOverride = username)
         }
     }
+
+    /**
+     * Records every login attempt (success or failure) into the
+     * login_attempts table for audit / threat-intelligence.
+     *
+     * Best-effort — if the write fails (offline, RLS denies, table
+     * missing on legacy schema) we silently drop. The login UX is
+     * the priority; we never want a logging failure to mask the
+     * authentication outcome.
+     *
+     * Privacy note: device_id is a HASH of (manufacturer + model +
+     * Settings.Secure.ANDROID_ID), NOT the raw values. ANDROID_ID
+     * resets on factory reset, which is the granularity we want for
+     * CTI: catches the same attacker hopping accounts on one device,
+     * doesn't track an end-user across two phones. The hash means
+     * even if the database leaks, no raw identifier escapes.
+     *
+     * IP address is filled in server-side by the panel — clients
+     * can't see their own egress IP reliably.
+     */
+    private fun recordLoginAttempt(
+        username: String,
+        succeeded: Boolean,
+        failureStep: String? = null
+    ) {
+        val app = getApplication<Application>()
+        val deviceId = deviceFingerprint(app)
+        val model    = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
+        val osVer    = "Android ${android.os.Build.VERSION.RELEASE} (SDK ${android.os.Build.VERSION.SDK_INT})"
+        val appVer   = com.unischeduler.BuildConfig.VERSION_NAME
+        val ua       = "UniScheduler/$appVer (Android ${android.os.Build.VERSION.RELEASE})"
+
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                com.unischeduler.data.remote.SupabaseClient.client.postgrest["login_attempts"]
+                    .insert(LoginAttemptRow(
+                        username     = username,
+                        succeeded    = succeeded,
+                        userAgent    = ua,
+                        deviceId     = deviceId,
+                        deviceModel  = model.take(120),
+                        osVersion    = osVer,
+                        appVersion   = appVer,
+                        source       = "mobile",
+                        failureStep  = failureStep
+                    ))
+            }
+        }
+    }
+
+    /** Stable, salted hash of (manufacturer + model + ANDROID_ID).
+     *  Returns the same value on the same device across launches and
+     *  app reinstalls; resets on factory reset. */
+    private fun deviceFingerprint(ctx: android.content.Context): String {
+        return runCatching {
+            val androidId = android.provider.Settings.Secure.getString(
+                ctx.contentResolver,
+                android.provider.Settings.Secure.ANDROID_ID
+            ) ?: "unknown"
+            val raw = "${android.os.Build.MANUFACTURER}:${android.os.Build.MODEL}:$androidId:UniScheduler"
+            val md = java.security.MessageDigest.getInstance("SHA-256")
+            md.digest(raw.toByteArray(Charsets.UTF_8))
+                .joinToString("") { "%02x".format(it) }
+                .substring(0, 16)  // first 64 bits — collision-safe at our scale
+        }.getOrDefault("unknown")
+    }
+
+    @kotlinx.serialization.Serializable
+    private data class LoginAttemptRow(
+        val username: String,
+        val succeeded: Boolean,
+        @kotlinx.serialization.SerialName("user_agent")    val userAgent: String,
+        @kotlinx.serialization.SerialName("device_id")     val deviceId: String,
+        @kotlinx.serialization.SerialName("device_model")  val deviceModel: String,
+        @kotlinx.serialization.SerialName("os_version")    val osVersion: String,
+        @kotlinx.serialization.SerialName("app_version")   val appVersion: String,
+        val source: String,
+        @kotlinx.serialization.SerialName("failure_step")  val failureStep: String? = null
+    )
 
     private fun reportValidationError(action: String, message: String, username: String) {
         viewModelScope.launch(Dispatchers.IO) {

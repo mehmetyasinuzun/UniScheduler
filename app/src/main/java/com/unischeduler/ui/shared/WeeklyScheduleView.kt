@@ -427,7 +427,7 @@ class WeeklyScheduleView @JvmOverloads constructor(
     private fun formatTime(minutes: Int): String {
         val h = minutes / 60
         val m = minutes % 60
-        return String.format("%02d:%02d", h, m)
+        return String.format(java.util.Locale.US, "%02d:%02d", h, m)
     }
 
     private fun toMinutes(time: String): Int {

@@ -127,19 +127,56 @@ const supabase = createClient(supabaseUrl, serviceKey, {
 });
 
 // ── Auth Endpoints ───────────────────────────────────────────────────
-app.post('/api/auth/login', (req, res) => {
-    const ip = req.ip || req.connection.remoteAddress;
+app.post('/api/auth/login', async (req, res) => {
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+        || req.ip || req.connection.remoteAddress;
     if (!checkRateLimit(ip)) {
+        // Even rate-limit hits go to login_attempts so the CTI dashboard
+        // surfaces "this IP is hammering us" without us having to grep
+        // the application logs.
+        recordPanelLoginAttempt({
+            username: req.body?.username || '(unknown)',
+            succeeded: false,
+            ip,
+            ua: req.headers['user-agent'],
+            failureStep: 'rateLimit'
+        });
         return res.status(429).json({ error: 'Too many login attempts. Try again later.' });
     }
     const { username, password } = req.body;
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+    const ok = (username === ADMIN_USERNAME && password === ADMIN_PASSWORD);
+
+    recordPanelLoginAttempt({
+        username: username || '(empty)',
+        succeeded: ok,
+        ip,
+        ua: req.headers['user-agent'],
+        failureStep: ok ? null : 'auth'
+    });
+
+    if (ok) {
         const token = crypto.randomBytes(32).toString('hex');
         activeSessions.set(token, { createdAt: Date.now() });
         return res.json({ token });
     }
     return res.status(401).json({ error: 'Invalid credentials.' });
 });
+
+/**
+ * Fire-and-forget recorder for panel-side login attempts. Service-role
+ * bypasses RLS so we can write straight to login_attempts. Failures
+ * here MUST NOT break the login response — it's an audit side-channel.
+ */
+function recordPanelLoginAttempt({ username, succeeded, ip, ua, failureStep }) {
+    supabase.from('login_attempts').insert({
+        username:     username,
+        succeeded:    succeeded,
+        ip_address:   ip || null,
+        user_agent:   (ua || '').substring(0, 250),
+        source:       'panel',
+        failure_step: failureStep
+    }).then(() => {}).catch(() => { /* never block auth */ });
+}
 
 app.post('/api/auth/logout', (req, res) => {
     const token = extractToken(req);
@@ -245,11 +282,51 @@ app.get('/api/organizations', async (req, res) => {
 
 app.post('/api/organizations', async (req, res) => {
     const { name, code } = req.body;
-    if (!name || !code) return res.status(400).json({ error: 'Name and code are required.' });
-    const { data, error } = await supabase.from('organizations').insert({ name, code }).select().single();
-    if (error) return res.status(400).json({ error: error.message });
+    if (!name || !code) {
+        return res.status(400).json({ error: 'Kurum adı ve kısa kodu zorunludur.' });
+    }
+    if (name.trim().length === 0) {
+        return res.status(400).json({ error: 'Kurum adı boş olamaz.' });
+    }
 
-    // Auto-create default org_settings for the new organization
+    // Auto-normalise: "Bilgi Üniversitesi" → "BILGI_UNIVERSITESI",
+    // "test" → "TEST", "ITÜ" → "ITU". Saves the user from having to
+    // memorise the regex our DB CHECK constraint uses.
+    const normalized = normalizeOrgCode(code);
+    if (!normalized) {
+        return res.status(400).json({
+            error: 'Kurum kısa kodu en az 2 karakter olmalı ve harf/rakam içermeli. ' +
+                   'Örnek: BILGI, ITU, MARMARA. (Türkçe karakterler ve boşluklar otomatik dönüştürülür.)'
+        });
+    }
+
+    const { data, error } = await supabase
+        .from('organizations')
+        .insert({ name: name.trim(), code: normalized })
+        .select()
+        .single();
+
+    if (error) {
+        // Map the most common DB-side rejection back to a user-friendly TR message.
+        const msg = (error.message || '').toLowerCase();
+        if (msg.includes('organizations_code_check')) {
+            return res.status(400).json({
+                error: `Kurum kısa kodu geçersiz biçimde: "${normalized}". ` +
+                       'Sadece büyük harf, rakam, _ ve - kullanılabilir; uzunluk 2-20 olmalı.'
+            });
+        }
+        if (msg.includes('duplicate key') || msg.includes('unique')) {
+            return res.status(400).json({
+                error: `"${normalized}" kodu zaten başka bir kurumda kullanılıyor. ` +
+                       'Farklı bir kısa kod seçin.'
+            });
+        }
+        return res.status(400).json({ error: error.message });
+    }
+
+    // Auto-create default org_settings for the new organization. We don't
+    // block on the result — settings can always be re-added later, and we
+    // don't want a partial failure here to hide the org creation success.
     await supabase.from('org_settings').insert({
         org_id: data.id,
         time_step_minutes: 10,
@@ -552,6 +629,26 @@ const TURKISH_MAP = {
 function normalizeText(text) {
     if (!text) return '';
     return text.split('').map(c => TURKISH_MAP[c] || c).join('').toLowerCase().replace(/[^a-z0-9_]/g, '');
+}
+
+/**
+ * Normalises an org code into the canonical form the database CHECK
+ * constraint accepts (^[A-Z0-9_-]{2,20}$). Replaces spaces with `_`,
+ * folds Turkish chars to ASCII, uppercases, drops anything outside the
+ * allowed alphabet, then truncates to 20 chars.
+ *
+ * Returns null if the result would be too short (<2 chars) — caller is
+ * expected to surface a clear error message.
+ */
+function normalizeOrgCode(text) {
+    if (!text) return null;
+    const folded = text
+        .split('').map(c => TURKISH_MAP[c] || c).join('')
+        .replace(/\s+/g, '_')
+        .toUpperCase()
+        .replace(/[^A-Z0-9_-]/g, '')
+        .substring(0, 20);
+    return folded.length >= 2 ? folded : null;
 }
 
 function stripTitle(name) {
@@ -1063,9 +1160,281 @@ process.on('unhandledRejection', (reason) => {
     logProcessError('unhandledRejection', reason instanceof Error ? reason : new Error(String(reason)));
 });
 
+// ═══════════════════════════════════════════════════════════════════════
+//  Production additions (FASE 1B)
+// ═══════════════════════════════════════════════════════════════════════
+//
+// All these endpoints rely on the production schema (schema.sql) — they
+// will return errors against the legacy schema. That's intentional: the
+// panel is meant to be deployed alongside the latest schema, and surfacing
+// a clear error is better than silently working with stale data.
+
+// ── Healthcheck ──
+//   Used by uptime monitors (Pingdom, UptimeRobot, custom cron) and load
+//   balancers. Authentication-free by design — checking /api/health
+//   shouldn't require credentials. Returns DB ping latency so monitors
+//   catch slow databases before they fail.
+app.get('/healthz', async (req, res) => {
+    const startedAt = Date.now();
+    try {
+        const { error } = await supabase.from('organizations').select('id').limit(1);
+        if (error) throw error;
+        res.json({
+            ok: true,
+            uptime_sec: Math.round(process.uptime()),
+            db_latency_ms: Date.now() - startedAt,
+            version: require('./package.json').version || '0.0.0'
+        });
+    } catch (e) {
+        res.status(503).json({ ok: false, error: 'database_unreachable' });
+    }
+});
+
+// ── Async route wrapper ──
+//   Eliminates the repeated `try { } catch (e) { res.status(500)... }` we
+//   would otherwise need on each endpoint. Throws bubble up to the
+//   centralised error middleware below.
+const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+// ── Pagination helper ──
+//   Parses ?page=1&pageSize=50, clamps pageSize to [1, 200] so a hostile
+//   caller can't ask for 100k rows. Returns Postgrest range tuple ready
+//   to plug into supabase-js .range(from, to).
+function paginate(req, defaultSize = 50) {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const size = Math.min(200, Math.max(1, parseInt(req.query.pageSize, 10) || defaultSize));
+    const from = (page - 1) * size;
+    const to   = from + size - 1;
+    return { page, pageSize: size, from, to };
+}
+
+// ── Org dashboard (uses the SQL view org_dashboard) ──
+app.get('/api/dashboard', wrap(async (req, res) => {
+    const { data, error } = await supabase.from('org_dashboard').select('*');
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+}));
+
+// ── Audit log viewer (admin's own org only — service_role bypasses RLS
+//   so we filter explicitly) ──
+app.get('/api/audit/:orgId', wrap(async (req, res) => {
+    const orgId = parseInt(req.params.orgId, 10);
+    const { from, to, page, pageSize } = paginate(req);
+    const { data, error, count } = await supabase
+        .from('audit_log')
+        .select('*', { count: 'exact' })
+        .eq('org_id', orgId)
+        .order('created_at', { ascending: false })
+        .range(from, to);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({
+        rows: data,
+        page, pageSize,
+        total: count ?? data.length,
+        hasMore: count != null && (from + data.length) < count
+    });
+}));
+
+// ── Login attempts (for "who is trying to log in as admin?" investigations) ──
+//
+// Query params:
+//   ?username=foo            — filter by exact username
+//   ?onlyFailed=1            — only failed attempts
+//   ?since=24h | 7d | 30d    — only recent (default 7d)
+//   ?page=&pageSize=         — pagination
+//
+// Each row is enriched with a basic "risk" score (0-100) based on:
+//   • per-username failure burst (>=5 fails in last 15 min → +40)
+//   • per-device username churn (one device, many usernames → +30)
+//   • mismatched success+failure pair on same device → +15
+//   • IP from unusual ASN — left to a future enrichment job (TODO)
+app.get('/api/login-attempts', wrap(async (req, res) => {
+    const { from, to, page, pageSize } = paginate(req, 100);
+
+    // ── Time window ──
+    const sinceArg = (req.query.since || '7d').toString();
+    const sinceMatch = /^(\d+)([hdw])$/.exec(sinceArg);
+    let sinceMs = 7 * 24 * 60 * 60 * 1000;
+    if (sinceMatch) {
+        const n = parseInt(sinceMatch[1], 10);
+        const unit = sinceMatch[2];
+        sinceMs = n * (unit === 'h' ? 36e5 : unit === 'd' ? 864e5 : 6048e5);
+    }
+    const sinceIso = new Date(Date.now() - sinceMs).toISOString();
+
+    let q = supabase.from('login_attempts')
+        .select('*', { count: 'exact' })
+        .gte('created_at', sinceIso)
+        .order('created_at', { ascending: false })
+        .range(from, to);
+    if (req.query.username) q = q.eq('username', req.query.username);
+    if (req.query.onlyFailed === '1') q = q.eq('succeeded', false);
+
+    const { data, error, count } = await q;
+    if (error) return res.status(500).json({ error: error.message });
+
+    // ── Risk scoring (in-memory, on the page slice — sufficient up
+    //    to ~50 k rows; revisit if usage grows) ──
+    //
+    // Thresholds are query parameters so the panel can let analysts
+    // experiment without redeploys. Defaults are conservative
+    // (aimed at "real" attacks, not noisy typo-prone users).
+    //
+    // Why these defaults:
+    //   • failHigh=10 / failMid=5 over 15-minute window: a real human
+    //     who forgets a password tries 2-3 times then gives up; 10+ is
+    //     a clear pattern. failMid is the early-warning yellow band.
+    //   • churnHigh=5 / churnMid=3 distinct usernames per device:
+    //     legitimate shared devices (kiosks, family tablets) might see
+    //     2-3 logins. 5+ from one device is almost certainly hostile.
+    //   • windowMin=15 minutes matches typical credential-stuffing
+    //     burst; expand to 60 if you're hunting low-and-slow attempts.
+    const failHigh  = parseInt(req.query.failHigh,  10) || 10;
+    const failMid   = parseInt(req.query.failMid,   10) || 5;
+    const churnHigh = parseInt(req.query.churnHigh, 10) || 5;
+    const churnMid  = parseInt(req.query.churnMid,  10) || 3;
+    const windowMin = parseInt(req.query.windowMin, 10) || 15;
+    const windowStart = Date.now() - windowMin * 60 * 1000;
+
+    const failsByUser = new Map();      // username  → failure count last `windowMin` min
+    const usersByDevice = new Map();    // device_id → Set<username>
+    for (const r of data) {
+        if (!r.succeeded && new Date(r.created_at).getTime() > windowStart) {
+            failsByUser.set(r.username, (failsByUser.get(r.username) || 0) + 1);
+        }
+        if (r.device_id) {
+            if (!usersByDevice.has(r.device_id)) usersByDevice.set(r.device_id, new Set());
+            usersByDevice.get(r.device_id).add(r.username);
+        }
+    }
+
+    const enriched = data.map(r => {
+        let risk = 0;
+        const userFails = failsByUser.get(r.username) || 0;
+        if (userFails >= failHigh) risk += 40;
+        else if (userFails >= failMid) risk += 20;
+        const deviceChurn = r.device_id ? (usersByDevice.get(r.device_id)?.size || 1) : 1;
+        if (deviceChurn >= churnHigh) risk += 30;
+        else if (deviceChurn >= churnMid) risk += 15;
+        if (!r.succeeded && r.failure_step === 'signIn') risk += 5;
+        return { ...r, risk: Math.min(100, risk) };
+    });
+
+    res.json({
+        rows: enriched,
+        page, pageSize,
+        total: count ?? data.length,
+        hasMore: count != null && (from + data.length) < count,
+        windowSince: sinceIso
+    });
+}));
+
+// ── Login attempts summary (top brute-force targets in window) ──
+app.get('/api/login-attempts/summary', wrap(async (req, res) => {
+    const sinceArg = (req.query.since || '7d').toString();
+    const sinceMatch = /^(\d+)([hdw])$/.exec(sinceArg);
+    let sinceMs = 7 * 24 * 60 * 60 * 1000;
+    if (sinceMatch) {
+        const n = parseInt(sinceMatch[1], 10);
+        const u = sinceMatch[2];
+        sinceMs = n * (u === 'h' ? 36e5 : u === 'd' ? 864e5 : 6048e5);
+    }
+    const sinceIso = new Date(Date.now() - sinceMs).toISOString();
+    const { data } = await supabase.from('login_attempts')
+        .select('username, succeeded, device_id, ip_address, created_at')
+        .gte('created_at', sinceIso)
+        .limit(50000);
+
+    const rows = data || [];
+    const byUser = new Map();
+    const byDevice = new Map();
+    const byIp = new Map();
+    let total = rows.length, failures = 0;
+    for (const r of rows) {
+        if (!r.succeeded) failures++;
+        const u = byUser.get(r.username) || { username: r.username, total: 0, failed: 0 };
+        u.total++; if (!r.succeeded) u.failed++; byUser.set(r.username, u);
+        if (r.device_id) {
+            const d = byDevice.get(r.device_id) || { device_id: r.device_id, total: 0, failed: 0, usernames: new Set() };
+            d.total++; if (!r.succeeded) d.failed++;
+            d.usernames.add(r.username);
+            byDevice.set(r.device_id, d);
+        }
+        if (r.ip_address) {
+            const ip = byIp.get(r.ip_address) || { ip: r.ip_address, total: 0, failed: 0 };
+            ip.total++; if (!r.succeeded) ip.failed++; byIp.set(r.ip_address, ip);
+        }
+    }
+
+    // "Suspicious" device thresholds — analyst can override via query
+    // params. Defaults are deliberately permissive (10 fails OR 5+
+    // distinct usernames) so the dashboard surfaces obvious abuse,
+    // not noise.
+    const susFails   = parseInt(req.query.susFails,   10) || 10;
+    const susUsers   = parseInt(req.query.susUsers,   10) || 5;
+
+    res.json({
+        windowSince: sinceIso,
+        total, failures, success: total - failures,
+        topUsernames: [...byUser.values()].sort((a,b) => b.failed - a.failed).slice(0, 10),
+        suspiciousDevices: [...byDevice.values()]
+            .map(d => ({ ...d, usernameCount: d.usernames.size, usernames: undefined }))
+            .filter(d => d.failed >= susFails || d.usernameCount >= susUsers)
+            .sort((a,b) => b.failed - a.failed).slice(0, 10),
+        topIps: [...byIp.values()].sort((a,b) => b.failed - a.failed).slice(0, 10)
+    });
+}));
+
+// ── Super-admin self-management (just metadata, real auth is the panel
+//   login above) ──
+app.get('/api/super-admins', wrap(async (req, res) => {
+    const { data, error } = await supabase.from('super_admins').select('*').order('id');
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+}));
+
+// ── Centralised error middleware ──
+//   Last resort for routes that throw without responding. Logs once,
+//   returns a generic JSON error so we never leak SQL state, stack
+//   traces, or service_role hints to the client.
+app.use((err, req, res, _next) => {
+    console.error(`[${new Date().toISOString()}] ${req.method} ${req.path}:`, err.message || err);
+    if (res.headersSent) return;
+    res.status(500).json({
+        error: 'Internal server error.',
+        ref: req.headers['x-request-id'] || null
+    });
+});
+
+// ── 404 handler — must come AFTER all real routes ──
+app.use((req, res) => {
+    if (res.headersSent) return;
+    res.status(404).json({ error: 'Not found.', path: req.path });
+});
+
 // ═══ Start Server ════════════════════════════════════════════════════
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => {
+const server = app.listen(PORT, async () => {
     console.log(`Admin panel → http://localhost:${PORT}`);
+    if (isProduction) {
+        console.log('  NODE_ENV=production active — strict security policies enforced.');
+    }
     await ensureOrgSettings();
 });
+
+// Graceful shutdown — important when running under Docker/PM2 so in-flight
+// requests aren't killed mid-write. SIGTERM is the standard signal.
+function shutdown(signal) {
+    console.log(`Received ${signal}; shutting down gracefully…`);
+    server.close((err) => {
+        if (err) {
+            console.error('Error during shutdown:', err);
+            process.exit(1);
+        }
+        process.exit(0);
+    });
+    // Force exit after 10s if graceful close hangs.
+    setTimeout(() => process.exit(1), 10_000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT',  () => shutdown('SIGINT'));

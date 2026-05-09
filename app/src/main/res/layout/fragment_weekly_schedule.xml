@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
@@ -22,6 +23,16 @@
             android:text="@string/weekly_schedule_title"
             android:textSize="20sp"
             android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnExportPdf"
+            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/export_save_pdf"
+            android:textSize="12sp"
+            android:visibility="gone"
+            app:icon="@android:drawable/ic_menu_save" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRetry"

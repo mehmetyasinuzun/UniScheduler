@@ -109,3 +109,8 @@
     public static *** v(...);
     public static *** i(...);
 }
+
+# ── WorkManager + receivers ─────────────────────────────────────────────────
+# WorkManager loads workers reflectively from the merged manifest; the
+# class name must survive R8.
+-keep class com.unischeduler.notif.** { *; }

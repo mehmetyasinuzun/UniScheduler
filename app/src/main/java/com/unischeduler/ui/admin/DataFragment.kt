@@ -31,6 +31,7 @@ import com.unischeduler.databinding.ItemCourseBinding
 import com.unischeduler.databinding.ItemLecturerBinding
 import com.unischeduler.databinding.ItemOfferingBinding
 import com.unischeduler.util.CsvImporter
+import com.unischeduler.util.PendingDelete
 import com.unischeduler.util.ErrorReporter
 import com.unischeduler.util.ExcelHelper
 import com.unischeduler.util.FileTypeDetector
@@ -59,6 +60,12 @@ class DataFragment : Fragment() {
     // onResume'da yeniden yüklüyoruz. İlk açılışta ViewModel zaten Idle->load
     // tetikliyor, çift yüklemeyi önlemek için flag'liyoruz.
     private var isFirstResume = true
+
+    // B8 — Free-text search filters. Stored as lowercased strings so the
+    // matching loop doesn't re-lowercase on every keystroke. Empty = all.
+    private var lecturerQuery: String = ""
+    private var courseQuery: String = ""
+    private var offeringQuery: String = ""
 
     private val academicTitles = listOf("Dr.", "Prof.", "Asst. Prof.", "Lecturer", "Mr.", "Ms.")
     private val terms          = listOf("Fall", "Spring", "Summer")
@@ -167,6 +174,34 @@ class DataFragment : Fragment() {
             viewModel.loadCourses()
             viewModel.loadOfferings()
         }
+
+        // B8 — search wires. Each TextWatcher only re-applies the
+        // department filter (which already does the heavy lifting) so we
+        // don't need a separate filter pass per query type.
+        binding.etSearchLecturers.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                lecturerQuery = s?.toString()?.trim()?.lowercase() ?: ""
+                applyDeptFilter()
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+        binding.etSearchCourses.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                courseQuery = s?.toString()?.trim()?.lowercase() ?: ""
+                applyDeptFilter()
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+        binding.etSearchOfferings.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                offeringQuery = s?.toString()?.trim()?.lowercase() ?: ""
+                applyDeptFilter()
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
         binding.btnAddLecturer.setOnClickListener       { onAddLecturerClicked() }
         binding.btnImportLecturers.setOnClickListener   { lecturerImportLauncher.launch("*/*") }
         binding.btnExportLecturers.setOnClickListener   { lecturerExportLauncher.launch("lecturers.xlsx") }
@@ -493,7 +528,23 @@ class DataFragment : Fragment() {
         AlertDialog.Builder(requireContext())
             .setTitle(getString(R.string.data_course_delete_title))
             .setMessage(getString(R.string.data_course_delete_message, course.code, course.name))
-            .setPositiveButton(getString(R.string.common_delete)) { _, _ -> viewModel.deleteCourse(course.id) }
+            .setPositiveButton(getString(R.string.common_delete)) { _, _ ->
+                // Optimistic remove from local list so user sees it gone
+                // immediately. Snackbar UNDO restores it before the actual
+                // network delete fires.
+                allCourses = allCourses.filter { it.id != course.id }
+                applyDeptFilter()
+                PendingDelete.schedule(
+                    anchor = binding.root,
+                    owner = viewLifecycleOwner,
+                    message = getString(R.string.ux_undo_deleted_course, course.code),
+                    onUndo = {
+                        allCourses = (allCourses + course).sortedBy { it.code }
+                        applyDeptFilter()
+                    },
+                    performDelete = { viewModel.deleteCourse(course.id) }
+                )
+            }
             .setNegativeButton(getString(R.string.common_cancel), null)
             .show()
     }
@@ -606,7 +657,20 @@ class DataFragment : Fragment() {
         AlertDialog.Builder(requireContext())
             .setTitle(getString(R.string.data_offering_delete_title))
             .setMessage(getString(R.string.data_offering_delete_message, offering.courseName, offering.section))
-            .setPositiveButton(getString(R.string.common_delete)) { _, _ -> viewModel.deleteOffering(offering.id) }
+            .setPositiveButton(getString(R.string.common_delete)) { _, _ ->
+                allOfferings = allOfferings.filter { it.id != offering.id }
+                applyDeptFilter()
+                PendingDelete.schedule(
+                    anchor = binding.root,
+                    owner = viewLifecycleOwner,
+                    message = getString(R.string.ux_undo_deleted_offering, offering.courseName),
+                    onUndo = {
+                        allOfferings = (allOfferings + offering)
+                        applyDeptFilter()
+                    },
+                    performDelete = { viewModel.deleteOffering(offering.id) }
+                )
+            }
             .setNegativeButton(getString(R.string.common_cancel), null)
             .show()
     }
@@ -740,7 +804,20 @@ class DataFragment : Fragment() {
         AlertDialog.Builder(requireContext())
             .setTitle(getString(R.string.data_lecturer_delete_title))
             .setMessage(getString(R.string.data_lecturer_delete_message, lecturer.fullName))
-            .setPositiveButton(getString(R.string.common_delete)) { _, _ -> viewModel.deleteLecturer(lecturer) }
+            .setPositiveButton(getString(R.string.common_delete)) { _, _ ->
+                allLecturers = allLecturers.filter { it.id != lecturer.id }
+                applyDeptFilter()
+                PendingDelete.schedule(
+                    anchor = binding.root,
+                    owner = viewLifecycleOwner,
+                    message = getString(R.string.ux_undo_deleted_lecturer, lecturer.fullName),
+                    onUndo = {
+                        allLecturers = (allLecturers + lecturer).sortedBy { it.lastName }
+                        applyDeptFilter()
+                    },
+                    performDelete = { viewModel.deleteLecturer(lecturer) }
+                )
+            }
             .setNegativeButton(getString(R.string.common_cancel), null)
             .show()
     }
@@ -829,23 +906,46 @@ class DataFragment : Fragment() {
     private fun applyDeptFilter() {
         val deptId = selectedDeptId
 
-        val filteredLecturers = if (deptId != null) allLecturers.filter { it.departmentId == deptId } else allLecturers
-        lecturers = filteredLecturers
+        // ── Lecturers: dept filter → search filter ──
+        val deptScopedLecturers = if (deptId != null) allLecturers.filter { it.departmentId == deptId } else allLecturers
+        val filteredLecturers = if (lecturerQuery.isBlank()) deptScopedLecturers else deptScopedLecturers.filter {
+            it.firstName.lowercase().contains(lecturerQuery) ||
+            it.lastName.lowercase().contains(lecturerQuery) ||
+            it.fullName.lowercase().contains(lecturerQuery) ||
+            it.username.lowercase().contains(lecturerQuery)
+        }
+        // Spinner'lar filtreden bağımsız olarak dept-scoped tüm hocaları
+        // göstermeli — kullanıcı yeni atama yaparken arama filtresi
+        // dropdown'ı kısıtlamamalı.
+        lecturers = deptScopedLecturers
         populateLecturerSpinner()
         binding.tvLecturerHeader.text = getString(R.string.data_lecturers_header_count, filteredLecturers.size)
         populateLecturerList(filteredLecturers)
 
-        val filteredCourses = if (deptId != null) allCourses.filter { it.departmentId == deptId } else allCourses
-        courses = filteredCourses
-        populateCourseSpinner(filteredCourses)
+        // ── Courses ──
+        val deptScopedCourses = if (deptId != null) allCourses.filter { it.departmentId == deptId } else allCourses
+        val filteredCourses = if (courseQuery.isBlank()) deptScopedCourses else deptScopedCourses.filter {
+            it.code.lowercase().contains(courseQuery) ||
+            it.name.lowercase().contains(courseQuery)
+        }
+        courses = deptScopedCourses
+        populateCourseSpinner(deptScopedCourses)
         binding.tvCourseHeader.text = getString(R.string.data_courses_header_count, filteredCourses.size)
         courseAdapter.submitList(filteredCourses)
         binding.tvCoursesEmpty.visibility = if (filteredCourses.isEmpty()) View.VISIBLE else View.GONE
         binding.rvCourses.visibility      = if (filteredCourses.isEmpty()) View.GONE else View.VISIBLE
 
-        val filteredOfferings = if (deptId != null) {
+        // ── Offerings ──
+        val deptScopedOfferings = if (deptId != null) {
             allOfferings.filter { it.courses?.departmentId == deptId }
         } else allOfferings
+        val filteredOfferings = if (offeringQuery.isBlank()) deptScopedOfferings else deptScopedOfferings.filter {
+            (it.courses?.code?.lowercase()?.contains(offeringQuery) == true) ||
+            (it.courses?.name?.lowercase()?.contains(offeringQuery) == true) ||
+            (it.lecturers?.fullName?.lowercase()?.contains(offeringQuery) == true) ||
+            it.section.lowercase().contains(offeringQuery) ||
+            it.term.lowercase().contains(offeringQuery)
+        }
         binding.tvOfferingHeader.text = getString(R.string.data_offerings_header_count, filteredOfferings.size)
         offeringAdapter.submitList(filteredOfferings)
         binding.tvOfferingsEmpty.visibility = if (filteredOfferings.isEmpty()) View.VISIBLE else View.GONE

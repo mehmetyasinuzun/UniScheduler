@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Reusable empty-state placeholder. The host fragment sets:
+    • imageEmptyState  → @drawable/ic_empty_lecturers (or other)
+    • tvEmptyTitle      → "Henüz hoca eklenmedi"
+    • tvEmptyHint       → optional secondary text
+    • btnEmptyAction    → optional CTA button (gone by default)
+
+  Designed to be <include>'d into existing fragments without disturbing
+  their main layout structure. Wrapper is wrap_content vertically so it
+  centres nicely inside a parent FrameLayout.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="32dp">
+
+    <ImageView
+        android:id="@+id/imageEmptyState"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:contentDescription="@null"
+        android:importantForAccessibility="no" />
+
+    <TextView
+        android:id="@+id/tvEmptyTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="center"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tvEmptyHint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnEmptyAction"
+        style="@style/Widget.MaterialComponents.Button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:visibility="gone" />
+
+</LinearLayout>

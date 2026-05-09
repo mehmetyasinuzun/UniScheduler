@@ -51,6 +51,14 @@ class LoginFragment : Fragment() {
     }
 
     private fun navigate(result: LoginResult) {
+        // Lecturer just finished logging in → arm tomorrow's reminders so
+        // they don't have to wait for the next 23:00 worker tick. No-op
+        // for admins (cancelAll inside scheduleNextDayReminders bails out
+        // on non-lecturer sessions).
+        if (result.role == "lecturer" && !result.mustChangePassword) {
+            com.unischeduler.notif.ReminderScheduler
+                .scheduleNextDayReminders(requireContext().applicationContext)
+        }
         when {
             result.mustChangePassword                -> findNavController().navigate(R.id.action_login_to_passwordChange)
             result.role == "admin"                   -> findNavController().navigate(R.id.action_login_to_adminHome)

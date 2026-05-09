@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
+import com.unischeduler.notif.NotificationHelper
+import com.unischeduler.notif.ReminderScheduler
 
 class App : Application() {
 
@@ -20,6 +22,15 @@ class App : Application() {
         if (lang != null) {
             AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(lang))
         }
+
+        // Local-reminder infrastructure (Sprint B2).
+        // ensureChannels: creates the "Class reminders" notification channel
+        //   so it shows up in system Settings → Notifications even before
+        //   the first reminder fires (lets users mute us per-channel).
+        // ensureDailyWorker: idempotently schedules the once-a-night
+        //   WorkManager job that refreshes alarms.
+        NotificationHelper.ensureChannels(this)
+        ReminderScheduler.ensureDailyWorker(this)
     }
 
     /**

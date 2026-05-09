@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Empty-state illustration for lecturer lists. A stylised group of two
+  abstract figures over a horizontal "table". Hand-coded so we have a
+  consistent visual language across screens without depending on a
+  third-party CDN or pulling in undraw.co SVGs (which look great but
+  vary per illustration).
+
+  Tinted via android:tint at the host TextView so the same drawable
+  picks up the day/night theme accent colour.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+
+    <!-- Background circle (subtle accent) -->
+    <path
+        android:fillColor="#1A3F51B5"
+        android:pathData="M 60 18 m -50 0 a 50 50 0 1 0 100 0 a 50 50 0 1 0 -100 0" />
+
+    <!-- Left figure head -->
+    <path
+        android:fillColor="#3F51B5"
+        android:pathData="M 45 50 m -10 0 a 10 10 0 1 0 20 0 a 10 10 0 1 0 -20 0" />
+    <!-- Left figure body -->
+    <path
+        android:fillColor="#3F51B5"
+        android:pathData="M 30 86 C 30 72 38 64 45 64 C 52 64 60 72 60 86 Z" />
+
+    <!-- Right figure head -->
+    <path
+        android:fillColor="#3F51B5"
+        android:pathData="M 75 50 m -10 0 a 10 10 0 1 0 20 0 a 10 10 0 1 0 -20 0" />
+    <!-- Right figure body -->
+    <path
+        android:fillColor="#3F51B5"
+        android:pathData="M 60 86 C 60 72 68 64 75 64 C 82 64 90 72 90 86 Z" />
+
+    <!-- + sign indicating "add" -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 92 28 h 6 v 6 h 6 v 6 h -6 v 6 h -6 v -6 h -6 v -6 h 6 z" />
+</vector>

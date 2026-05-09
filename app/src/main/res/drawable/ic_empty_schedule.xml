@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Empty-state illustration for schedule / offerings: calendar grid with
+  one highlighted cell.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+
+    <path
+        android:fillColor="#1A3F51B5"
+        android:pathData="M 60 18 m -50 0 a 50 50 0 1 0 100 0 a 50 50 0 1 0 -100 0" />
+
+    <!-- Calendar body -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 32 38 h 56 v 56 h -56 z" />
+    <path
+        android:strokeColor="#3F51B5"
+        android:strokeWidth="2"
+        android:fillColor="#00000000"
+        android:pathData="M 32 38 h 56 v 56 h -56 z" />
+    <!-- Header strip -->
+    <path
+        android:fillColor="#3F51B5"
+        android:pathData="M 32 38 h 56 v 12 h -56 z" />
+    <!-- Hangers -->
+    <path
+        android:fillColor="#3F51B5"
+        android:pathData="M 42 32 h 4 v 10 h -4 z" />
+    <path
+        android:fillColor="#3F51B5"
+        android:pathData="M 74 32 h 4 v 10 h -4 z" />
+
+    <!-- Grid lines (3x3) -->
+    <path
+        android:strokeColor="#BDBDBD"
+        android:strokeWidth="1"
+        android:fillColor="#00000000"
+        android:pathData="M 32 60 h 56 M 32 72 h 56 M 32 84 h 56 M 50 50 v 44 M 70 50 v 44" />
+
+    <!-- Highlighted cell -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M 50 60 h 20 v 12 h -20 z" />
+
+    <!-- Other small dots -->
+    <path
+        android:fillColor="#FF9800"
+        android:pathData="M 38 78 m -2 0 a 2 2 0 1 0 4 0 a 2 2 0 1 0 -4 0" />
+    <path
+        android:fillColor="#2196F3"
+        android:pathData="M 78 88 m -2 0 a 2 2 0 1 0 4 0 a 2 2 0 1 0 -4 0" />
+</vector>

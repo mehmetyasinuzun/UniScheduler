@@ -178,7 +178,17 @@ class AssignmentFragment : Fragment() {
         AlertDialog.Builder(requireContext())
             .setTitle(getString(R.string.assignment_delete_title))
             .setMessage(getString(R.string.assignment_delete_message, entry.courseCode, entry.day, entry.timeRange))
-            .setPositiveButton(getString(R.string.common_delete)) { _, _ -> viewModel.deleteEntry(entry.id) }
+            .setPositiveButton(getString(R.string.common_delete)) { _, _ ->
+                com.unischeduler.util.PendingDelete.schedule(
+                    anchor = binding.root,
+                    owner = viewLifecycleOwner,
+                    message = getString(R.string.ux_undo_deleted_assignment),
+                    // Schedule list is reloaded from network in saveState
+                    // observer; nothing to optimistically restore here.
+                    onUndo = { viewModel.loadForm() },
+                    performDelete = { viewModel.deleteEntry(entry.id) }
+                )
+            }
             .setNegativeButton(getString(R.string.common_cancel), null)
             .show()
     }
@@ -205,7 +215,7 @@ class AssignmentFragment : Fragment() {
             .build()
 
         picker.addOnPositiveButtonClickListener {
-            val time = String.format("%02d:%02d", picker.hour, picker.minute)
+            val time = String.format(java.util.Locale.US, "%02d:%02d", picker.hour, picker.minute)
             onTimeSelected(time)
         }
 

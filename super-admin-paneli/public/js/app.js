@@ -50,7 +50,8 @@ if(page==='dashboard'){loadOrganizations();setTimeout(loadDashboard,100)}
 if(page==='offerings'){loadOrganizations();setTimeout(loadOfferingsPage,100)}
 if(page==='schedule'){loadOrganizations();setTimeout(loadSchedulePage,100)}
 if(page==='availability'){loadOrganizations();setTimeout(loadAvailabilityPage,100)}
-if(page==='logs'){loadOrganizations();setTimeout(loadErrorLogs,100)}}
+if(page==='logs'){loadOrganizations();setTimeout(loadErrorLogs,100)}
+if(page==='security'){setTimeout(loadSecurityPage,100)}}
 
 // ── Organizations
 async function loadOrganizations(){try{const r=await apiFetch('/api/organizations');orgs=await r.json();renderOrgTable();populateOrgSelects()}catch(e){if(e.message!=='Auth')showAlert('orgAlert','Organizasyonlar yuklenemedi: '+e.message,'error')}}
@@ -395,6 +396,31 @@ document.getElementById('globalOrg').addEventListener('change',onOrgSelectChange
 document.getElementById('logOrg').addEventListener('change',loadErrorLogs);
 document.getElementById('availLecturer').addEventListener('change',loadLecturerAvailability);
 ['filterLecturer','filterDept','filterClassroom','filterYear'].forEach(id=>document.getElementById(id).addEventListener('change',renderWeeklyGrid));
+// Live normalisation for org code: as the user types, fold Turkish chars,
+// uppercase, replace spaces with `_`, drop anything outside [A-Z0-9_-].
+// This mirrors the server-side normalizeOrgCode so the input box always
+// shows what will actually hit the database — fewer "why is my code
+// invalid" surprises.
+(function wireOrgCodeNormalisation(){
+    const TURKISH_FOLD = {ş:'s',Ş:'S',ç:'c',Ç:'C',ğ:'g',Ğ:'G',ü:'u',Ü:'U',ö:'o',Ö:'O',ı:'i',İ:'I'};
+    const orgCode = document.getElementById('orgCode');
+    if (!orgCode) return;
+    orgCode.addEventListener('input', () => {
+        const start = orgCode.selectionStart;
+        const out = orgCode.value
+            .split('').map(c => TURKISH_FOLD[c] || c).join('')
+            .replace(/\s+/g, '_')
+            .toUpperCase()
+            .replace(/[^A-Z0-9_-]/g, '')
+            .substring(0, 20);
+        if (out !== orgCode.value) {
+            orgCode.value = out;
+            // restore caret position roughly so the user can keep typing
+            orgCode.setSelectionRange(start, start);
+        }
+    });
+})();
+
 document.getElementById('btnAddOrg').addEventListener('click',addOrganization);
 document.getElementById('btnAddAdmin').addEventListener('click',addAdmin);
 document.getElementById('btnAddDept').addEventListener('click',addDepartment);
@@ -434,5 +460,135 @@ if((btn=e.target.closest('.btn-edit-lec')))openEditModal('lecturer',JSON.parse(d
 if((btn=e.target.closest('.btn-edit-course')))openEditModal('course',JSON.parse(decodeURIComponent(btn.dataset.data)));
 if((btn=e.target.closest('.btn-edit-classroom')))openEditModal('classroom',JSON.parse(decodeURIComponent(btn.dataset.data)));
 if((btn=e.target.closest('.del-x')))deleteAvailability(btn.dataset.id)});
+
+// ─── Security / Threat Intelligence page (P3) ─────────────────────────
+//
+// Pure monitoring — no blocking. Risk thresholds are panel-side and
+// configurable via the inputs at the top of the page so an analyst can
+// hunt with different sensitivities without restarting the server.
+const SEC_DEFAULTS = { failMid:5, failHigh:10, churnMid:3, churnHigh:5, windowMin:15 };
+
+function readThresholds() {
+    return {
+        failMid:   parseInt(document.getElementById('thFailMid').value,   10) || SEC_DEFAULTS.failMid,
+        failHigh:  parseInt(document.getElementById('thFailHigh').value,  10) || SEC_DEFAULTS.failHigh,
+        churnMid:  parseInt(document.getElementById('thChurnMid').value,  10) || SEC_DEFAULTS.churnMid,
+        churnHigh: parseInt(document.getElementById('thChurnHigh').value, 10) || SEC_DEFAULTS.churnHigh,
+        windowMin: parseInt(document.getElementById('thWindowMin').value, 10) || SEC_DEFAULTS.windowMin,
+    };
+}
+
+function resetThresholds() {
+    document.getElementById('thFailMid').value   = SEC_DEFAULTS.failMid;
+    document.getElementById('thFailHigh').value  = SEC_DEFAULTS.failHigh;
+    document.getElementById('thChurnMid').value  = SEC_DEFAULTS.churnMid;
+    document.getElementById('thChurnHigh').value = SEC_DEFAULTS.churnHigh;
+    document.getElementById('thWindowMin').value = SEC_DEFAULTS.windowMin;
+    loadSecurityPage();
+}
+
+async function loadSecurityPage() {
+    const win = document.getElementById('secWindow').value || '7d';
+    const user = document.getElementById('secUser').value.trim();
+    const onlyFailed = document.getElementById('secOnlyFailed').checked;
+    const th = readThresholds();
+
+    // Summary card
+    try {
+        const sumParams = new URLSearchParams({
+            since: win,
+            susFails: String(th.failHigh),
+            susUsers: String(th.churnHigh)
+        });
+        const sumRes = await apiFetch('/api/login-attempts/summary?' + sumParams.toString());
+        const sum = await sumRes.json();
+        const failRate = sum.total > 0 ? Math.round((sum.failures / sum.total) * 100) : 0;
+        document.getElementById('secStats').innerHTML = `
+            <div class="stat-card"><div class="stat-label">Toplam Deneme</div><div class="stat-value">${sum.total||0}</div></div>
+            <div class="stat-card"><div class="stat-label">Basarili</div><div class="stat-value" style="color:#28a745">${sum.success||0}</div></div>
+            <div class="stat-card"><div class="stat-label">Basarisiz</div><div class="stat-value" style="color:#dc3545">${sum.failures||0}</div></div>
+            <div class="stat-card"><div class="stat-label">Basarisizlik Orani</div><div class="stat-value">${failRate}%</div></div>
+        `;
+        document.getElementById('secTopUsers').innerHTML = sum.topUsernames.length === 0
+            ? '<div class="text-muted">Veri yok</div>'
+            : '<table class="table table-sm"><thead><tr><th>Kullanici</th><th>Toplam</th><th>Basarisiz</th></tr></thead><tbody>'
+            + sum.topUsernames.map(u => `<tr><td>${escapeHtml(u.username)}</td><td>${u.total}</td><td style="color:#dc3545">${u.failed}</td></tr>`).join('')
+            + '</tbody></table>';
+        document.getElementById('secSusDevices').innerHTML = sum.suspiciousDevices.length === 0
+            ? '<div class="text-muted">Supheli cihaz yok</div>'
+            : '<table class="table table-sm"><thead><tr><th>Cihaz</th><th>Kullanici</th><th>Basarisiz</th></tr></thead><tbody>'
+            + sum.suspiciousDevices.map(d => `<tr><td><code style="font-size:0.75rem">${escapeHtml((d.device_id||'').substring(0,12))}…</code></td><td>${d.usernameCount}</td><td style="color:#dc3545">${d.failed}</td></tr>`).join('')
+            + '</tbody></table>';
+        document.getElementById('secTopIps').innerHTML = sum.topIps.length === 0
+            ? '<div class="text-muted">IP bilgisi yok (mobil tarafindan toplanmıyor)</div>'
+            : '<table class="table table-sm"><thead><tr><th>IP</th><th>Toplam</th><th>Basarisiz</th></tr></thead><tbody>'
+            + sum.topIps.map(ip => `<tr><td><code>${escapeHtml(ip.ip)}</code></td><td>${ip.total}</td><td style="color:#dc3545">${ip.failed}</td></tr>`).join('')
+            + '</tbody></table>';
+    } catch (e) {
+        document.getElementById('secStats').innerHTML = `<div class="alert alert-danger">Ozet yuklenemedi: ${escapeHtml(e.message)}</div>`;
+    }
+
+    // Detail attempts list
+    try {
+        const params = new URLSearchParams();
+        params.set('since', win);
+        params.set('pageSize', '100');
+        params.set('failMid',   String(th.failMid));
+        params.set('failHigh',  String(th.failHigh));
+        params.set('churnMid',  String(th.churnMid));
+        params.set('churnHigh', String(th.churnHigh));
+        params.set('windowMin', String(th.windowMin));
+        if (user) params.set('username', user);
+        if (onlyFailed) params.set('onlyFailed', '1');
+        const r = await apiFetch('/api/login-attempts?' + params.toString());
+        const data = await r.json();
+        const rows = data.rows || [];
+        if (rows.length === 0) {
+            document.getElementById('secAttempts').innerHTML = '<div class="text-muted">Bu pencerede deneme yok</div>';
+            return;
+        }
+        const tbl = '<div class="table-responsive"><table class="table table-sm table-hover">'
+            + '<thead><tr>'
+            + '<th>Zaman</th><th>Kullanici</th><th>Sonuc</th><th>Asama</th>'
+            + '<th>Cihaz Modeli</th><th>OS</th><th>App</th>'
+            + '<th>Cihaz Hash</th><th>IP</th><th>Risk</th>'
+            + '</tr></thead><tbody>'
+            + rows.map(r => {
+                const t = new Date(r.created_at);
+                const okBadge = r.succeeded
+                    ? '<span class="badge bg-success">OK</span>'
+                    : '<span class="badge bg-danger">FAIL</span>';
+                const riskColor = r.risk >= 60 ? 'bg-danger' : r.risk >= 30 ? 'bg-warning' : 'bg-secondary';
+                return `<tr>
+                    <td>${t.toLocaleString('tr-TR')}</td>
+                    <td><strong>${escapeHtml(r.username)}</strong></td>
+                    <td>${okBadge}</td>
+                    <td>${escapeHtml(r.failure_step || '-')}</td>
+                    <td>${escapeHtml(r.device_model || '-')}</td>
+                    <td>${escapeHtml(r.os_version || '-')}</td>
+                    <td>${escapeHtml(r.app_version || '-')}</td>
+                    <td><code style="font-size:0.7rem">${escapeHtml((r.device_id||'-').substring(0,10))}</code></td>
+                    <td><code style="font-size:0.75rem">${escapeHtml(r.ip_address || '-')}</code></td>
+                    <td><span class="badge ${riskColor}">${r.risk}</span></td>
+                </tr>`;
+            }).join('')
+            + '</tbody></table></div>';
+        document.getElementById('secAttempts').innerHTML = tbl;
+    } catch (e) {
+        document.getElementById('secAttempts').innerHTML = `<div class="alert alert-danger">Detay yuklenemedi: ${escapeHtml(e.message)}</div>`;
+    }
+}
+
+function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+document.getElementById('btnSecRefresh').addEventListener('click', loadSecurityPage);
+document.getElementById('btnSecResetThresholds').addEventListener('click', resetThresholds);
+['secWindow','secUser','secOnlyFailed'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', loadSecurityPage);
+});
 
 checkAuth()});

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Empty-state illustration for course catalogue: stack of three books.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+
+    <path
+        android:fillColor="#1A3F51B5"
+        android:pathData="M 60 18 m -50 0 a 50 50 0 1 0 100 0 a 50 50 0 1 0 -100 0" />
+
+    <!-- Bottom book (largest) -->
+    <path
+        android:fillColor="#3F51B5"
+        android:pathData="M 28 80 h 64 v 14 h -64 z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 36 86 h 48 v 2 h -48 z" />
+
+    <!-- Middle book -->
+    <path
+        android:fillColor="#5C6BC0"
+        android:pathData="M 32 64 h 56 v 14 h -56 z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 40 70 h 40 v 2 h -40 z" />
+
+    <!-- Top book -->
+    <path
+        android:fillColor="#7986CB"
+        android:pathData="M 36 48 h 48 v 14 h -48 z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 44 54 h 32 v 2 h -32 z" />
+
+    <!-- Bookmark on top -->
+    <path
+        android:fillColor="#FF5722"
+        android:pathData="M 70 48 v 8 l -3 -2 l -3 2 v -8 z" />
+</vector>

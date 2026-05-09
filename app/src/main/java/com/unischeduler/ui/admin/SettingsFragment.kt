@@ -7,25 +7,49 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import androidx.core.os.LocaleListCompat
 import com.unischeduler.App
+import com.unischeduler.BuildConfig
 import com.unischeduler.MainActivity
 import com.unischeduler.R
 import com.unischeduler.data.model.Department
 import com.unischeduler.databinding.FragmentSettingsBinding
 import com.unischeduler.databinding.ItemDepartmentBinding
+import com.unischeduler.util.BackupManager
+import com.unischeduler.util.ExcelHelper
+import com.unischeduler.util.SessionManager
 import com.unischeduler.util.UiState
 import com.unischeduler.util.collectFlow
+import com.unischeduler.util.writeBytesToUri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import java.io.ByteArrayOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class SettingsFragment : Fragment() {
+
+    private enum class TemplateKind { COURSES, LECTURERS, CLASSROOMS }
+
+    /** Single Json instance — Kotlin lint warns on per-call construction
+     *  because the parser caches descriptors per Json instance. */
+    private companion object {
+        val laxJson = Json { ignoreUnknownKeys = true }
+    }
 
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
@@ -33,6 +57,87 @@ class SettingsFragment : Fragment() {
     private var isFirstResume = true
 
     private lateinit var departmentAdapter: DepartmentAdapter
+
+    // Pending template kind, captured at click time so the SAF callback knows
+    // which exporter to invoke once the user picks the destination URI.
+    private var pendingTemplateKind: TemplateKind? = null
+
+    private lateinit var templateSaveLauncher: ActivityResultLauncher<String>
+    private lateinit var backupSaveLauncher: ActivityResultLauncher<String>
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        templateSaveLauncher = registerForActivityResult(
+            ActivityResultContracts.CreateDocument(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        ) { uri ->
+            uri ?: return@registerForActivityResult
+            val kind = pendingTemplateKind ?: return@registerForActivityResult
+            pendingTemplateKind = null
+            writeBytesToUri(
+                destination = uri,
+                produce = { renderTemplateBytes(kind) }
+            )
+        }
+        backupSaveLauncher = registerForActivityResult(
+            ActivityResultContracts.CreateDocument("application/json")
+        ) { uri ->
+            uri ?: return@registerForActivityResult
+            val ctx = requireContext().applicationContext
+            val orgId = SessionManager(ctx).orgId
+            if (orgId <= 0) {
+                Toast.makeText(ctx, R.string.export_failed, Toast.LENGTH_SHORT).show()
+                return@registerForActivityResult
+            }
+            writeBytesToUri(
+                destination = uri,
+                produce = {
+                    withContext(Dispatchers.IO) {
+                        BackupManager.createBackup(orgId, BuildConfig.VERSION_NAME)
+                            .toByteArray(Charsets.UTF_8)
+                    }
+                },
+                onDone = { _ ->
+                    // Surface a summary so the user knows what's inside.
+                    showBackupDoneDialog(uri)
+                }
+            )
+        }
+    }
+
+    private fun renderTemplateBytes(kind: TemplateKind): ByteArray =
+        ByteArrayOutputStream().use { buf ->
+            when (kind) {
+                TemplateKind.COURSES    -> ExcelHelper.exportCourses(emptyList(), buf)
+                TemplateKind.LECTURERS  -> ExcelHelper.exportLecturers(emptyList(), buf)
+                TemplateKind.CLASSROOMS -> ExcelHelper.exportClassrooms(emptyList(), buf)
+            }
+            buf.toByteArray()
+        }
+
+    private fun showBackupDoneDialog(uri: android.net.Uri) {
+        // Re-read the saved file to compute a quick summary. Cheap because
+        // we just wrote it; the OS page cache still has it hot. Bound to
+        // viewLifecycleOwner so dialog can't leak past onDestroyView.
+        val ctx = requireContext().applicationContext
+        viewLifecycleOwner.lifecycleScope.launch {
+            val summary = runCatching {
+                withContext(Dispatchers.IO) {
+                    val text = ctx.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() }
+                        ?: return@withContext "—"
+                    val backup = laxJson.decodeFromString(BackupManager.Backup.serializer(), text)
+                    BackupManager.summarise(backup)
+                }
+            }.getOrDefault("—")
+            if (!isAdded) return@launch
+            AlertDialog.Builder(requireContext())
+                .setTitle(R.string.settings_backup_done_title)
+                .setMessage(getString(R.string.settings_backup_done_message, summary))
+                .setPositiveButton(R.string.common_ok, null)
+                .show()
+        }
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentSettingsBinding.inflate(inflater, container, false)
@@ -58,6 +163,27 @@ class SettingsFragment : Fragment() {
 
         setupThemeSelector()
         setupLanguageSelector()
+
+        // ── Excel templates (B6) ──
+        binding.btnTemplateCourses.setOnClickListener {
+            pendingTemplateKind = TemplateKind.COURSES
+            templateSaveLauncher.launch("courses-template.xlsx")
+        }
+        binding.btnTemplateLecturers.setOnClickListener {
+            pendingTemplateKind = TemplateKind.LECTURERS
+            templateSaveLauncher.launch("lecturers-template.xlsx")
+        }
+        binding.btnTemplateClassrooms.setOnClickListener {
+            pendingTemplateKind = TemplateKind.CLASSROOMS
+            templateSaveLauncher.launch("classrooms-template.xlsx")
+        }
+
+        // ── Backup (B7) ──
+        binding.btnBackup.setOnClickListener {
+            val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+            val filename = getString(R.string.settings_backup_default_filename, today)
+            backupSaveLauncher.launch(filename)
+        }
 
         binding.btnLogout.setOnClickListener {
             AlertDialog.Builder(requireContext())
@@ -204,7 +330,15 @@ class SettingsFragment : Fragment() {
         AlertDialog.Builder(requireContext())
             .setTitle(getString(R.string.settings_dept_delete_title))
             .setMessage(getString(R.string.settings_dept_delete_message, dept.name))
-            .setPositiveButton(getString(R.string.common_delete)) { _, _ -> viewModel.deleteDepartment(dept.id) }
+            .setPositiveButton(getString(R.string.common_delete)) { _, _ ->
+                com.unischeduler.util.PendingDelete.schedule(
+                    anchor = binding.root,
+                    owner = viewLifecycleOwner,
+                    message = getString(R.string.ux_undo_deleted_department, dept.name),
+                    onUndo = { viewModel.loadDepartments() },
+                    performDelete = { viewModel.deleteDepartment(dept.id) }
+                )
+            }
             .setNegativeButton(getString(R.string.common_cancel), null)
             .show()
     }

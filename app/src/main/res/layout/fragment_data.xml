@@ -250,14 +250,51 @@
                         android:text="@string/common_retry"
                         android:visibility="gone" />
 
-                    <TextView
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:hint="@string/ux_search_hint_lecturer"
+                        app:startIconDrawable="@android:drawable/ic_menu_search"
+                        app:endIconMode="clear_text">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etSearchLecturers"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:imeOptions="actionSearch"
+                            android:inputType="text" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <LinearLayout
                         android:id="@+id/tvLecturerEmpty"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/data_lecturer_empty"
-                        android:visibility="gone"
-                        android:padding="8dp"
-                        android:layout_marginTop="8dp" />
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="16dp"
+                        android:visibility="gone">
+                        <ImageView
+                            android:layout_width="80dp"
+                            android:layout_height="80dp"
+                            android:contentDescription="@null"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_empty_lecturers" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="@string/ux_empty_no_lecturers"
+                            android:textStyle="bold" />
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:gravity="center"
+                            android:text="@string/ux_empty_no_lecturers_hint"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textSize="13sp" />
+                    </LinearLayout>
 
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/rvLecturers"
@@ -448,15 +485,51 @@
                             android:text="@string/common_export" />
                     </LinearLayout>
 
-                    <TextView
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:hint="@string/ux_search_hint_course"
+                        app:startIconDrawable="@android:drawable/ic_menu_search"
+                        app:endIconMode="clear_text">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etSearchCourses"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:imeOptions="actionSearch"
+                            android:inputType="text" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <LinearLayout
                         android:id="@+id/tvCoursesEmpty"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/data_course_empty"
-                        android:textSize="13sp"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:padding="12dp"
-                        android:visibility="gone" />
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="16dp"
+                        android:visibility="gone">
+                        <ImageView
+                            android:layout_width="80dp"
+                            android:layout_height="80dp"
+                            android:contentDescription="@null"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_empty_courses" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="@string/ux_empty_no_courses"
+                            android:textStyle="bold" />
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:gravity="center"
+                            android:text="@string/ux_empty_no_courses_hint"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textSize="13sp" />
+                    </LinearLayout>
 
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/rvCourses"
@@ -657,15 +730,51 @@
                         android:layout_gravity="center_horizontal"
                         android:layout_marginTop="8dp" />
 
-                    <TextView
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:hint="@string/ux_search_hint_offering"
+                        app:startIconDrawable="@android:drawable/ic_menu_search"
+                        app:endIconMode="clear_text">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etSearchOfferings"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:imeOptions="actionSearch"
+                            android:inputType="text" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <LinearLayout
                         android:id="@+id/tvOfferingsEmpty"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/data_offering_empty"
-                        android:textSize="13sp"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:padding="12dp"
-                        android:visibility="gone" />
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="16dp"
+                        android:visibility="gone">
+                        <ImageView
+                            android:layout_width="80dp"
+                            android:layout_height="80dp"
+                            android:contentDescription="@null"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_empty_schedule" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="@string/ux_empty_no_offerings"
+                            android:textStyle="bold" />
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:gravity="center"
+                            android:text="@string/ux_empty_no_offerings_hint"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textSize="13sp" />
+                    </LinearLayout>
 
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/rvOfferings"

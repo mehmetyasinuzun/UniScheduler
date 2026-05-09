@@ -340,6 +340,72 @@ cd UniScheduler
 
 ---
 
+## 9.A — Test Durumu (Dürüst Rapor)
+
+> Geliştirme sırasında otomatik olarak doğrulanan ve **gerçek bir cihazda /
+> kuruluma gerçek veriyle** doğrulanmamış olan özelliklerin net listesi.
+> Anahtar teslimatdan önce sağ sütundaki testleri **mutlaka manuel
+> yapın** — bizim CI'da yer almayan iş yükleri.
+
+### ✅ Otomatik doğrulanan (her commit'te yeniden çalışıyor)
+
+| Alan | Yöntem |
+|------|--------|
+| Kotlin compile (debug + release) | `./gradlew assembleDebug assembleRelease` |
+| 137 unit test | `./gradlew test` |
+| ProGuard/R8 minify | release build içinde |
+| AAPT2 manifest doğrulama | `aapt dump xmltree app-release.apk AndroidManifest.xml` |
+| Resource shrinking + obfuscation | release build çıktısı 8.9 MB |
+| String i18n (TR + EN) | her string her iki locale'de |
+| schema.sql tablo / RLS / trigger sayısı tutarlılığı | kabuk script'leri |
+
+### ⚠️ Manuel test gerekiyor (anahtar teslim'den ÖNCE)
+
+| # | Test | Beklenen Sonuç | Süre |
+|---|------|----------------|------|
+| 1 | `schema.sql`'i Supabase SQL Editor'a yapıştır → Run | Sondaki status query "tables=14, rls_policies=28, triggers=24" benzeri | 2 dk |
+| 2 | İki ayrı org oluştur → her birine bir admin → mobil app ile cross-org SELECT denemesi | Diğer org'un verisi GÖZÜKMÜYOR | 10 dk |
+| 3 | Telefonda release APK kurulumu → ilk açılışta onboarding 4 sayfa | 4 sayfa görünür, "Başla" butonu kapatır | 3 dk |
+| 4 | Login → Data → 50+ ders Excel import → arama kutusunda "CS101" yaz | Sonuçlar anında filtrelenir | 5 dk |
+| 5 | Bir ders sil → snackbar UNDO görünür → tıkla → ders geri gelir | UNDO çalışır | 1 dk |
+| 6 | Bir ders sil → 5 saniye bekle → backend'den de silindiğini doğrula | Refresh sonrası ders yok | 2 dk |
+| 7 | Tüm hocaları sil → empty state illustration görünür | "Henüz hoca eklenmedi" + ikon | 1 dk |
+| 8 | Settings → Veri Yedekle → JSON dosya çıktısı | Geçerli JSON, 8 anahtar | 2 dk |
+| 9 | Lecturer Home → PDF ile Programımı İndir | A4 yatay PDF, görsel net | 2 dk |
+| 10 | Lecturer Home → iCal indir → telefon Calendar uygulamasına açtır | 14 hafta haftalık tekrar olarak görünür | 5 dk |
+| 11 | Pull-to-refresh tüm liste ekranlarında | Spinner döner, veriler yenilenir | 3 dk |
+| 12 | Login → Logout → tekrar Login (farklı kullanıcı) | Eski oturum sızıntısı yok | 2 dk |
+| 13 | Eski APK varken yeni APK kurulumu | Migration logic çalışır, eski session temizlenir | 2 dk |
+| 14 | Schedule entry sil → Snackbar UNDO → backend doğrulama | UNDO çalışır, undo basılmazsa silinir | 3 dk |
+| 15 | Web panel `npm start` → tarayıcıda `http://localhost:3000/healthz` | `{ok: true, db_latency_ms: <300}` | 1 dk |
+| 16 | Web panel'de bir org oluştur → mobil app ile o org'un admin'i ile login | Login başarılı, multi-tenant veri tutarlı | 5 dk |
+| 17 | Web panel `/api/audit/:orgId` → admin'in son 10 işlemi | Audit tablo dolu, kim sildi görünür | 2 dk |
+
+**Toplam manuel test süresi: ~50 dakika.** Bu listeyi tamamlamadan kuruma teslim **etmeyin**.
+
+### ❌ Kapsam dışı (Sprint 4'e ertelendi — eksiklik kabul edilmiştir)
+
+- **B1**: Firebase Cloud Messaging (push notification — uzaktan tetikleme)
+- **B7-Restore**: JSON yedekten geri yükleme (mobile değil panel-side iş)
+- **B10**: Bulk operations (toplu seçim modu)
+- **B11**: Skeleton loading shimmer (progress bar yeterli)
+- **B13**: Drag & drop schedule editor
+- **B15-B18**: Audit log UI viewer / heatmap / rating prompt / multi-term filter
+
+### 🔴 Bilinen sınırlamalar
+
+1. **Backup-Restore tek yönlü**: Sadece export var. Restore Supabase Auth Admin API gerektirdiği için panel'de yapılmalı (mobil app'te güvenli değil — service_role gerek).
+
+2. **Onboarding tetikleme**: Sadece logout state'te ve `onboarding_done_v1` flag false ise gösterilir. Test için Settings → app temizleme veya `adb shell pm clear com.unischeduler` gerekir.
+
+3. **Realtime ile sıralı tutarlılık**: Schema.sql `schedule_entries`, `courses`, `lecturer_availability`, `offerings` realtime publication'a eklendi. Mobil app şu sürümde realtime subscriber kullanmıyor — tablolar push edilse de uygulama dinlemiyor. Pull-to-refresh + onResume reload gerçek zamanlı yenilik için yeterli.
+
+4. **Web panel UI**: `public/` altındaki HTML/JS yeni endpoint'leri (`/api/dashboard`, `/api/audit/:orgId`, `/healthz`) **kullanmıyor**. Endpoint'ler hazır, panel UI eski versiyonda. İstersen ileride dashboard tab eklenebilir.
+
+5. **Production keystore**: Şu anki release APK debug keystore ile imzalı. Play Store'a çıkmadan önce `keytool` ile yeni keystore + `local.properties` `KEYSTORE_FILE` set edilmesi şart.
+
+---
+
 ## 10. Production Launch Checklist (FINAL — yayından önce)
 
 Bu listenin **TÜM** maddeleri ✅ olmadan production'a gönderme.

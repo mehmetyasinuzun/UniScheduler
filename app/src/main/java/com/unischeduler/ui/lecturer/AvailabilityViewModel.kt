@@ -48,6 +48,17 @@ class AvailabilityViewModel(app: Application) : AndroidViewModel(app) {
                 withContext(Dispatchers.IO) {
                     val orgId = session.orgId
                     val lecturerId = session.lecturerId
+                    // Without a positive lecturer id (= account never linked
+                    // to a lecturer profile, or session was cleared) any
+                    // repo.getForLecturer/getEntriesForLecturer call hits
+                    // the server with id=-1, which Postgres rejects with a
+                    // constraint violation. Fail fast with a friendly message
+                    // instead of leaking the raw 500.
+                    if (lecturerId <= 0) {
+                        throw IllegalStateException(
+                            "Hocaya ait bir profil bulunamadı. Yöneticiyle iletişime geçin veya yeniden giriş yapın."
+                        )
+                    }
                     coroutineScope {
                         val slotsDeferred = async { repo.getForLecturer(lecturerId, orgId) }
                         val entriesDeferred = async { scheduleRepo.getEntriesForLecturer(lecturerId, orgId) }
@@ -77,11 +88,19 @@ class AvailabilityViewModel(app: Application) : AndroidViewModel(app) {
             _saveState.value = UiState.Error("Bitiş saati başlangıçtan sonra olmalı.", retryable = false)
             return
         }
+        val lecturerId = session.lecturerId
+        if (lecturerId <= 0) {
+            _saveState.value = UiState.Error(
+                "Hocaya ait bir profil bulunamadı. Yöneticiyle iletişime geçin.",
+                retryable = false
+            )
+            return
+        }
         viewModelScope.launch {
             _saveState.value = UiState.Loading
             runCatching {
                 withContext(Dispatchers.IO) {
-                    repo.insert(session.lecturerId, day, startTime, endTime, session.orgId)
+                    repo.insert(lecturerId, day, startTime, endTime, session.orgId)
                 }
             }.onSuccess {
                 _saveState.value = UiState.Success(Unit)

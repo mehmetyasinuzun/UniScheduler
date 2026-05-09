@@ -8,7 +8,9 @@ constraintlayout    = "2.1.4"
 lifecycle           = "2.8.3"
 navigation          = "2.7.7"
 recyclerview        = "1.3.2"
+viewpager2          = "1.1.0"
 swipeRefreshLayout  = "1.1.0"
+workManager         = "2.9.1"
 securityCrypto      = "1.1.0-alpha06"
 coroutines          = "1.9.0"
 serialization       = "1.7.3"
@@ -16,6 +18,9 @@ supabase            = "3.0.0"
 ktor                = "3.0.1"
 junit               = "4.13.2"
 junitExt            = "1.2.1"
+robolectric         = "4.13"
+testCore            = "1.6.1"
+testRunner          = "1.6.2"
 
 [libraries]
 androidx-core-ktx              = { group = "androidx.core",              name = "core-ktx",               version.ref = "coreKtx" }
@@ -23,7 +28,9 @@ androidx-appcompat             = { group = "androidx.appcompat",         name = 
 material                       = { group = "com.google.android.material", name = "material",                version.ref = "material" }
 androidx-constraintlayout      = { group = "androidx.constraintlayout",  name = "constraintlayout",        version.ref = "constraintlayout" }
 androidx-recyclerview          = { group = "androidx.recyclerview",       name = "recyclerview",            version.ref = "recyclerview" }
+androidx-viewpager2            = { group = "androidx.viewpager2",        name = "viewpager2",              version.ref = "viewpager2" }
 androidx-swiperefreshlayout    = { group = "androidx.swiperefreshlayout", name = "swiperefreshlayout",      version.ref = "swipeRefreshLayout" }
+androidx-work-runtime          = { group = "androidx.work",              name = "work-runtime-ktx",        version.ref = "workManager" }
 androidx-security-crypto       = { group = "androidx.security",          name = "security-crypto",         version.ref = "securityCrypto" }
 
 lifecycle-viewmodel-ktx        = { group = "androidx.lifecycle",         name = "lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
@@ -46,6 +53,9 @@ gridlayout                     = { group = "androidx.gridlayout",       name = "
 
 junit                          = { group = "junit",                      name = "junit",                   version.ref = "junit" }
 androidx-junit                 = { group = "androidx.test.ext",          name = "junit",                   version.ref = "junitExt" }
+robolectric                    = { group = "org.robolectric",            name = "robolectric",             version.ref = "robolectric" }
+androidx-test-core             = { group = "androidx.test",              name = "core-ktx",                version.ref = "testCore" }
+androidx-test-runner           = { group = "androidx.test",              name = "runner",                  version.ref = "testRunner" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -41,6 +41,15 @@ class MainActivity : AppCompatActivity() {
 
         session = SessionManager(this)
 
+        // First-launch onboarding (B14). Shown only once across the app's
+        // lifetime, gated by a SharedPreferences flag — survives app
+        // upgrades, cleared on data wipe.
+        if (!session.isLoggedIn &&
+            com.unischeduler.ui.onboarding.OnboardingActivity.isPending(this)
+        ) {
+            com.unischeduler.ui.onboarding.OnboardingActivity.start(this)
+        }
+
         // Honor a pending logout from a previous activity instance: if we got here
         // via the FORCE_LOGOUT extra, ignore any persisted session and land on login.
         val forceLogout = intent?.getBooleanExtra(EXTRA_FORCE_LOGOUT, false) == true
@@ -113,6 +122,10 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             withContext(Dispatchers.IO) {
                 runCatching { SupabaseClient.resetForLogout() }
+                // Cancel any pending reminders so the next user (possibly a
+                // different lecturer on a shared device) doesn't inherit
+                // alarms scheduled against the previous account's lecturer_id.
+                runCatching { com.unischeduler.notif.ReminderScheduler.cancelAll(applicationContext) }
             }
             session.clear()
             adminNavReady    = false
@@ -124,7 +137,15 @@ class MainActivity : AppCompatActivity() {
             }
             startActivity(restart)
             finish()
-            overridePendingTransition(0, 0)
+            // overridePendingTransition is deprecated on API 34+; the new
+            // overrideActivityTransition provides equivalent fade-zero
+            // animation without the lint warning.
+            if (android.os.Build.VERSION.SDK_INT >= 34) {
+                overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, 0, 0)
+            } else {
+                @Suppress("DEPRECATION")
+                overridePendingTransition(0, 0)
+            }
         }
     }
 

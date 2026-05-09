@@ -51,6 +51,9 @@ class PasswordChangeFragment : Fragment() {
                     if (session.isAdmin) {
                         findNavController().navigate(R.id.action_passwordChange_to_adminHome)
                     } else {
+                        // Same as fresh login: arm tomorrow's reminders.
+                        com.unischeduler.notif.ReminderScheduler
+                            .scheduleNextDayReminders(requireContext().applicationContext)
                         findNavController().navigate(R.id.action_passwordChange_to_lecturerHome)
                     }
                 }

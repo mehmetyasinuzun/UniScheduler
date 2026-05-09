@@ -84,7 +84,9 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.recyclerview)
+    implementation(libs.androidx.viewpager2)
     implementation(libs.androidx.swiperefreshlayout)
+    implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.security.crypto)
 
     implementation(libs.lifecycle.viewmodel.ktx)
@@ -112,7 +114,37 @@ dependencies {
     }
 
     testImplementation(libs.junit)
+    // Robolectric: runs Android-aware UI tests on the JVM (no emulator needed).
+    // Used for Activity/Fragment smoke tests that catch layout-inflation
+    // crashes, missing resources, and onCreate/onViewCreated regressions
+    // without requiring a connected device.
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.test.runner)
+    // androidx.test.ext:junit gives us @AndroidJUnit4 runner that works
+    // with both Robolectric (JVM unit tests) and Espresso (instrumented).
+    testImplementation(libs.androidx.junit)
+
     androidTestImplementation(libs.androidx.junit)
+}
+
+// Robolectric needs unit tests to see Android resources (R.layout, strings,
+// drawables). Without this, every smoke test fails with "Unable to find
+// resource" before any assertion runs.
+android.testOptions {
+    unitTests.isIncludeAndroidResources = true
+    unitTests.isReturnDefaultValues     = true
+    unitTests.all {
+        // Force the test JVM to en_US so Robolectric's native-library
+        // resolver (which calls String.toLowerCase to build platform-
+        // specific .so paths like "conscrypt_openjdk_jni-windows-x86_64")
+        // doesn't trip on the Turkish locale's i → ı dotless conversion
+        // and look for "wındows-x86_64" — a non-existent file.
+        it.systemProperty("user.language", "en")
+        it.systemProperty("user.country",  "US")
+        it.systemProperty("file.encoding", "UTF-8")
+        it.jvmArgs = listOf("-Duser.timezone=UTC")
+    }
 }
 
 // Fix duplicate resource issues from Apache POI on Android.

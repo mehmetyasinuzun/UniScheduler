@@ -116,7 +116,7 @@ class AvailabilityFragment : Fragment() {
             .setTitleText(getString(R.string.availability_time_pick_title))
             .build()
         picker.addOnPositiveButtonClickListener {
-            onSelected(String.format("%02d:%02d", picker.hour, picker.minute))
+            onSelected(String.format(java.util.Locale.US, "%02d:%02d", picker.hour, picker.minute))
         }
         picker.show(parentFragmentManager, "timePicker")
     }

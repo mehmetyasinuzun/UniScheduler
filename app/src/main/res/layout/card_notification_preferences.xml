@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Reusable card with all five notification preferences. Included from both
+  Settings (admin) and LecturerHome (lecturer) so both roles share one UI
+  surface and one set of test paths.
+
+  Children expose stable IDs the host fragment binds to; nothing here owns
+  state directly — the host wires SwitchMaterial.setOnCheckedChangeListener
+  and persists via NotificationPreferences.
+-->
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/notif_card_title"
+            android:textStyle="bold"
+            android:textSize="16sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/notif_card_description"
+            android:textSize="13sp"
+            android:layout_marginTop="2dp"
+            android:layout_marginBottom="8dp" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/swNotifMaster"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/notif_master_switch"
+            android:checked="true" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?android:attr/listDivider"
+            android:layout_marginVertical="8dp" />
+
+        <TextView
+            android:id="@+id/tvNotifOffsetLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/notif_reminder_offset_label"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp" />
+
+        <RadioGroup
+            android:id="@+id/rgNotifOffset"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/rbNotif15"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/notif_reminder_15" />
+            <RadioButton
+                android:id="@+id/rbNotif30"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/notif_reminder_30" />
+            <RadioButton
+                android:id="@+id/rbNotif60"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/notif_reminder_60" />
+            <RadioButton
+                android:id="@+id/rbNotif120"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/notif_reminder_120" />
+        </RadioGroup>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?android:attr/listDivider"
+            android:layout_marginVertical="8dp" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/swQuietHours"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/notif_quiet_switch" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/notif_quiet_description"
+            android:textSize="12sp"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/llQuietHoursRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/notif_quiet_start"
+                android:textStyle="bold"
+                android:layout_marginEnd="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnQuietStart"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="22:00" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/notif_quiet_end"
+                android:textStyle="bold"
+                android:layout_marginEnd="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnQuietEnd"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="07:00" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

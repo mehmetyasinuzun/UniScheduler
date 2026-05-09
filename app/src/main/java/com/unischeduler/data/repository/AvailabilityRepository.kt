@@ -19,6 +19,15 @@ class AvailabilityRepository {
             }
             .decodeList<LecturerAvailability>()
 
+    /** Org-wide availability rows (used by Admin Auto-Schedule and Backup). */
+    suspend fun getAllForOrg(orgId: Int): List<LecturerAvailability> =
+        client.postgrest["lecturer_availability"]
+            .select {
+                filter { eq("org_id", orgId) }
+                limit(20000)
+            }
+            .decodeList<LecturerAvailability>()
+
     suspend fun insert(lecturerId: Int, day: String, startTime: String, endTime: String, orgId: Int) {
         client.postgrest["lecturer_availability"].insert(
             LecturerAvailabilityInsert(

@@ -75,6 +75,55 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Export & Share card (B4 + B5) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardExport"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:layout_marginTop="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/lecturer_export_title"
+                    android:textStyle="bold"
+                    android:textSize="16sp"
+                    android:layout_marginBottom="8dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnExportPdf"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/lecturer_export_pdf"
+                    android:layout_marginBottom="4dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnExportIcs"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/lecturer_export_ics" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Notification preferences (B3) — visible only when load() succeeds -->
+        <include
+            android:id="@+id/cardNotifications"
+            layout="@layout/card_notification_preferences"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:visibility="gone" />
+
         <TextView
             android:id="@+id/tvError"
             android:layout_width="match_parent"

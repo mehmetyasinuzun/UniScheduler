@@ -307,4 +307,112 @@
     <string name="day_friday">Cuma</string>
     <string name="day_saturday">Cumartesi</string>
     <string name="day_sunday">Pazar</string>
+
+    <!-- ─── Export & Sharing (Sprint B4–B7) ──────────────────────────────────── -->
+    <!-- Common -->
+    <string name="export_share_title">Paylaş…</string>
+    <string name="export_save_pdf">PDF olarak kaydet</string>
+    <string name="export_save_ics">Takvim dosyası (.ics)</string>
+    <string name="export_save_backup">Tüm verileri yedekle (.json)</string>
+    <string name="export_template_courses">Ders şablonu (.xlsx)</string>
+    <string name="export_template_lecturers">Hoca şablonu (.xlsx)</string>
+    <string name="export_template_classrooms">Derslik şablonu (.xlsx)</string>
+    <string name="export_in_progress">Hazırlanıyor…</string>
+    <string name="export_success">Dosya kaydedildi</string>
+    <string name="export_failed">Kaydetme başarısız: %1$s</string>
+
+    <!-- PDF -->
+    <string name="export_pdf_default_filename">program.pdf</string>
+    <string name="export_pdf_lecturer_title">%1$s — Haftalık Programım</string>
+    <string name="export_pdf_admin_title">Haftalık Ders Programı</string>
+    <string name="export_pdf_share">PDF\'i paylaş</string>
+
+    <!-- iCal -->
+    <string name="export_ics_default_filename">program.ics</string>
+    <string name="export_ics_calendar_name">UniScheduler — %1$s</string>
+
+    <!-- Templates section header -->
+    <string name="settings_templates_title">Excel Şablonları</string>
+    <string name="settings_templates_description">İçe aktarma için boş Excel şablonlarını indir.</string>
+
+    <!-- Backup section -->
+    <string name="settings_backup_title">Veri Yedekleme</string>
+    <string name="settings_backup_description">Tüm bölüm, hoca, ders, derslik ve program verilerinizi tek bir JSON dosyası olarak indirin. Saklamak için arşivleyebilirsiniz.</string>
+    <string name="settings_backup_button">Yedek İndir</string>
+    <string name="settings_backup_default_filename">unischeduler-yedek-%1$s.json</string>
+    <string name="settings_backup_done_title">Yedek hazır</string>
+    <string name="settings_backup_done_message">İçerik:\n%1$s\n\nBu dosyayı güvenli bir yerde saklayın.</string>
+
+    <!-- Share section (lecturer) -->
+    <string name="lecturer_export_title">Programımı Dışa Aktar</string>
+    <string name="lecturer_export_pdf">PDF olarak indir</string>
+    <string name="lecturer_export_ics">Takvim olarak indir (.ics)</string>
+
+    <!-- ─── UX (Sprint B8 - B14) ───────────────────────────────────────────── -->
+    <string name="ux_search_hint_lecturer">Hoca ara (ad, soyad veya kullanıcı adı)</string>
+    <string name="ux_search_hint_course">Ders ara (kod veya ad)</string>
+    <string name="ux_search_hint_classroom">Derslik ara (kod)</string>
+    <string name="ux_search_hint_offering">Açılan ders ara</string>
+    <string name="ux_search_clear">Temizle</string>
+    <string name="ux_search_no_results">"%1$s" araması için sonuç yok</string>
+
+    <string name="ux_undo_deleted_lecturer">"%1$s" silindi</string>
+    <string name="ux_undo_deleted_course">"%1$s" silindi</string>
+    <string name="ux_undo_deleted_classroom">"%1$s" silindi</string>
+    <string name="ux_undo_deleted_offering">"%1$s" silindi</string>
+    <string name="ux_undo_deleted_department">"%1$s" silindi</string>
+    <string name="ux_undo_deleted_assignment">Atama silindi</string>
+    <string name="ux_undo_action">GERİ AL</string>
+
+    <string name="ux_empty_no_lecturers">Henüz hoca eklenmedi</string>
+    <string name="ux_empty_no_lecturers_hint">"+ Hoca Ekle" butonu ile ilk hocayı oluşturun, sistem kullanıcı adı ve şifreyi sizin için üretir.</string>
+    <string name="ux_empty_no_courses">Henüz ders eklenmedi</string>
+    <string name="ux_empty_no_courses_hint">Manuel ekleyin ya da Excel ile toplu içe aktarın.</string>
+    <string name="ux_empty_no_classrooms">Henüz derslik eklenmedi</string>
+    <string name="ux_empty_no_classrooms_hint">Derslik kodu ve kapasiteyi girerek başlayın.</string>
+    <string name="ux_empty_no_offerings">Bu dönem için açılan ders yok</string>
+    <string name="ux_empty_no_offerings_hint">Önce ders ekleyin, sonra dönem ve şube bilgisi ile açılan ders oluşturun.</string>
+    <string name="ux_empty_no_departments">Henüz bölüm eklenmedi</string>
+    <string name="ux_empty_no_assignments">Henüz program kaydı yok</string>
+    <string name="ux_empty_no_schedule">Bu hafta için programınız yok</string>
+
+    <!-- Onboarding (B14) -->
+    <string name="onboarding_skip">Atla</string>
+    <string name="onboarding_next">İleri</string>
+    <string name="onboarding_finish">Başla</string>
+    <string name="onboarding_p1_title">UniScheduler\'a Hoş Geldiniz</string>
+    <string name="onboarding_p1_body">Üniversite ders programınızı tek bir yerden yönetin: hocalar, dersler, derslikler ve haftalık çakışmasız atamalar.</string>
+    <string name="onboarding_p2_title">1. Departmanları Ekleyin</string>
+    <string name="onboarding_p2_body">Settings sekmesinden bölümleri ekleyin. Her hoca, ders ve derslik bir bölüme bağlanır.</string>
+    <string name="onboarding_p3_title">2. Hocaları &amp; Dersleri Ekleyin</string>
+    <string name="onboarding_p3_body">Data sekmesinden manuel ekleyin veya Excel/CSV ile toplu içe aktarın. Sistem her hocaya kullanıcı adı ve geçici şifre üretir.</string>
+    <string name="onboarding_p4_title">3. Otomatik Programı Çalıştırın</string>
+    <string name="onboarding_p4_body">Assignment ekranından "Otomatik Atama"ya tıklayın. Çakışma kontrolü dahil, dakikalar içinde hazır.</string>
+
+    <!-- ─── Notifications (Sprint B2 + B3) ──────────────────────────────────── -->
+    <string name="notif_card_title">Bildirim Tercihleri</string>
+    <string name="notif_card_description">Yarınki dersleriniz için yerel hatırlatma bildirimleri.</string>
+    <string name="notif_master_switch">Hatırlatmalar açık</string>
+    <string name="notif_reminder_offset_label">Ders başlamadan kaç dakika önce</string>
+    <string name="notif_reminder_15">15 dakika</string>
+    <string name="notif_reminder_30">30 dakika</string>
+    <string name="notif_reminder_60">1 saat</string>
+    <string name="notif_reminder_120">2 saat</string>
+    <string name="notif_quiet_switch">Sessiz saatler</string>
+    <string name="notif_quiet_description">Belirlenen aralıkta bildirim gösterilmez.</string>
+    <string name="notif_quiet_start">Başlangıç</string>
+    <string name="notif_quiet_end">Bitiş</string>
+
+    <!-- Permission rationale -->
+    <string name="notif_permission_rationale_title">Bildirim izni</string>
+    <string name="notif_permission_rationale_message">Yarınki derslerinizi hatırlatabilmemiz için Android\'in bildirim iznine ihtiyacımız var. Reddetmeniz uygulamanın diğer özelliklerini etkilemez.</string>
+    <string name="notif_permission_rationale_grant">İzin ver</string>
+    <string name="notif_permission_rationale_decline">Vazgeç</string>
+
+    <!-- Notification channel + content (B2) -->
+    <string name="notif_channel_reminder_name">Ders hatırlatmaları</string>
+    <string name="notif_channel_reminder_description">Yarınki dersleriniz için zamanlanmış hatırlatmalar.</string>
+    <string name="notif_reminder_title">%1$s — %2$s\'da</string>
+    <string name="notif_reminder_body">%1$s • %2$s</string>
+    <string name="notif_reminder_body_no_room">%1$s</string>
 </resources>

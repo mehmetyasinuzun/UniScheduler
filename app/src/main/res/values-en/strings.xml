@@ -307,4 +307,103 @@
     <string name="day_friday">Friday</string>
     <string name="day_saturday">Saturday</string>
     <string name="day_sunday">Sunday</string>
+
+    <!-- ─── Export & Sharing (Sprint B4–B7) ──────────────────────────────────── -->
+    <string name="export_share_title">Share…</string>
+    <string name="export_save_pdf">Save as PDF</string>
+    <string name="export_save_ics">Calendar file (.ics)</string>
+    <string name="export_save_backup">Back up all data (.json)</string>
+    <string name="export_template_courses">Courses template (.xlsx)</string>
+    <string name="export_template_lecturers">Lecturers template (.xlsx)</string>
+    <string name="export_template_classrooms">Classrooms template (.xlsx)</string>
+    <string name="export_in_progress">Preparing…</string>
+    <string name="export_success">File saved</string>
+    <string name="export_failed">Save failed: %1$s</string>
+
+    <string name="export_pdf_default_filename">schedule.pdf</string>
+    <string name="export_pdf_lecturer_title">%1$s — My Weekly Schedule</string>
+    <string name="export_pdf_admin_title">Weekly Schedule</string>
+    <string name="export_pdf_share">Share PDF</string>
+
+    <string name="export_ics_default_filename">schedule.ics</string>
+    <string name="export_ics_calendar_name">UniScheduler — %1$s</string>
+
+    <string name="settings_templates_title">Excel Templates</string>
+    <string name="settings_templates_description">Download empty Excel templates for bulk import.</string>
+
+    <string name="settings_backup_title">Data Backup</string>
+    <string name="settings_backup_description">Download all department, lecturer, course, classroom and schedule data as a single JSON file. Keep this archived for safety.</string>
+    <string name="settings_backup_button">Download Backup</string>
+    <string name="settings_backup_default_filename">unischeduler-backup-%1$s.json</string>
+    <string name="settings_backup_done_title">Backup ready</string>
+    <string name="settings_backup_done_message">Contents:\n%1$s\n\nKeep this file in a safe place.</string>
+
+    <string name="lecturer_export_title">Export My Schedule</string>
+    <string name="lecturer_export_pdf">Download as PDF</string>
+    <string name="lecturer_export_ics">Download as calendar (.ics)</string>
+
+    <!-- ─── UX (Sprint B8 - B14) ───────────────────────────────────────────── -->
+    <string name="ux_search_hint_lecturer">Search lecturers (name or username)</string>
+    <string name="ux_search_hint_course">Search courses (code or name)</string>
+    <string name="ux_search_hint_classroom">Search classrooms (code)</string>
+    <string name="ux_search_hint_offering">Search offerings</string>
+    <string name="ux_search_clear">Clear</string>
+    <string name="ux_search_no_results">No matches for "%1$s"</string>
+
+    <string name="ux_undo_deleted_lecturer">Deleted "%1$s"</string>
+    <string name="ux_undo_deleted_course">Deleted "%1$s"</string>
+    <string name="ux_undo_deleted_classroom">Deleted "%1$s"</string>
+    <string name="ux_undo_deleted_offering">Deleted "%1$s"</string>
+    <string name="ux_undo_deleted_department">Deleted "%1$s"</string>
+    <string name="ux_undo_deleted_assignment">Assignment deleted</string>
+    <string name="ux_undo_action">UNDO</string>
+
+    <string name="ux_empty_no_lecturers">No lecturers yet</string>
+    <string name="ux_empty_no_lecturers_hint">Tap "+ Add Lecturer" to create the first one. The system will generate a username and password for you.</string>
+    <string name="ux_empty_no_courses">No courses yet</string>
+    <string name="ux_empty_no_courses_hint">Add manually or bulk-import from Excel.</string>
+    <string name="ux_empty_no_classrooms">No classrooms yet</string>
+    <string name="ux_empty_no_classrooms_hint">Enter a room code and capacity to begin.</string>
+    <string name="ux_empty_no_offerings">No offerings opened for this term</string>
+    <string name="ux_empty_no_offerings_hint">First add courses, then open them as offerings with term and section info.</string>
+    <string name="ux_empty_no_departments">No departments yet</string>
+    <string name="ux_empty_no_assignments">No schedule entries yet</string>
+    <string name="ux_empty_no_schedule">No classes for you this week</string>
+
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_finish">Get Started</string>
+    <string name="onboarding_p1_title">Welcome to UniScheduler</string>
+    <string name="onboarding_p1_body">Manage your university timetable in one place: lecturers, courses, classrooms and conflict-free weekly assignments.</string>
+    <string name="onboarding_p2_title">1. Add Departments</string>
+    <string name="onboarding_p2_body">Use the Settings tab to add departments. Every lecturer, course and classroom is tied to one.</string>
+    <string name="onboarding_p3_title">2. Add Lecturers &amp; Courses</string>
+    <string name="onboarding_p3_body">Add manually from the Data tab or bulk-import via Excel/CSV. The system generates each lecturer\'s credentials.</string>
+    <string name="onboarding_p4_title">3. Run Auto-Schedule</string>
+    <string name="onboarding_p4_body">Tap "Auto-Schedule" on the Assignment screen. Conflict checks included — ready in minutes.</string>
+
+    <!-- ─── Notifications (Sprint B2 + B3) ──────────────────────────────────── -->
+    <string name="notif_card_title">Notification Preferences</string>
+    <string name="notif_card_description">Local reminders for tomorrow\'s classes.</string>
+    <string name="notif_master_switch">Reminders enabled</string>
+    <string name="notif_reminder_offset_label">How long before class</string>
+    <string name="notif_reminder_15">15 minutes</string>
+    <string name="notif_reminder_30">30 minutes</string>
+    <string name="notif_reminder_60">1 hour</string>
+    <string name="notif_reminder_120">2 hours</string>
+    <string name="notif_quiet_switch">Quiet hours</string>
+    <string name="notif_quiet_description">No reminders will be shown during this window.</string>
+    <string name="notif_quiet_start">From</string>
+    <string name="notif_quiet_end">Until</string>
+
+    <string name="notif_permission_rationale_title">Notification permission</string>
+    <string name="notif_permission_rationale_message">To remind you of tomorrow\'s classes we need Android\'s notification permission. Declining does not affect other app features.</string>
+    <string name="notif_permission_rationale_grant">Grant</string>
+    <string name="notif_permission_rationale_decline">Skip</string>
+
+    <string name="notif_channel_reminder_name">Class reminders</string>
+    <string name="notif_channel_reminder_description">Scheduled reminders for tomorrow\'s classes.</string>
+    <string name="notif_reminder_title">%1$s at %2$s</string>
+    <string name="notif_reminder_body">%1$s • %2$s</string>
+    <string name="notif_reminder_body_no_room">%1$s</string>
 </resources>

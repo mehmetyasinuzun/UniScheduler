@@ -6,17 +6,37 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.appcompat.app.AlertDialog
+import androidx.lifecycle.lifecycleScope
 import com.unischeduler.App
 import com.unischeduler.MainActivity
 import com.unischeduler.R
+import com.unischeduler.data.model.OrgSettings
+import com.unischeduler.data.model.ScheduleEntry
+import com.unischeduler.data.repository.OrgSettingsRepository
+import com.unischeduler.data.repository.ScheduleRepository
 import com.unischeduler.databinding.FragmentLecturerHomeBinding
+import com.unischeduler.util.IcsExporter
+import com.unischeduler.util.NotificationPreferences
+import com.unischeduler.util.NotificationPreferencesUi
+import com.unischeduler.util.PdfExporter
+import com.unischeduler.util.SessionManager
 import com.unischeduler.util.UiState
 import com.unischeduler.util.collectFlow
+import com.unischeduler.util.shareDocument
+import com.unischeduler.util.writeBytesToUri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 
 class LecturerHomeFragment : Fragment() {
 
@@ -24,6 +44,65 @@ class LecturerHomeFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: LecturerHomeViewModel by viewModels()
     private var isFirstResume = true
+
+    // SAF launchers — both must be registered in onCreate per Android contract.
+    private lateinit var pdfSaveLauncher: ActivityResultLauncher<String>
+    private lateinit var icsSaveLauncher: ActivityResultLauncher<String>
+    private lateinit var notifPermissionLauncher: ActivityResultLauncher<String>
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // PDF export contract
+        pdfSaveLauncher = registerForActivityResult(
+            ActivityResultContracts.CreateDocument("application/pdf")
+        ) { uri ->
+            uri ?: return@registerForActivityResult
+            val title = getString(R.string.export_pdf_lecturer_title, currentLecturerLabel())
+            writeBytesToUri(
+                destination = uri,
+                produce = { renderPdfBytes(title) },
+                onDone = { savedUri ->
+                    AlertDialog.Builder(requireContext())
+                        .setTitle(R.string.export_success)
+                        .setPositiveButton(R.string.export_pdf_share) { _, _ ->
+                            shareDocument(savedUri, "application/pdf")
+                        }
+                        .setNegativeButton(R.string.common_ok, null)
+                        .show()
+                }
+            )
+        }
+        // iCal export contract — text/calendar is the canonical MIME for .ics
+        icsSaveLauncher = registerForActivityResult(
+            ActivityResultContracts.CreateDocument("text/calendar")
+        ) { uri ->
+            uri ?: return@registerForActivityResult
+            writeBytesToUri(
+                destination = uri,
+                produce = { renderIcsBytes() }
+            )
+        }
+        // POST_NOTIFICATIONS runtime permission for Android 13+.
+        // Only result we care about is "denied" → revert master switch.
+        notifPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            // Persist the preference flip even if the fragment was
+            // destroyed by the time the system permission dialog returns
+            // — the user's intent is unambiguous. Touching `binding`
+            // requires the view to still be attached.
+            val appCtx = context?.applicationContext ?: return@registerForActivityResult
+            if (!granted) {
+                NotificationPreferences(appCtx).enabled = false
+            }
+            if (!isAdded || _binding == null) return@registerForActivityResult
+            if (!granted) {
+                binding.cardNotifications.root.findViewById<com.google.android.material.materialswitch.MaterialSwitch>(
+                    R.id.swNotifMaster
+                )?.isChecked = false
+            }
+        }
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentLecturerHomeBinding.inflate(inflater, container, false)
@@ -35,6 +114,23 @@ class LecturerHomeFragment : Fragment() {
 
         binding.btnRetry.setOnClickListener { viewModel.load() }
         binding.swipeRefresh.setOnRefreshListener { viewModel.load() }
+        binding.btnExportPdf.setOnClickListener {
+            pdfSaveLauncher.launch(getString(R.string.export_pdf_default_filename))
+        }
+        binding.btnExportIcs.setOnClickListener {
+            icsSaveLauncher.launch(getString(R.string.export_ics_default_filename))
+        }
+
+        // Notification preferences card (B3) — also re-arms tomorrow's
+        // alarms whenever the user changes any setting so the change is
+        // reflected immediately, not at the next 23:00 worker run.
+        val ctx = requireContext().applicationContext
+        NotificationPreferencesUi.bind(
+            root = binding.cardNotifications.root,
+            prefs = NotificationPreferences(ctx),
+            permissionLauncher = notifPermissionLauncher,
+            onAnyChange = { NotificationPreferencesUi.rescheduleAfterChange(ctx) }
+        )
 
         setupThemeSelector()
         setupLanguageSelector()
@@ -68,6 +164,8 @@ class LecturerHomeFragment : Fragment() {
                     binding.tvWelcome.visibility    = View.VISIBLE
                     binding.tvDepartment.visibility = View.VISIBLE
                     binding.cardWeekly.visibility   = View.VISIBLE
+                    binding.cardExport.visibility   = View.VISIBLE
+                    binding.cardNotifications.root.visibility = View.VISIBLE
                 }
             }
         }
@@ -140,6 +238,51 @@ class LecturerHomeFragment : Fragment() {
         if (isFirstResume) { isFirstResume = false; return }
         viewModel.load()
     }
+
+    // ── Export helpers ─────────────────────────────────────────────────────-
+
+    private fun currentLecturerLabel(): String =
+        (viewModel.state.value as? UiState.Success)?.data?.lecturer?.fullName
+            ?: SessionManager(requireContext().applicationContext).username
+
+    /** Pulls the latest entries + settings from the network so the PDF
+     *  matches what the user actually sees, not whatever was cached. */
+    private suspend fun loadExportInputs(): Pair<List<ScheduleEntry>, OrgSettings> = coroutineScope {
+        val ctx = requireContext().applicationContext
+        val session = SessionManager(ctx)
+        val orgId = session.orgId
+        val lecturerId = session.lecturerId
+        if (orgId <= 0 || lecturerId <= 0) error("Aktif oturum bulunamadı")
+
+        val scheduleRepo  = ScheduleRepository()
+        val settingsRepo  = OrgSettingsRepository()
+        val entriesAsync  = async { scheduleRepo.getEntriesForLecturer(lecturerId, orgId) }
+        val settingsAsync = async {
+            runCatching { settingsRepo.getSettings(orgId) }.getOrNull() ?: OrgSettings(orgId = orgId)
+        }
+        entriesAsync.await() to settingsAsync.await()
+    }
+
+    private suspend fun renderPdfBytes(title: String): ByteArray =
+        withContext(Dispatchers.IO) {
+            val (entries, settings) = loadExportInputs()
+            ByteArrayOutputStream().use { buf ->
+                PdfExporter.exportSchedule(
+                    out = buf,
+                    title = title,
+                    entries = entries,
+                    settings = settings
+                )
+                buf.toByteArray()
+            }
+        }
+
+    private suspend fun renderIcsBytes(): ByteArray =
+        withContext(Dispatchers.IO) {
+            val (entries, _) = loadExportInputs()
+            val calendarName = getString(R.string.export_ics_calendar_name, currentLecturerLabel())
+            IcsExporter.export(entries, calendarName).toByteArray(Charsets.UTF_8)
+        }
 
     override fun onDestroyView() { super.onDestroyView(); _binding = null }
 }

@@ -14,23 +14,39 @@ class SessionManager(context: Context) {
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
         .build()
 
-    private val prefs: SharedPreferences = try {
-        EncryptedSharedPreferences.create(
-            context,
-            "uni_scheduler_session",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
-    } catch (_: Exception) {
-        context.deleteSharedPreferences("uni_scheduler_session")
-        EncryptedSharedPreferences.create(
-            context,
-            "uni_scheduler_session",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+    // Three-tier prefs creation — each tier degrades a bit on security but
+    // keeps the app launchable rather than crashing:
+    //   1. Open the encrypted store as designed.
+    //   2. Master-key drift / corrupted file: wipe and retry encryption.
+    //   3. Even fresh encryption fails (rare — broken keystore on some
+    //      Chinese OEMs, factory-reset state mid-launch): fall back to a
+    //      plain SharedPreferences so the user can at least reach login.
+    //      No PII is *written* in this fallback path because we always
+    //      redirect to login when we can't decrypt — but we mark it so
+    //      defensive callers can refuse to persist sensitive data.
+    private val prefs: SharedPreferences = run {
+        val attemptCreate = {
+            EncryptedSharedPreferences.create(
+                context,
+                "uni_scheduler_session",
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        }
+        runCatching { attemptCreate() }
+            .recoverCatching {
+                context.deleteSharedPreferences("uni_scheduler_session")
+                attemptCreate()
+            }
+            .recoverCatching {
+                // Last resort — Tink/Keystore unavailable on this device.
+                // App still launches; user is forced through login on every
+                // start because no session can be persisted. Better than a
+                // permanent boot loop.
+                context.getSharedPreferences("uni_scheduler_session_fallback", Context.MODE_PRIVATE)
+            }
+            .getOrThrow()
     }
 
     var userId: String

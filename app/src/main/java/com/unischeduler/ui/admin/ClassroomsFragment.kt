@@ -26,6 +26,7 @@ import com.unischeduler.util.ErrorReporter
 import com.unischeduler.util.ExcelHelper
 import com.unischeduler.util.FileTypeDetector
 import com.unischeduler.util.ImportPreviewDialog
+import com.unischeduler.util.PendingDelete
 import com.unischeduler.util.UiState
 import com.unischeduler.util.collectFlow
 import androidx.lifecycle.lifecycleScope
@@ -43,6 +44,7 @@ class ClassroomsFragment : Fragment() {
     private val classroomTypes = listOf("theory", "lab")
 
     private var isFirstResume = true
+    private var classroomQuery: String = ""
 
     private lateinit var classroomAdapter: ClassroomAdapter
 
@@ -91,6 +93,16 @@ class ClassroomsFragment : Fragment() {
         binding.rvClassrooms.layoutManager = LinearLayoutManager(requireContext())
         binding.rvClassrooms.setHasFixedSize(true)
         binding.swipeRefresh.setOnRefreshListener { viewModel.loadClassrooms() }
+
+        // B8 — search
+        binding.etSearchClassrooms.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                classroomQuery = s?.toString()?.trim()?.lowercase() ?: ""
+                refreshClassroomList()
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
         classroomAdapter = ClassroomAdapter(
             onEditClick   = { showEditDialog(it) },
             onDeleteClick = { showDeleteDialog(it) }
@@ -128,7 +140,7 @@ class ClassroomsFragment : Fragment() {
                     binding.swipeRefresh.isRefreshing = false
                     showLoading(false)
                     classrooms = state.data
-                    classroomAdapter.submitList(state.data)
+                    refreshClassroomList()
                 }
             }
         }
@@ -205,7 +217,20 @@ class ClassroomsFragment : Fragment() {
         AlertDialog.Builder(requireContext())
             .setTitle(getString(R.string.classroom_delete_title))
             .setMessage(getString(R.string.classroom_delete_message, classroom.roomCode))
-            .setPositiveButton(getString(R.string.common_delete)) { _, _ -> viewModel.deleteClassroom(classroom.id) }
+            .setPositiveButton(getString(R.string.common_delete)) { _, _ ->
+                classrooms = classrooms.filter { it.id != classroom.id }
+                refreshClassroomList()
+                PendingDelete.schedule(
+                    anchor = binding.root,
+                    owner = viewLifecycleOwner,
+                    message = getString(R.string.ux_undo_deleted_classroom, classroom.roomCode),
+                    onUndo = {
+                        classrooms = (classrooms + classroom).sortedBy { it.roomCode }
+                        refreshClassroomList()
+                    },
+                    performDelete = { viewModel.deleteClassroom(classroom.id) }
+                )
+            }
             .setNegativeButton(getString(R.string.common_cancel), null)
             .show()
     }
@@ -385,6 +410,16 @@ class ClassroomsFragment : Fragment() {
         if (isFirstResume) { isFirstResume = false; return }
         viewModel.loadClassrooms()
         viewModel.loadDepartmentsSilently()
+    }
+
+    /** Apply the current search query to the in-memory list. */
+    private fun refreshClassroomList() {
+        val filtered = if (classroomQuery.isBlank()) classrooms else classrooms.filter {
+            it.roomCode.lowercase().contains(classroomQuery) ||
+            it.type.lowercase().contains(classroomQuery) ||
+            (it.departmentName.lowercase().contains(classroomQuery))
+        }
+        classroomAdapter.submitList(filtered)
     }
 
     override fun onDestroyView() { super.onDestroyView(); _binding = null }
