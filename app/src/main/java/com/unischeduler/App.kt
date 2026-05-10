@@ -6,11 +6,22 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import com.unischeduler.notif.NotificationHelper
 import com.unischeduler.notif.ReminderScheduler
+import com.unischeduler.util.CrashHandler
 
 class App : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Native/uncaught crash'leri yakala — coroutine içindeki
+        // exception'lar runCatching ile yakalanıyor, ama UI thread'de
+        // veya callback'lerde yakalanmamış bir hata varsa proses
+        // sessizce kapanıyor ve hiçbir log düşmüyordu. Handler diske
+        // yazar, MainActivity login sonrası DB'ye flush eder.
+        // (App.onCreate'te flush ÇAĞIRMAYIZ — JWT henüz yok ve
+        // EncryptedSharedPreferences/AndroidKeyStore Robolectric
+        // testlerinde mevcut değil; bu çağrı hem test'i hem login
+        // öncesi crash raporlamayı bozuyordu.)
+        CrashHandler.install(this)
         runMigrations()
 
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

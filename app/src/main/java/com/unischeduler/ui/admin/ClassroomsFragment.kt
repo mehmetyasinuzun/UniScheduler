@@ -91,7 +91,10 @@ class ClassroomsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.rvClassrooms.layoutManager = LinearLayoutManager(requireContext())
-        binding.rvClassrooms.setHasFixedSize(true)
+        // RV is wrap_content inside the page-level NestedScrollView, so a
+        // fixed-size hint is incorrect. Bigger view cache instead, since
+        // the RV won't recycle as aggressively.
+        binding.rvClassrooms.setItemViewCacheSize(20)
         binding.swipeRefresh.setOnRefreshListener { viewModel.loadClassrooms() }
 
         // B8 — search

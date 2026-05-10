@@ -22,20 +22,23 @@
                 android:id="@+id/tvCourse"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:text="" />
 
             <TextView
                 android:id="@+id/tvLecturer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp" />
+                android:layout_marginTop="2dp"
+                android:text="" />
 
             <TextView
                 android:id="@+id/tvSlot"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="?attr/colorOnSurfaceVariant"
-                android:layout_marginTop="2dp" />
+                android:layout_marginTop="2dp"
+                android:text="" />
 
         </LinearLayout>
 

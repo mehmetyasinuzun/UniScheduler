@@ -24,4 +24,6 @@ data class Lecturer(
     val displayName: String get() = "$firstName $lastName"
     val departmentName: String get() = departments?.name ?: ""
     val username: String get() = users?.username ?: ""
+    /** true → henüz ilk girişini yapmamış / şifre sıfırlanmış (Geçici durum). */
+    val mustChangePassword: Boolean get() = users?.mustChangePassword ?: false
 }

@@ -20,8 +20,8 @@ android {
         applicationId = "com.unischeduler"
         minSdk        = 26
         targetSdk     = 34
-        versionCode   = 2
-        versionName   = "1.0.1"
+        versionCode   = 8
+        versionName   = "1.2.7"
 
         buildConfigField("String", "SUPABASE_URL",      "\"${localProps["SUPABASE_URL"] ?: ""}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProps["SUPABASE_ANON_KEY"] ?: ""}\"")
@@ -107,11 +107,9 @@ dependencies {
 
     implementation(libs.gridlayout)
 
-    // Apache POI for Excel (.xlsx) import/export
-    implementation("org.apache.poi:poi:5.2.5")
-    implementation("org.apache.poi:poi-ooxml:5.2.5") {
-        exclude(group = "org.apache.xmlgraphics")
-    }
+    // Excel .xlsx import/export — handled by our own MiniXlsxReader /
+    // MiniXlsxWriter (zero external deps). Apache POI was removed
+    // after repeated Android-only failures (see those files' headers).
 
     testImplementation(libs.junit)
     // Robolectric: runs Android-aware UI tests on the JVM (no emulator needed).
@@ -147,11 +145,9 @@ android.testOptions {
     }
 }
 
-// Fix duplicate resource issues from Apache POI on Android.
-// "META-INF/services/**" must be MERGED, not excluded — Apache POI
-// (XSSFWorkbook etc.) discovers StAX / XmlBeans providers via
-// ServiceLoader at runtime; without these files, release APK throws
-// XmlException / NoSuchMethodError when opening .xlsx imports.
+// Standard packaging hygiene — strip license/notice files that bundled
+// libs duplicate. (POI-specific META-INF/services merge rule removed
+// when we dropped POI.)
 android.packagingOptions {
     resources.excludes += setOf(
         "META-INF/DEPENDENCIES",
@@ -161,8 +157,5 @@ android.packagingOptions {
         "META-INF/NOTICE.txt",
         "META-INF/versions/**",
         "META-INF/*.kotlin_module"
-    )
-    resources.merges += setOf(
-        "META-INF/services/**"
     )
 }

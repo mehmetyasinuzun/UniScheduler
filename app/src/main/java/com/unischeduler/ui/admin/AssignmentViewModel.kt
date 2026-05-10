@@ -173,6 +173,84 @@ class AssignmentViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun updateEntry(
+        entryId: Int,
+        offeringId: Int,
+        lecturerId: Int?,
+        classroomId: Int,
+        day: String,
+        startTime: String,
+        endTime: String,
+        force: Boolean = false
+    ) {
+        if (startTime.isBlank() || endTime.isBlank()) {
+            _saveState.value = UiState.Error("Başlangıç ve bitiş saati gerekli.", retryable = false)
+            return
+        }
+        if (toMinutes(startTime) >= toMinutes(endTime)) {
+            _saveState.value = UiState.Error("Bitiş saati başlangıçtan sonra olmalı.", retryable = false)
+            return
+        }
+        viewModelScope.launch {
+            _saveState.value = UiState.Loading
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    val orgId = session.orgId
+
+                    if (!force) {
+                        val conflicts = scheduleRepo.findConflicts(
+                            lecturerId     = lecturerId,
+                            classroomId    = classroomId,
+                            day            = day,
+                            startTime      = startTime,
+                            endTime        = endTime,
+                            orgId          = orgId,
+                            excludeEntryId = entryId
+                        )
+                        val availWarning = if (lecturerId != null) {
+                            val available = availabilityRepo.isAvailable(
+                                lecturerId = lecturerId, day = day,
+                                startTime = startTime, endTime = endTime, orgId = orgId
+                            )
+                            if (!available) "Öğretim üyesi bu saati müsait olarak işaretlememiş." else null
+                        } else null
+
+                        val warnings = AssignmentWarnings(
+                            conflicts = if (conflicts.hasConflicts) conflicts else null,
+                            availabilityWarning = availWarning
+                        )
+                        if (warnings.hasIssues) {
+                            _warningState.value = warnings
+                            _pendingEditId.value = entryId
+                            _saveState.value = UiState.Idle
+                            return@withContext
+                        }
+                    }
+
+                    scheduleRepo.updateEntry(
+                        entryId = entryId, offeringId = offeringId,
+                        lecturerId = lecturerId, classroomId = classroomId,
+                        day = day, startTime = startTime, endTime = endTime,
+                        orgId = orgId
+                    )
+                }
+            }.onSuccess {
+                if (_warningState.value == null) {
+                    _saveState.value = UiState.Success(Unit)
+                    _pendingEditId.value = null
+                    loadForm()
+                }
+            }.onFailure { e ->
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                _saveState.value = UiState.Error(ErrorMessages.map(e), retryable = false)
+                reportError("updateEntry", e)
+            }
+        }
+    }
+
+    private val _pendingEditId = MutableStateFlow<Int?>(null)
+    val pendingEditId: StateFlow<Int?> = _pendingEditId
+
     fun deleteEntry(entryId: Int) {
         viewModelScope.launch {
             runCatching {
@@ -187,7 +265,7 @@ class AssignmentViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun resetSaveState()   { _saveState.value = UiState.Idle }
-    fun clearWarnings()    { _warningState.value = null }
+    fun clearWarnings()    { _warningState.value = null; _pendingEditId.value = null }
 
     private fun reportError(action: String, e: Throwable) {
         viewModelScope.launch(Dispatchers.IO) {

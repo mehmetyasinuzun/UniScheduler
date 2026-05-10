@@ -11,7 +11,8 @@
         android:layout_height="wrap_content"
         android:textSize="14sp"
         android:textStyle="bold"
-        android:layout_marginBottom="4dp" />
+        android:layout_marginBottom="4dp"
+        android:text="" />
 
     <TextView
         android:id="@+id/tvImportErrors"
@@ -20,7 +21,8 @@
         android:textSize="12sp"
         android:textColor="?attr/colorError"
         android:layout_marginBottom="8dp"
-        android:visibility="gone" />
+        android:visibility="gone"
+        android:text="" />
 
     <TextView
         android:id="@+id/tvImportTarget"
@@ -28,7 +30,8 @@
         android:layout_height="wrap_content"
         android:textSize="13sp"
         android:textColor="?attr/colorOnSurfaceVariant"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginBottom="8dp"
+        android:text="" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -43,7 +46,8 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:textSize="13sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:text="" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnImportSelectAll"

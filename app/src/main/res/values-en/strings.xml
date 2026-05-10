@@ -159,6 +159,24 @@
     <string name="assignment_assign_button">Assign</string>
     <string name="assignment_current_title">Current Assignments</string>
     <string name="assignment_success">Assignment saved.</string>
+    <string name="assignment_update_button">Update</string>
+    <string name="assignment_update_success">Assignment updated.</string>
+    <string name="assignment_edit_banner">Editing %1$s — change fields then tap Update</string>
+    <string name="lecturer_status_temp">Pending</string>
+    <string name="lecturer_status_active">Active</string>
+    <string name="lecturer_more_actions">More actions</string>
+    <string name="lecturer_action_edit">Edit</string>
+    <string name="lecturer_action_view_schedule">Schedule &amp; Availability</string>
+    <string name="lecturer_schedule_busy_card">Busy</string>
+    <string name="lecturer_action_reset_password">Reset Password</string>
+    <string name="lecturer_action_delete">Delete</string>
+    <string name="lecturer_reset_password_confirm">Generate a new temporary password for %1$s?</string>
+    <string name="lecturer_reset_password_done_title">New password generated</string>
+    <string name="lecturer_reset_password_done_msg">Share this with the lecturer. They must change it on first login.\n\nUser: @%1$s\nPassword: %2$s</string>
+    <string name="lecturer_reset_password_copy">Copy</string>
+    <string name="lecturer_reset_password_copied">Password copied</string>
+    <string name="lecturer_schedule_title">%1$s — Weekly Schedule</string>
+    <string name="lecturer_schedule_empty">This lecturer has no scheduled classes.</string>
     <string name="assignment_invalid_selection">Please select a valid course and classroom.</string>
     <string name="assignment_select_time">Select Time</string>
     <string name="assignment_delete_title">Delete Assignment</string>
@@ -337,6 +355,24 @@
     <string name="settings_backup_default_filename">unischeduler-backup-%1$s.json</string>
     <string name="settings_backup_done_title">Backup ready</string>
     <string name="settings_backup_done_message">Contents:\n%1$s\n\nKeep this file in a safe place.</string>
+
+    <string name="settings_samples_title">Sample Excel Files</string>
+    <string name="settings_samples_description">Want to know what format the importer expects? Download a sample below and fill in your own data following the same structure.</string>
+    <string name="settings_sample_courses">Sample: Courses (.xlsx)</string>
+    <string name="settings_sample_lecturers">Sample: Lecturers (.xlsx)</string>
+    <string name="settings_sample_classrooms">Sample: Classrooms (.xlsx)</string>
+    <string name="settings_sample_default_courses">sample-courses.xlsx</string>
+    <string name="settings_sample_default_lecturers">sample-lecturers.xlsx</string>
+    <string name="settings_sample_default_classrooms">sample-classrooms.xlsx</string>
+
+    <string name="settings_restore_button">Restore from Backup</string>
+    <string name="settings_restore_confirm_title">Restore from backup?</string>
+    <string name="settings_restore_confirm_message">⚠ WARNING: This will DELETE all current data and replace it with the backup contents.\n\n• %1$s\n\nAre you sure you want to continue?</string>
+    <string name="settings_restore_in_progress">Restoring…</string>
+    <string name="settings_restore_done">Restore completed.</string>
+    <string name="settings_restore_failed">Restore failed: %1$s</string>
+    <string name="settings_restore_invalid_file">Not a valid UniScheduler backup file.</string>
+    <string name="settings_restore_wrong_org">This backup belongs to a different org (org_id=%1$d). Contact your administrator.</string>
 
     <string name="lecturer_export_title">Export My Schedule</string>
     <string name="lecturer_export_pdf">Download as PDF</string>

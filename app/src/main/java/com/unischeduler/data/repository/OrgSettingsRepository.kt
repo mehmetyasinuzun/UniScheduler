@@ -20,4 +20,29 @@ class OrgSettingsRepository {
             dayEnd = "18:00"
         )
     }
+
+    /**
+     * Upsert org settings. Tries UPDATE first; if no row matches we
+     * fall back to INSERT. Done this way so the call works whether or
+     * not the panel pre-seeded a row when the org was created.
+     */
+    suspend fun updateSettings(
+        orgId: Int,
+        timeStepMinutes: Int,
+        activeDays: List<String>,
+        dayStart: String,
+        dayEnd: String
+    ) {
+        val payload = OrgSettings(
+            orgId = orgId,
+            timeStepMinutes = timeStepMinutes,
+            activeDays = activeDays,
+            dayStart = dayStart,
+            dayEnd = dayEnd
+        )
+        // Postgrest upsert: insert with on-conflict update on the
+        // primary key (org_id). One round trip, no race window.
+        client.postgrest["org_settings"]
+            .upsert(payload) { onConflict = "org_id" }
+    }
 }

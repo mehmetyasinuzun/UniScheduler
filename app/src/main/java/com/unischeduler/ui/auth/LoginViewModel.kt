@@ -144,6 +144,7 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
         val osVer    = "Android ${android.os.Build.VERSION.RELEASE} (SDK ${android.os.Build.VERSION.SDK_INT})"
         val appVer   = com.unischeduler.BuildConfig.VERSION_NAME
         val ua       = "UniScheduler/$appVer (Android ${android.os.Build.VERSION.RELEASE})"
+        val isEmu    = com.unischeduler.util.EmulatorDetector.isEmulator()
 
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
@@ -157,7 +158,8 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
                         osVersion    = osVer,
                         appVersion   = appVer,
                         source       = "mobile",
-                        failureStep  = failureStep
+                        failureStep  = failureStep,
+                        isEmulator   = isEmu
                     ))
             }
         }
@@ -190,7 +192,8 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
         @kotlinx.serialization.SerialName("os_version")    val osVersion: String,
         @kotlinx.serialization.SerialName("app_version")   val appVersion: String,
         val source: String,
-        @kotlinx.serialization.SerialName("failure_step")  val failureStep: String? = null
+        @kotlinx.serialization.SerialName("failure_step")  val failureStep: String? = null,
+        @kotlinx.serialization.SerialName("is_emulator")   val isEmulator: Boolean? = null
     )
 
     private fun reportValidationError(action: String, message: String, username: String) {

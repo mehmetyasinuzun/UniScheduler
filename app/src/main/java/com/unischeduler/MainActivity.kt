@@ -68,6 +68,17 @@ class MainActivity : AppCompatActivity() {
         // Wire bottom navs for the current session (if already logged in)
         ensureNavSetup()
 
+        // Login akışı tamamlandıktan sonra (veya zaten oturum açıkken)
+        // birikmiş crash dosyalarını DB'ye gönder. App.onCreate'te bunu
+        // yaparken JWT olmadığı için Postgrest insert kendi içinde NPE
+        // atıyordu — destination listener login sonrası tetiklenince
+        // burada tekrar deniyoruz.
+        navController.addOnDestinationChangedListener { _, _, _ ->
+            if (session.isLoggedIn) {
+                com.unischeduler.util.CrashHandler.flushPendingCrashes(application)
+            }
+        }
+
         navController.addOnDestinationChangedListener { _, destination, _ ->
             // After login the session is populated; wire the nav lazily the first time
             ensureNavSetup()

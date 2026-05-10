@@ -37,6 +37,8 @@ class AssignmentFragment : Fragment() {
     private var classrooms: List<Classroom> = emptyList()
     private var isFirstResume = true
 
+    private var editingEntryId: Int? = null
+
     private lateinit var scheduleEntryAdapter: ScheduleEntryAdapter
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -49,7 +51,10 @@ class AssignmentFragment : Fragment() {
 
         binding.rvEntries.layoutManager = LinearLayoutManager(requireContext())
         binding.rvEntries.isNestedScrollingEnabled = false
-        scheduleEntryAdapter = ScheduleEntryAdapter { showDeleteConfirmation(it) }
+        scheduleEntryAdapter = ScheduleEntryAdapter(
+            onDeleteClick = { showDeleteConfirmation(it) },
+            onLongClick = { showEditDialog(it) }
+        )
         binding.rvEntries.adapter = scheduleEntryAdapter
         binding.btnRetry.setOnClickListener { viewModel.loadForm() }
         binding.swipeRefresh.setOnRefreshListener { viewModel.loadForm() }
@@ -57,6 +62,7 @@ class AssignmentFragment : Fragment() {
         binding.btnAutoSchedule.setOnClickListener {
             findNavController().navigate(R.id.action_assignment_to_autoSchedule)
         }
+        binding.btnCancelEdit.setOnClickListener { exitEditMode(clearForm = true) }
 
         binding.etStartTime.setOnClickListener {
             showTimePicker { binding.etStartTime.setText(it) }
@@ -93,7 +99,10 @@ class AssignmentFragment : Fragment() {
                 is UiState.Success -> {
                     binding.btnAssign.isEnabled    = true
                     binding.tvSaveError.visibility = View.GONE
-                    Toast.makeText(requireContext(), getString(R.string.assignment_success), Toast.LENGTH_SHORT).show()
+                    val msg = if (editingEntryId != null) getString(R.string.assignment_update_success)
+                              else getString(R.string.assignment_success)
+                    Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
+                    exitEditMode(clearForm = false)
                     viewModel.resetSaveState()
                 }
             }
@@ -163,15 +172,65 @@ class AssignmentFragment : Fragment() {
         val lecturerIdx = lecturers.indexOfFirst { it.fullName == lecturerText }
         val selectedLecturerId: Int? = if (lecturerIdx >= 0) lecturers[lecturerIdx].id else null
 
-        viewModel.assign(
-            offeringId = offerings[offeringIdx].id,
-            lecturerId = selectedLecturerId,
-            classroomId = classrooms[classroomIdx].id,
-            day = binding.spinnerDay.selectedItem.toString(),
-            startTime = binding.etStartTime.text?.toString().orEmpty(),
-            endTime = binding.etEndTime.text?.toString().orEmpty(),
-            force = force
-        )
+        val editId = editingEntryId
+        if (editId != null) {
+            viewModel.updateEntry(
+                entryId = editId,
+                offeringId = offerings[offeringIdx].id,
+                lecturerId = selectedLecturerId,
+                classroomId = classrooms[classroomIdx].id,
+                day = binding.spinnerDay.selectedItem.toString(),
+                startTime = binding.etStartTime.text?.toString().orEmpty(),
+                endTime = binding.etEndTime.text?.toString().orEmpty(),
+                force = force
+            )
+        } else {
+            viewModel.assign(
+                offeringId = offerings[offeringIdx].id,
+                lecturerId = selectedLecturerId,
+                classroomId = classrooms[classroomIdx].id,
+                day = binding.spinnerDay.selectedItem.toString(),
+                startTime = binding.etStartTime.text?.toString().orEmpty(),
+                endTime = binding.etEndTime.text?.toString().orEmpty(),
+                force = force
+            )
+        }
+    }
+
+    private fun showEditDialog(entry: ScheduleEntry) {
+        editingEntryId = entry.id
+        val offering = offerings.find { it.id == entry.offeringId }
+        binding.actvOffering.setText(offering?.displayName ?: "", false)
+        binding.actvLecturer.setText(entry.lecturerName.takeIf { it != "Atanmadı" } ?: "", false)
+        binding.actvClassroom.setText(entry.classroomCode, false)
+        @Suppress("UNCHECKED_CAST")
+        val dayAdapter = binding.spinnerDay.adapter as? ArrayAdapter<String>
+        val dayPos = dayAdapter?.getPosition(entry.day) ?: -1
+        if (dayPos >= 0) binding.spinnerDay.setSelection(dayPos)
+        binding.etStartTime.setText(entry.startTime)
+        binding.etEndTime.setText(entry.endTime)
+        binding.btnAssign.text = getString(R.string.assignment_update_button)
+        binding.tvEditBanner.text = getString(R.string.assignment_edit_banner, entry.courseCode)
+        binding.editBanner.visibility = View.VISIBLE
+        binding.tvSaveError.visibility = View.GONE
+        binding.root.post {
+            var p: android.view.ViewParent? = binding.editBanner.parent
+            while (p != null && p !is androidx.core.widget.NestedScrollView) p = p.parent
+            (p as? androidx.core.widget.NestedScrollView)?.smoothScrollTo(0, 0)
+        }
+    }
+
+    private fun exitEditMode(clearForm: Boolean) {
+        editingEntryId = null
+        binding.editBanner.visibility = View.GONE
+        binding.btnAssign.text = getString(R.string.assignment_assign_button)
+        if (clearForm) {
+            binding.actvOffering.setText("", false)
+            binding.actvLecturer.setText("", false)
+            binding.actvClassroom.setText("", false)
+            binding.etStartTime.text = null
+            binding.etEndTime.text = null
+        }
     }
 
     private fun showDeleteConfirmation(entry: ScheduleEntry) {
@@ -301,7 +360,8 @@ class AssignmentFragment : Fragment() {
 }
 
 class ScheduleEntryAdapter(
-    private val onDeleteClick: (ScheduleEntry) -> Unit
+    private val onDeleteClick: (ScheduleEntry) -> Unit,
+    private val onLongClick: (ScheduleEntry) -> Unit = {}
 ) : ListAdapter<ScheduleEntry, ScheduleEntryAdapter.VH>(DIFF) {
 
     inner class VH(val binding: ItemScheduleEntryBinding) :
@@ -317,6 +377,7 @@ class ScheduleEntryAdapter(
         holder.binding.tvSlot.text          = "${e.day} ${e.timeRange} • ${e.classroomCode}"
         holder.binding.btnDelete.visibility = View.VISIBLE
         holder.binding.btnDelete.setOnClickListener { onDeleteClick(e) }
+        holder.binding.root.setOnLongClickListener { onLongClick(e); true }
     }
 
     companion object {

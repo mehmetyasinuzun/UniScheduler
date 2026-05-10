@@ -67,8 +67,31 @@ class AuthRepository {
                     eq("user_id", userId)
                     if (orgId != null) eq("org_id", orgId)
                 }
+                limit(1)
             }
-            .decodeSingleOrNull<Lecturer>()
+            // decodeSingleOrNull 2+ satır gördüğünde tutarsız dönüyordu.
+            // List'in ilkini almak null nedenini daraltır.
+            .decodeList<Lecturer>()
+            .firstOrNull()
+
+    /**
+     * lecturers tablosundan id ile çek. user_id sorgusu (yukarıda)
+     * embedlenmiş users(*) join'i RLS pürüzünden boş satır döndürüp
+     * null sanıldığında fallback olarak çağrılır. Embed olmadan
+     * sadece lecturers + departments okunur — bu çok daha az
+     * RLS hattı dolayısıyla daha güvenilir.
+     */
+    suspend fun getLecturerById(lecturerId: Int, orgId: Int? = null): Lecturer? =
+        client.postgrest["lecturers"]
+            .select(Columns.raw("*, departments(*)")) {
+                filter {
+                    eq("id", lecturerId)
+                    if (orgId != null) eq("org_id", orgId)
+                }
+                limit(1)
+            }
+            .decodeList<Lecturer>()
+            .firstOrNull()
 
     /**
      * Change password via Supabase Auth and update public.users to clear must_change_password.

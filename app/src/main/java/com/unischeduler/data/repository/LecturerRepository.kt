@@ -35,6 +35,16 @@ class LecturerRepository {
         return result
     }
 
+    /**
+     * Creates a new lecturer end-to-end: auth user + public.users row +
+     * lecturers row. All three inserts run in the ADMIN's session — the
+     * old design let signUpWith flip the JWT to the new user mid-flow,
+     * which made RLS context unpredictable and produced the
+     * "Hocaya ait bir profil bulunamadı" symptom on first login.
+     *
+     * The schema policy `users_insert_admin` is what makes this work:
+     * the admin can insert the new user's profile row directly.
+     */
     suspend fun insertLecturerWithUser(
         title: String,
         firstName: String,
@@ -43,14 +53,16 @@ class LecturerRepository {
         orgId: Int,
         email: String? = null
     ): Pair<String, String> {
-        val baseUsername  = CredentialGenerator.generateUsername(firstName, lastName)
-        val username      = generateUniqueUsername(baseUsername)
-        val plainPassword = CredentialGenerator.generatePassword()
+        val baseUsername   = CredentialGenerator.generateUsername(firstName, lastName)
+        val username       = generateUniqueUsername(baseUsername)
+        val plainPassword  = CredentialGenerator.generatePassword()
         val syntheticEmail = AuthRepository.usernameToEmail(username)
 
         val adminSession = client.auth.currentSessionOrNull()
             ?: throw IllegalStateException("Admin oturumu bulunamadı. Lütfen tekrar giriş yapın.")
 
+        // ── Step 1: Create the Auth user (Supabase will switch our
+        //           current session to the new user as a side-effect). ──
         val authUserId: String
         try {
             val signUpResult = client.auth.signUpWith(Email) {
@@ -64,11 +76,21 @@ class LecturerRepository {
                     "Supabase Auth ayarlarında 'Enable email confirmations' kapalı olmalı."
                 )
         } catch (e: Exception) {
+            // Best-effort: restore admin session even on failure so the
+            // app is usable afterward.
             runCatching { client.auth.importSession(adminSession) }
             if (e is IllegalStateException) throw e
             throw IllegalStateException("Auth kullanıcı oluşturma hatası: ${e.message}", e)
         }
 
+        // ── Step 2: IMMEDIATELY restore the admin session BEFORE any
+        //           Postgrest call. From this point onward every insert
+        //           is evaluated against the admin's RLS context, which
+        //           is stable and known-correct. ──
+        client.auth.importSession(adminSession)
+
+        // ── Step 3: Insert the public.users profile (admin RLS:
+        //           users_insert_admin policy). ──
         try {
             client.postgrest["users"].insert(
                 UserInsert(
@@ -80,12 +102,18 @@ class LecturerRepository {
                 )
             )
         } catch (e: Exception) {
-            runCatching { client.auth.importSession(adminSession) }
+            // The auth user already exists — ideally we'd
+            // auth.admin.deleteUser() here, but that requires service_role
+            // which the mobile app intentionally doesn't carry. Best
+            // effort: log + surface so the panel admin can clean up the
+            // orphan auth user manually.
+            android.util.Log.e("LecturerRepo",
+                "users insert failed (auth orphan: $syntheticEmail). " +
+                "Use the panel to delete this user.", e)
             throw IllegalStateException("Kullanıcı profili oluşturma hatası: ${e.message}", e)
         }
 
-        client.auth.importSession(adminSession)
-
+        // ── Step 4: Insert lecturers profile (still admin session). ──
         try {
             client.postgrest["lecturers"].insert(
                 LecturerInsert(
@@ -99,6 +127,10 @@ class LecturerRepository {
                 )
             )
         } catch (e: Exception) {
+            // Roll back: delete the just-inserted users row so we don't
+            // leave a profile with no lecturer record (which would make
+            // login fail with "profile not found"). Auth orphan still
+            // needs panel cleanup.
             runCatching {
                 client.postgrest["users"].delete { filter { eq("id", authUserId) } }
             }
@@ -133,6 +165,25 @@ class LecturerRepository {
                     eq("org_id", orgId)
                 }
             }
+    }
+
+    /**
+     * Yeni rastgele şifre üretip Supabase Auth'taki şifreyi sıfırlar.
+     * Mobil admin'in service_role'ü olmadığı için doğrudan auth.users'a
+     * yazamayız; iş schema'daki `admin_reset_lecturer_password` SECURITY
+     * DEFINER fonksiyonuna devredilir. Üretilen düz şifreyi geri döner ki
+     * UI bunu admin'e bir kez gösterip kopyalama imkânı sunsun.
+     */
+    suspend fun resetLecturerPassword(lecturerId: Int): String {
+        val newPassword = CredentialGenerator.generatePassword()
+        client.postgrest.rpc(
+            function = "admin_reset_lecturer_password",
+            parameters = kotlinx.serialization.json.buildJsonObject {
+                put("p_lecturer_id", kotlinx.serialization.json.JsonPrimitive(lecturerId))
+                put("p_new_password", kotlinx.serialization.json.JsonPrimitive(newPassword))
+            }
+        )
+        return newPassword
     }
 
     suspend fun deleteLecturerUser(userId: String, orgId: Int) {

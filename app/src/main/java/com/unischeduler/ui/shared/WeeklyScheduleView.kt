@@ -286,9 +286,13 @@ class WeeklyScheduleView @JvmOverloads constructor(
         val textLeft = left + 6f.dp
         val availableHeight = bottom - top
         val lineHeight = cardTextPaint.textSize * 1.3f
+        val isSyntheticBusy = entry.id < 0 && entry.offerings == null && entry.offeringId == 0
 
         if (availableHeight > lineHeight) {
-            val courseText = ellipsize(entry.courseCode, cardTextPaint, right - textLeft - 4f.dp)
+            val label = if (isSyntheticBusy)
+                context.getString(com.unischeduler.R.string.lecturer_schedule_busy_card)
+            else entry.courseCode
+            val courseText = ellipsize(label, cardTextPaint, right - textLeft - 4f.dp)
             canvas.drawText(courseText, textLeft, top + lineHeight, cardTextPaint)
         }
 
@@ -297,14 +301,16 @@ class WeeklyScheduleView @JvmOverloads constructor(
             canvas.drawText(timeText, textLeft, top + lineHeight * 2, cardSubTextPaint)
         }
 
-        if (availableHeight > lineHeight * 3) {
-            val roomText = ellipsize(entry.classroomCode, cardSubTextPaint, right - textLeft - 4f.dp)
-            canvas.drawText(roomText, textLeft, top + lineHeight * 3, cardSubTextPaint)
-        }
-
-        if (availableHeight > lineHeight * 4) {
-            val lecturerText = ellipsize(entry.lecturerName, cardSubTextPaint, right - textLeft - 4f.dp)
-            canvas.drawText(lecturerText, textLeft, top + lineHeight * 4, cardSubTextPaint)
+        // Synthetic block için classroom/lecturer alanları boş — atlanmaları yeterli.
+        if (!isSyntheticBusy) {
+            if (availableHeight > lineHeight * 3) {
+                val roomText = ellipsize(entry.classroomCode, cardSubTextPaint, right - textLeft - 4f.dp)
+                canvas.drawText(roomText, textLeft, top + lineHeight * 3, cardSubTextPaint)
+            }
+            if (availableHeight > lineHeight * 4) {
+                val lecturerText = ellipsize(entry.lecturerName, cardSubTextPaint, right - textLeft - 4f.dp)
+                canvas.drawText(lecturerText, textLeft, top + lineHeight * 4, cardSubTextPaint)
+            }
         }
     }
 
@@ -402,6 +408,12 @@ class WeeklyScheduleView @JvmOverloads constructor(
     }
 
     private fun getColorForEntry(entry: ScheduleEntry): String {
+        // LecturerScheduleSheet'in synthetic "müsait değil" blokları:
+        // negatif id + offering yok. Bu blokları sabit gri çiziyoruz ki
+        // gerçek atanmış dersler renkli kalsın, admin ikisini ayırt etsin.
+        if (entry.id < 0 && entry.offerings == null && entry.offeringId == 0) {
+            return "#BDBDBD"
+        }
         val key = entry.offerings?.courseId ?: entry.offeringId
         return courseColors[key.hashCode().and(0x7FFFFFFF) % courseColors.size]
     }

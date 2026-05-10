@@ -27,7 +27,6 @@ import com.unischeduler.data.model.Department
 import com.unischeduler.databinding.FragmentSettingsBinding
 import com.unischeduler.databinding.ItemDepartmentBinding
 import com.unischeduler.util.BackupManager
-import com.unischeduler.util.ExcelHelper
 import com.unischeduler.util.SessionManager
 import com.unischeduler.util.UiState
 import com.unischeduler.util.collectFlow
@@ -36,14 +35,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 class SettingsFragment : Fragment() {
 
-    private enum class TemplateKind { COURSES, LECTURERS, CLASSROOMS }
+    private enum class SampleKind(val asset: String) {
+        COURSES("samples/courses.xlsx"),
+        LECTURERS("samples/lecturers.xlsx"),
+        CLASSROOMS("samples/classrooms.xlsx")
+    }
 
     /** Single Json instance — Kotlin lint warns on per-call construction
      *  because the parser caches descriptors per Json instance. */
@@ -58,26 +60,35 @@ class SettingsFragment : Fragment() {
 
     private lateinit var departmentAdapter: DepartmentAdapter
 
-    // Pending template kind, captured at click time so the SAF callback knows
-    // which exporter to invoke once the user picks the destination URI.
-    private var pendingTemplateKind: TemplateKind? = null
+    // Pending sample kind, captured at click time so the SAF callback knows
+    // which asset to copy once the user picks the destination URI.
+    private var pendingSampleKind: SampleKind? = null
 
-    private lateinit var templateSaveLauncher: ActivityResultLauncher<String>
+    private lateinit var sampleSaveLauncher: ActivityResultLauncher<String>
     private lateinit var backupSaveLauncher: ActivityResultLauncher<String>
+    private lateinit var restoreOpenLauncher: ActivityResultLauncher<Array<String>>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        templateSaveLauncher = registerForActivityResult(
+        sampleSaveLauncher = registerForActivityResult(
             ActivityResultContracts.CreateDocument(
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
         ) { uri ->
             uri ?: return@registerForActivityResult
-            val kind = pendingTemplateKind ?: return@registerForActivityResult
-            pendingTemplateKind = null
+            val kind = pendingSampleKind ?: return@registerForActivityResult
+            pendingSampleKind = null
+            val appCtx = requireContext().applicationContext
             writeBytesToUri(
                 destination = uri,
-                produce = { renderTemplateBytes(kind) }
+                // Stream the sample asset out byte-for-byte. No POI involved —
+                // this is just file copy, so it works even on devices where
+                // POI's static initializer throws.
+                produce = {
+                    withContext(Dispatchers.IO) {
+                        appCtx.assets.open(kind.asset).use { it.readBytes() }
+                    }
+                }
             )
         }
         backupSaveLauncher = registerForActivityResult(
@@ -104,17 +115,103 @@ class SettingsFragment : Fragment() {
                 }
             )
         }
+        restoreOpenLauncher = registerForActivityResult(
+            ActivityResultContracts.OpenDocument()
+        ) { uri ->
+            uri ?: return@registerForActivityResult
+            handleRestorePicked(uri)
+        }
     }
 
-    private fun renderTemplateBytes(kind: TemplateKind): ByteArray =
-        ByteArrayOutputStream().use { buf ->
-            when (kind) {
-                TemplateKind.COURSES    -> ExcelHelper.exportCourses(emptyList(), buf)
-                TemplateKind.LECTURERS  -> ExcelHelper.exportLecturers(emptyList(), buf)
-                TemplateKind.CLASSROOMS -> ExcelHelper.exportClassrooms(emptyList(), buf)
+    /**
+     * Two-phase restore flow:
+     *   Phase 1 — read + parse the JSON, show a confirmation dialog with
+     *             the contents, abort if anything looks wrong.
+     *   Phase 2 — actually wipe and re-insert. Runs only after the user
+     *             confirms the destructive operation.
+     */
+    private fun handleRestorePicked(uri: android.net.Uri) {
+        val ctx = requireContext().applicationContext
+        val orgId = SessionManager(ctx).orgId
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            // Phase 1: parse + validate
+            val parsed = runCatching {
+                withContext(Dispatchers.IO) {
+                    val text = ctx.contentResolver.openInputStream(uri)?.use {
+                        it.bufferedReader().readText()
+                    } ?: error("Dosya açılamadı")
+                    BackupManager.parseBackup(text)
+                }
             }
-            buf.toByteArray()
+            if (!isAdded) return@launch
+            val backup = parsed.getOrNull()
+            if (backup == null) {
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.settings_restore_invalid_file),
+                    Toast.LENGTH_LONG
+                ).show()
+                return@launch
+            }
+            if (backup.orgId != orgId) {
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.settings_restore_wrong_org, backup.orgId),
+                    Toast.LENGTH_LONG
+                ).show()
+                return@launch
+            }
+
+            // Show confirmation. We pass the backup summary so the user
+            // can sanity-check what will land in the DB before wiping.
+            AlertDialog.Builder(requireContext())
+                .setTitle(R.string.settings_restore_confirm_title)
+                .setMessage(getString(
+                    R.string.settings_restore_confirm_message,
+                    BackupManager.summarise(backup)
+                ))
+                .setPositiveButton(R.string.common_ok) { _, _ ->
+                    runRestore(backup, orgId)
+                }
+                .setNegativeButton(R.string.common_cancel, null)
+                .show()
         }
+    }
+
+    private fun runRestore(backup: BackupManager.Backup, orgId: Int) {
+        val progress = AlertDialog.Builder(requireContext())
+            .setMessage(R.string.settings_restore_in_progress)
+            .setCancelable(false)
+            .show()
+        viewLifecycleOwner.lifecycleScope.launch {
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    BackupManager.restoreLookupData(orgId, backup)
+                }
+            }
+            progress.dismiss()
+            if (!isAdded) return@launch
+            result.onSuccess { r ->
+                AlertDialog.Builder(requireContext())
+                    .setTitle(R.string.settings_restore_done)
+                    .setMessage(r.summary())
+                    .setPositiveButton(R.string.common_ok) { _, _ ->
+                        // Trigger a full data reload so all fragments
+                        // pick up the new state on next visit.
+                        viewModel.loadDepartments()
+                    }
+                    .show()
+            }.onFailure { e ->
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                AlertDialog.Builder(requireContext())
+                    .setTitle(R.string.settings_restore_failed.let { _ -> "Hata" })
+                    .setMessage(getString(R.string.settings_restore_failed, e.message ?: e::class.java.simpleName))
+                    .setPositiveButton(R.string.common_ok, null)
+                    .show()
+            }
+        }
+    }
 
     private fun showBackupDoneDialog(uri: android.net.Uri) {
         // Re-read the saved file to compute a quick summary. Cheap because
@@ -164,18 +261,20 @@ class SettingsFragment : Fragment() {
         setupThemeSelector()
         setupLanguageSelector()
 
-        // ── Excel templates (B6) ──
-        binding.btnTemplateCourses.setOnClickListener {
-            pendingTemplateKind = TemplateKind.COURSES
-            templateSaveLauncher.launch("courses-template.xlsx")
+        // ── Sample Excel files — copies the bundled asset to the
+        //    user-picked destination. Real-world filled-in examples,
+        //    not empty templates. ──
+        binding.btnSampleCourses.setOnClickListener {
+            pendingSampleKind = SampleKind.COURSES
+            sampleSaveLauncher.launch(getString(R.string.settings_sample_default_courses))
         }
-        binding.btnTemplateLecturers.setOnClickListener {
-            pendingTemplateKind = TemplateKind.LECTURERS
-            templateSaveLauncher.launch("lecturers-template.xlsx")
+        binding.btnSampleLecturers.setOnClickListener {
+            pendingSampleKind = SampleKind.LECTURERS
+            sampleSaveLauncher.launch(getString(R.string.settings_sample_default_lecturers))
         }
-        binding.btnTemplateClassrooms.setOnClickListener {
-            pendingTemplateKind = TemplateKind.CLASSROOMS
-            templateSaveLauncher.launch("classrooms-template.xlsx")
+        binding.btnSampleClassrooms.setOnClickListener {
+            pendingSampleKind = SampleKind.CLASSROOMS
+            sampleSaveLauncher.launch(getString(R.string.settings_sample_default_classrooms))
         }
 
         // ── Backup (B7) ──
@@ -183,6 +282,11 @@ class SettingsFragment : Fragment() {
             val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
             val filename = getString(R.string.settings_backup_default_filename, today)
             backupSaveLauncher.launch(filename)
+        }
+        binding.btnRestore.setOnClickListener {
+            // OpenDocument: user picks the JSON. We restrict by MIME and
+            // also re-validate the magic bytes / schema_version inside.
+            restoreOpenLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
         }
 
         binding.btnLogout.setOnClickListener {

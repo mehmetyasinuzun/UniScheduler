@@ -1,6 +1,6 @@
 # UniScheduler Super Admin Paneli
 
-> 📘 **Tüm sistem için kurulum, deployment ve test rehberi:** [../TESLIM_REHBERI.md](../TESLIM_REHBERI.md)
+> 📘 **Sistem geneli (mobil app + panel) için kapsamlı rehber:** [../README.md](../README.md)
 
 Bu proje, UniScheduler sisteminin en üst düzey yönetim ve izleme arayüzünü oluşturur. Sistem sahibi veya baş yöneticiler (Super Admin) için tasarlanmış olan bu web tabanlı panel, sistemdeki tüm organizasyonları, yöneticileri, akademisyenleri ve ders programlarını tek bir noktadan yönetebilmenizi ve denetleyebilmenizi sağlar.
 

@@ -49,8 +49,19 @@ class LecturerHomeViewModel(app: Application) : AndroidViewModel(app) {
                         }
                         val lecturerDeferred = async { authRepo.getLecturerByUserId(session.userId, orgId) }
                         val entriesDeferred  = async { scheduleRepo.getEntriesForLecturer(lecturerId, orgId) }
+                        // Önce user_id üzerinden çekiyoruz; RLS/embed timing
+                        // sorunu null döndürürse session'da zaten saklı olan
+                        // lecturer.id ile yeniden deniyoruz. İki sorgudan
+                        // birinin başarılı olması yeterli — login'i tamamlamış
+                        // bir kullanıcının profili kesin DB'de var.
                         val lecturer = lecturerDeferred.await()
-                            ?: throw IllegalStateException("Öğretim üyesi profili bulunamadı.")
+                            ?: authRepo.getLecturerById(lecturerId, orgId)
+                            ?: throw IllegalStateException(
+                                "Hocaya ait kayıt bulunamadı (user_id=${session.userId.take(8)}…, " +
+                                "org_id=$orgId, lecturer_id=$lecturerId). " +
+                                "Yöneticinizin sizi öğretim üyesi listesine eklediğinden emin olun. " +
+                                "Hesap aktifse bir kez çıkış yapıp tekrar giriş deneyin."
+                            )
                         LecturerHomeData(lecturer = lecturer, weeklyCount = entriesDeferred.await().size)
                     }
                 }

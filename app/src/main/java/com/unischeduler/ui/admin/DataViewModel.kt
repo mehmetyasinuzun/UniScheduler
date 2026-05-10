@@ -153,6 +153,34 @@ class DataViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Hocaya yeni geçici şifre üretir, schema'daki SECURITY DEFINER
+     * RPC'sini çağırır ve sonucu callback ile UI'a geri verir. Mobil
+     * adminin service_role'ü olmadığı için DB tarafında bu işlemi
+     * yapmak zorundayız — RPC bcrypt hash'leyip auth.users'a yazıyor.
+     */
+    fun resetLecturerPassword(lecturer: Lecturer, onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    lecturerRepo.resetLecturerPassword(lecturer.id)
+                }
+            }.onSuccess { newPassword ->
+                onResult(newPassword)
+                // mustChangePassword artık true olduğundan listeyi tazele
+                // ki "Geçici" rozeti görünsün.
+                loadLecturers()
+            }.onFailure { e ->
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                _lecturerDeleteState.value = UiState.Error(
+                    "Şifre sıfırlanamadı: ${ErrorMessages.map(e)}",
+                    retryable = false
+                )
+                reportError("resetLecturerPassword", e)
+            }
+        }
+    }
+
     fun deleteLecturer(lecturer: Lecturer) {
         if (lecturer.userId.isBlank()) {
             _lecturerDeleteState.value = UiState.Error("Lecturer user record is missing.", retryable = false)

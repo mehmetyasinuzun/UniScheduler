@@ -146,7 +146,13 @@ class DataFragment : Fragment() {
     // Adapters set once and reused across data updates (DiffUtil computes diffs).
     private val courseAdapter   by lazy { CourseAdapter({ showEditCourseDialog(it) }, { showDeleteCourseDialog(it) }) }
     private val offeringAdapter by lazy { OfferingAdapter({ showEditOfferingDialog(it) }, { showDeleteOfferingDialog(it) }) }
-    private val lecturerAdapter by lazy { LecturerAdapter({ showEditLecturerDialog(it) }, { showDeleteLecturerDialog(it) }) }
+    private val lecturerAdapter by lazy {
+        LecturerAdapter(
+            onEdit = { showEditLecturerDialog(it) },
+            onDelete = { showDeleteLecturerDialog(it) },
+            onMore = { lecturer, anchor -> showLecturerMenu(lecturer, anchor) }
+        )
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -800,6 +806,69 @@ class DataFragment : Fragment() {
             .show()
     }
 
+    /**
+     * Hoca kartında "..." veya uzun bas → küçük menü.
+     * Web panelde olan işlemleri mobilde tek bir yere topluyoruz —
+     * admin liste görünümünden çıkmadan en kritik 3 aksiyonu
+     * (programını gör, şifreyi sıfırla, sil) yapabilsin diye.
+     */
+    private fun showLecturerMenu(lecturer: Lecturer, anchor: View) {
+        val popup = android.widget.PopupMenu(requireContext(), anchor)
+        val m = popup.menu
+        m.add(0, 1, 1, getString(R.string.lecturer_action_view_schedule))
+        m.add(0, 2, 2, getString(R.string.lecturer_action_edit))
+        m.add(0, 3, 3, getString(R.string.lecturer_action_reset_password))
+        m.add(0, 4, 4, getString(R.string.lecturer_action_delete))
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                1 -> showLecturerScheduleSheet(lecturer)
+                2 -> showEditLecturerDialog(lecturer)
+                3 -> confirmResetLecturerPassword(lecturer)
+                4 -> showDeleteLecturerDialog(lecturer)
+            }
+            true
+        }
+        popup.show()
+    }
+
+    private fun showLecturerScheduleSheet(lecturer: Lecturer) {
+        LecturerScheduleSheet.newInstance(lecturer.id, lecturer.fullName)
+            .show(parentFragmentManager, "lecturerScheduleSheet")
+    }
+
+    private fun confirmResetLecturerPassword(lecturer: Lecturer) {
+        AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.lecturer_action_reset_password))
+            .setMessage(getString(R.string.lecturer_reset_password_confirm, lecturer.fullName))
+            .setPositiveButton(getString(R.string.common_ok)) { _, _ ->
+                viewModel.resetLecturerPassword(lecturer) { newPassword ->
+                    showResetPasswordResult(lecturer, newPassword)
+                }
+            }
+            .setNegativeButton(getString(R.string.common_cancel), null)
+            .show()
+    }
+
+    private fun showResetPasswordResult(lecturer: Lecturer, password: String) {
+        val msg = getString(R.string.lecturer_reset_password_done_msg, lecturer.username, password)
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.lecturer_reset_password_done_title)
+            .setMessage(msg)
+            .setPositiveButton(R.string.lecturer_reset_password_copy) { _, _ ->
+                val clip = requireContext()
+                    .getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                    as android.content.ClipboardManager
+                clip.setPrimaryClip(android.content.ClipData.newPlainText("password", password))
+                android.widget.Toast.makeText(
+                    requireContext(),
+                    R.string.lecturer_reset_password_copied,
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            }
+            .setNegativeButton(R.string.common_ok, null)
+            .show()
+    }
+
     private fun showDeleteLecturerDialog(lecturer: Lecturer) {
         AlertDialog.Builder(requireContext())
             .setTitle(getString(R.string.data_lecturer_delete_title))
@@ -828,10 +897,29 @@ class DataFragment : Fragment() {
     }
 
     private fun setupAccordion() {
-        fun toggle(content: View, arrow: View) {
+        // Toggling visibility on a wrap_content RecyclerView inside a
+        // ScrollView is a known measure-pass trap: the RV often lays
+        // out at 0px height the first time it becomes VISIBLE, only
+        // re-measuring on the next focus change (which is why typing
+        // into the search field below it makes the list "appear").
+        // We force the re-measure ourselves and then ask the parent
+        // ScrollView to bring the just-opened section into view.
+        fun toggle(header: View, content: View, arrow: View) {
             if (content.visibility == View.GONE) {
                 content.visibility = View.VISIBLE
                 arrow.rotation = 180f
+                // Wait one frame so `content`'s width is non-zero, then:
+                content.post {
+                    // 1) Forced layout pass — the RecyclerViews inside
+                    //    `content` measure themselves correctly.
+                    content.requestLayout()
+                    // 2) Scroll the section header to the top of the
+                    //    visible area so the user sees what just opened.
+                    val r = android.graphics.Rect(
+                        0, 0, header.width, header.height + content.height
+                    )
+                    header.requestRectangleOnScreen(r, /* immediate = */ false)
+                }
             } else {
                 content.visibility = View.GONE
                 arrow.rotation = 0f
@@ -839,13 +927,13 @@ class DataFragment : Fragment() {
         }
 
         binding.headerLecturers.setOnClickListener {
-            toggle(binding.contentLecturers, binding.ivExpandLecturers)
+            toggle(binding.headerLecturers, binding.contentLecturers, binding.ivExpandLecturers)
         }
         binding.headerCourses.setOnClickListener {
-            toggle(binding.contentCourses, binding.ivExpandCourses)
+            toggle(binding.headerCourses, binding.contentCourses, binding.ivExpandCourses)
         }
         binding.headerOfferings.setOnClickListener {
-            toggle(binding.contentOfferings, binding.ivExpandOfferings)
+            toggle(binding.headerOfferings, binding.contentOfferings, binding.ivExpandOfferings)
         }
     }
 
@@ -1216,7 +1304,8 @@ class OfferingAdapter(
 
 class LecturerAdapter(
     private val onEdit: (Lecturer) -> Unit,
-    private val onDelete: (Lecturer) -> Unit
+    private val onDelete: (Lecturer) -> Unit,
+    private val onMore: (Lecturer, View) -> Unit = { _, _ -> }
 ) : ListAdapter<Lecturer, LecturerAdapter.VH>(DIFF) {
 
     inner class VH(val binding: ItemLecturerBinding) : RecyclerView.ViewHolder(binding.root)
@@ -1226,12 +1315,27 @@ class LecturerAdapter(
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val l = getItem(position)
+        val ctx = holder.binding.root.context
         holder.binding.tvName.text = l.fullName
-        holder.binding.tvDepartment.text = l.departmentName
+        holder.binding.tvDepartment.text = l.departmentName.ifBlank { "—" }
         holder.binding.tvUsername.text = "@${l.username}"
+
+        val isTemp = l.mustChangePassword
+        holder.binding.tvStatus.text = if (isTemp)
+            ctx.getString(R.string.lecturer_status_temp)
+        else
+            ctx.getString(R.string.lecturer_status_active)
+        holder.binding.tvStatus.setBackgroundResource(
+            if (isTemp) R.drawable.bg_status_chip else R.drawable.bg_status_chip_active
+        )
+        holder.binding.tvStatus.setTextColor(
+            android.graphics.Color.parseColor(if (isTemp) "#E65100" else "#2E7D32")
+        )
+
         holder.binding.btnDelete.visibility = View.VISIBLE
         holder.binding.btnDelete.setOnClickListener { onDelete(l) }
-        holder.binding.root.setOnLongClickListener { onEdit(l); true }
+        holder.binding.btnMore.setOnClickListener { v -> onMore(l, v) }
+        holder.binding.root.setOnLongClickListener { v -> onMore(l, v); true }
     }
 
     companion object {

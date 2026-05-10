@@ -2,12 +2,22 @@
 <!--
   Network security baseline for UniScheduler.
    • base-config disallows cleartext (HTTP) traffic — Supabase is HTTPS-only.
-   • debug-overrides allows cleartext only for `localhost` so a developer can
-     point the app at a local Supabase instance during testing without
-     weakening release behavior.
+   • debug-overrides allows the user CA store and cleartext only when the
+     APK is built debuggable, so a developer can point the app at a local
+     Supabase instance / use Charles Proxy without weakening release.
    • No certificate pinning intentionally: Supabase rotates certs through
      standard CAs; pinning their leaf certs would brick the app on rotation.
      If you need pinning later, pin the *intermediate* CA, not the leaf.
+
+  ⚠ NOTE about <domain-config>:
+    A previous version of this file had a <domain-config> block for
+    localhost / 10.0.2.2 cleartext, but it was missing <trust-anchors>.
+    Android 7+ rejects domain-config blocks without their own trust-
+    anchors with: "Domain specific configurations require that hostname
+    aware checkServerTrusted is used" — which manifests as a TLS
+    handshake failure on EVERY https request, including api.supabase.co.
+    We removed the block entirely; cleartext localhost is unnecessary
+    for production builds and debug-overrides covers dev use cases.
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false">
@@ -22,9 +32,4 @@
             <certificates src="user" />
         </trust-anchors>
     </debug-overrides>
-
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">localhost</domain>
-        <domain includeSubdomains="true">10.0.2.2</domain>
-    </domain-config>
 </network-security-config>

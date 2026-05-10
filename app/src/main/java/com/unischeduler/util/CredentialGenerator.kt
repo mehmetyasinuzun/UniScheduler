@@ -23,15 +23,19 @@ object CredentialGenerator {
         "Prof.", "Assoc. Prof.", "Assist. Prof.", "Dr.", "Res. Asst.", "Lect."
     )
 
-    private const val PASSWORD_LENGTH = 12
-    private val UPPER   = ('A'..'Z').toList()
-    private val LOWER   = ('a'..'z').toList()
-    private val DIGIT   = ('0'..'9').toList()
-    // Görsel karışıklık yapan karakterleri (backtick, quote, ters slash) dışarda
-    // bıraktık; "şifremi yanlış mı yazdım?" desteğini azaltır.
-    private val SPECIAL = listOf('!', '@', '#', '$', '%', '&', '*', '?', '+', '-', '_', '=')
-    private val ALL     = UPPER + LOWER + DIGIT + SPECIAL
-
+    // Password alphabet — kullanıcı isteği: sadece BÜYÜK harf + 1-6 arası
+    // rakam. Kasıtlı olarak 0/7/8/9 dışarda; 6 karakter uzunluk.
+    //
+    // Güvenlik notu (operatöre bilgi): bu alfabe + uzunluk kombinasyonu
+    // brute-force'a karşı zayıftır. Entropi ≈ log2(32^6) ≈ 30 bit
+    // ≈ 1 milyar olasılık. Bu sürüm kullanım kolaylığı için tercih
+    // edilmiştir; üretimde gerçek brute-force riski varsa hesap kilidi
+    // (DB tarafında auto-lockout) veya Supabase Auth'un per-IP rate
+    // limit'i bu açığı bir miktar telafi eder. SecureRandom kullanmaya
+    // devam ediyoruz — kısa şifre OLSA BİLE örüntü tahmin edilebilir
+    // olmamalı.
+    private const val PASSWORD_LENGTH = 6
+    private val ALPHABET = (('A'..'Z') + ('1'..'6')).toList()
     private val secureRandom = SecureRandom()
 
     fun generateUsername(firstName: String, lastName: String): String {
@@ -41,26 +45,15 @@ object CredentialGenerator {
     }
 
     /**
-     * Cryptographically strong 12-char password. Includes at least one
-     * uppercase, lowercase, digit and special. Order is shuffled with
-     * SecureRandom so the position of each category is unpredictable.
+     * 6-character password from [A-Z1-6]. SecureRandom-driven so even
+     * with the small alphabet, we don't leak predictable sequences.
      */
-    fun generatePassword(): String {
-        val chars = mutableListOf<Char>()
-        chars += UPPER.random(secureRandom)
-        chars += LOWER.random(secureRandom)
-        chars += DIGIT.random(secureRandom)
-        chars += SPECIAL.random(secureRandom)
-        repeat(PASSWORD_LENGTH - chars.size) {
-            chars += ALL[secureRandom.nextInt(ALL.size)]
+    fun generatePassword(): String =
+        buildString(PASSWORD_LENGTH) {
+            repeat(PASSWORD_LENGTH) {
+                append(ALPHABET[secureRandom.nextInt(ALPHABET.size)])
+            }
         }
-        // Fisher-Yates shuffle with SecureRandom
-        for (i in chars.size - 1 downTo 1) {
-            val j = secureRandom.nextInt(i + 1)
-            val tmp = chars[i]; chars[i] = chars[j]; chars[j] = tmp
-        }
-        return chars.joinToString("")
-    }
 
     // Strips academic title prefix from a name string if present
     fun stripTitle(name: String): String {
@@ -79,6 +72,4 @@ object CredentialGenerator {
             .joinToString("")
             .lowercase(Locale.ROOT)
             .filter { it.isLetter() || it == '_' }
-
-    private fun <T> List<T>.random(random: SecureRandom): T = this[random.nextInt(size)]
 }

@@ -1,19 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/swipeRefresh"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-<ScrollView
+<androidx.core.widget.NestedScrollView
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    android:fillViewport="true"
+    android:clipToPadding="false">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:paddingBottom="96dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -51,7 +55,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textColor="?attr/colorError"
-            android:visibility="gone" />
+            android:visibility="gone"
+            android:text="" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRetry"
@@ -59,6 +64,46 @@
             android:layout_height="wrap_content"
             android:text="Yeniden Dene"
             android:visibility="gone" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/editBanner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone"
+            app:cardBackgroundColor="#FFF3E0"
+            app:cardCornerRadius="6dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#FFB74D"
+            app:strokeWidth="1dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="10dp">
+                <TextView
+                    android:id="@+id/tvEditBanner"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textStyle="bold"
+                    android:textColor="#E65100"
+                    android:textSize="13sp"
+                    android:text="" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCancelEdit"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/common_cancel"
+                    android:textColor="#E65100"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:padding="4dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <!-- Searchable Dropdowns -->
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/assignment_offering_label" android:textStyle="bold" android:layout_marginTop="8dp"/>
@@ -72,7 +117,8 @@
                 android:id="@+id/actvOffering"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="none" />
+                android:inputType="none"
+                android:text="" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/assignment_lecturer_label" android:textStyle="bold"/>
@@ -86,7 +132,8 @@
                 android:id="@+id/actvLecturer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="none" />
+                android:inputType="none"
+                android:text="" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/assignment_classroom_label" android:textStyle="bold"/>
@@ -100,7 +147,8 @@
                 android:id="@+id/actvClassroom"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="none" />
+                android:inputType="none"
+                android:text="" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/assignment_day_label" android:textStyle="bold"/>
@@ -117,7 +165,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:focusable="false"
-                android:clickable="true" />
+                android:clickable="true"
+                android:text="" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -132,7 +181,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:focusable="false"
-                android:clickable="true" />
+                android:clickable="true"
+                android:text="" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <TextView
@@ -140,30 +190,52 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textColor="?attr/colorError"
-            android:visibility="gone" />
+            android:visibility="gone"
+            android:text="" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnAssign"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/assignment_assign_button"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="16dp" />
 
-        <!-- Current assignments -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/assignment_current_title"
-            android:textStyle="bold"
-            android:textSize="16sp"
-            android:layout_marginBottom="8dp" />
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvEntries"
+        <!-- Current assignments — wrap in a card so the visual break
+             from the form above is obvious. The list itself sits
+             inside its own padded container with a sensible min
+             height so 1-2 rows don't look cramped against the form. -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:nestedScrollingEnabled="false" />
+            app:cardCornerRadius="8dp"
+            app:cardElevation="1dp"
+            app:strokeColor="#E0E0E0"
+            app:strokeWidth="1dp"
+            android:layout_marginTop="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/assignment_current_title"
+                    android:textStyle="bold"
+                    android:textSize="16sp"
+                    android:layout_marginBottom="8dp" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvEntries"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    android:overScrollMode="never" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
-</ScrollView>
+</androidx.core.widget.NestedScrollView>
 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

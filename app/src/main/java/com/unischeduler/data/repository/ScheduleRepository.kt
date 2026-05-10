@@ -48,13 +48,16 @@ class ScheduleRepository {
             .decodeList<ScheduleEntry>()
 
     // Throws IllegalStateException on double-booking before hitting DB.
+    // excludeEntryId: editing flow → ignore the entry being edited so it
+    // doesn't collide with itself (same lecturer/room/time as before).
     suspend fun findConflicts(
         lecturerId: Int?,
         classroomId: Int,
         day: String,
         startTime: String,
         endTime: String,
-        orgId: Int
+        orgId: Int,
+        excludeEntryId: Int? = null
     ): ScheduleConflicts {
         val lecturerEntries = if (lecturerId != null) {
             client.postgrest["schedule_entries"]
@@ -81,10 +84,40 @@ class ScheduleRepository {
         val start = toMinutes(startTime)
         val end   = toMinutes(endTime)
 
-        val lecturerConflicts = lecturerEntries.filter { overlaps(start, end, it.startTime, it.endTime) }
-        val classroomConflicts = classroomEntries.filter { overlaps(start, end, it.startTime, it.endTime) }
+        val lecturerConflicts = lecturerEntries
+            .filter { excludeEntryId == null || it.id != excludeEntryId }
+            .filter { overlaps(start, end, it.startTime, it.endTime) }
+        val classroomConflicts = classroomEntries
+            .filter { excludeEntryId == null || it.id != excludeEntryId }
+            .filter { overlaps(start, end, it.startTime, it.endTime) }
 
         return ScheduleConflicts(lecturerConflicts, classroomConflicts)
+    }
+
+    suspend fun updateEntry(
+        entryId: Int,
+        offeringId: Int,
+        lecturerId: Int?,
+        classroomId: Int,
+        day: String,
+        startTime: String,
+        endTime: String,
+        orgId: Int
+    ) {
+        client.postgrest["schedule_entries"]
+            .update({
+                set("offering_id", offeringId)
+                set("lecturer_id", lecturerId)
+                set("classroom_id", classroomId)
+                set("day", day)
+                set("start_time", startTime)
+                set("end_time", endTime)
+            }) {
+                filter {
+                    eq("id", entryId)
+                    eq("org_id", orgId)
+                }
+            }
     }
 
     suspend fun insertEntry(

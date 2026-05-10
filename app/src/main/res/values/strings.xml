@@ -159,6 +159,24 @@
     <string name="assignment_assign_button">Ata</string>
     <string name="assignment_current_title">Mevcut Atamalar</string>
     <string name="assignment_success">Atama başarılı.</string>
+    <string name="assignment_update_button">Güncelle</string>
+    <string name="assignment_update_success">Atama güncellendi.</string>
+    <string name="assignment_edit_banner">%1$s düzenleniyor — formu güncelleyip Güncelle\'ye basın</string>
+    <string name="lecturer_status_temp">Geçici</string>
+    <string name="lecturer_status_active">Aktif</string>
+    <string name="lecturer_more_actions">Diğer işlemler</string>
+    <string name="lecturer_action_edit">Düzenle</string>
+    <string name="lecturer_action_view_schedule">Program ve Müsaitlik</string>
+    <string name="lecturer_schedule_busy_card">Müsait Değil</string>
+    <string name="lecturer_action_reset_password">Şifreyi Sıfırla</string>
+    <string name="lecturer_action_delete">Sil</string>
+    <string name="lecturer_reset_password_confirm">%1$s için yeni geçici şifre üretilsin mi?</string>
+    <string name="lecturer_reset_password_done_title">Yeni şifre oluşturuldu</string>
+    <string name="lecturer_reset_password_done_msg">Hocaya bu şifreyi iletin. İlk girişte yeniden belirlemek zorunda kalacak.\n\nKullanıcı: @%1$s\nŞifre: %2$s</string>
+    <string name="lecturer_reset_password_copy">Kopyala</string>
+    <string name="lecturer_reset_password_copied">Şifre kopyalandı</string>
+    <string name="lecturer_schedule_title">%1$s — Haftalık Program</string>
+    <string name="lecturer_schedule_empty">Bu hocanın atanmış dersi yok.</string>
     <string name="assignment_invalid_selection">Lütfen geçerli bir ders ve sınıf seçin.</string>
     <string name="assignment_select_time">Saat Seç</string>
     <string name="assignment_delete_title">Atamayı Sil</string>
@@ -342,6 +360,26 @@
     <string name="settings_backup_default_filename">unischeduler-yedek-%1$s.json</string>
     <string name="settings_backup_done_title">Yedek hazır</string>
     <string name="settings_backup_done_message">İçerik:\n%1$s\n\nBu dosyayı güvenli bir yerde saklayın.</string>
+
+    <!-- Sample Excel files (B6 — replaces empty templates with real-world examples) -->
+    <string name="settings_samples_title">Örnek Excel Dosyaları</string>
+    <string name="settings_samples_description">Sistem hangi Excel formatını kabul ediyor? Aşağıdan örnek dosyaları indirip kendi verinizle benzer şekilde doldurun.</string>
+    <string name="settings_sample_courses">Örnek: Dersler (.xlsx)</string>
+    <string name="settings_sample_lecturers">Örnek: Hocalar (.xlsx)</string>
+    <string name="settings_sample_classrooms">Örnek: Derslikler (.xlsx)</string>
+    <string name="settings_sample_default_courses">ornek-dersler.xlsx</string>
+    <string name="settings_sample_default_lecturers">ornek-hocalar.xlsx</string>
+    <string name="settings_sample_default_classrooms">ornek-derslikler.xlsx</string>
+
+    <!-- Backup restore (P3) -->
+    <string name="settings_restore_button">Yedekten Geri Yükle</string>
+    <string name="settings_restore_confirm_title">Yedekten geri yüklensin mi?</string>
+    <string name="settings_restore_confirm_message">⚠ DİKKAT: Bu işlem mevcut TÜM verinizi silecek ve yedekteki verilerle değiştirecek.\n\n• %1$s\n\nDevam etmek istediğinize emin misiniz?</string>
+    <string name="settings_restore_in_progress">Geri yükleme yapılıyor…</string>
+    <string name="settings_restore_done">Geri yükleme tamamlandı.</string>
+    <string name="settings_restore_failed">Geri yükleme başarısız: %1$s</string>
+    <string name="settings_restore_invalid_file">Geçerli bir UniScheduler yedek dosyası değil.</string>
+    <string name="settings_restore_wrong_org">Bu yedek farklı bir kuruma ait (org_id=%1$d). Yöneticiyle iletişime geçin.</string>
 
     <!-- Share section (lecturer) -->
     <string name="lecturer_export_title">Programımı Dışa Aktar</string>

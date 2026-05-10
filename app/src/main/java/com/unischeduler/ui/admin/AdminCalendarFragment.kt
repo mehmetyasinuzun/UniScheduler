@@ -32,12 +32,19 @@ class AdminCalendarFragment : Fragment() {
     private val viewModel: CalendarViewModel by viewModels()
 
     private var allEntries: List<ScheduleEntry> = emptyList()
-    private var displayedEntries: List<ScheduleEntry> = emptyList()
     private var currentSettings: OrgSettings? = null
-    private var currentTitle: String = ""
-    private var activeFilter: FilterType = FilterType.ALL
 
-    private enum class FilterType { ALL, LECTURER, CLASSROOM, DEPARTMENT }
+    private data class FilterCriteria(
+        val lecturerName: String? = null,
+        val classroomCode: String? = null,
+        val departmentName: String? = null,
+        val classYear: Int? = null
+    ) {
+        val isEmpty: Boolean get() =
+            lecturerName == null && classroomCode == null && departmentName == null && classYear == null
+    }
+
+    private var criteria: FilterCriteria = FilterCriteria()
 
     private lateinit var pdfSaveLauncher: ActivityResultLauncher<String>
 
@@ -47,11 +54,9 @@ class AdminCalendarFragment : Fragment() {
             ActivityResultContracts.CreateDocument("application/pdf")
         ) { uri ->
             uri ?: return@registerForActivityResult
-            // Snapshot the in-memory state at click time so a later filter
-            // change doesn't poison the export.
-            val entriesAtClick = currentlyVisibleEntries()
+            val entriesAtClick = filteredEntries()
             val settingsAtClick = currentSettings ?: OrgSettings()
-            val title = currentTitle.ifBlank { getString(R.string.export_pdf_admin_title) }
+            val title = buildTitle()
             writeBytesToUri(
                 destination = uri,
                 produce = {
@@ -75,10 +80,65 @@ class AdminCalendarFragment : Fragment() {
         }
     }
 
-    /** Returns whatever is currently rendered in the view — full list when
-     *  the "ALL" chip is active, otherwise the filter slice. */
-    private fun currentlyVisibleEntries(): List<ScheduleEntry> =
-        if (displayedEntries.isEmpty()) allEntries else displayedEntries
+    /**
+     * Tek doğruluk kaynağı: criteria + allEntries → görünen liste.
+     * Hem ekran hem PDF buradan beslenir; senkron kalır garanti.
+     */
+    private fun filteredEntries(): List<ScheduleEntry> {
+        if (criteria.isEmpty) return allEntries
+        return allEntries.filter { e ->
+            (criteria.lecturerName == null || e.lecturerName == criteria.lecturerName) &&
+            (criteria.classroomCode == null || e.classroomCode == criteria.classroomCode) &&
+            (criteria.departmentName == null || e.offerings?.courses?.departments?.name == criteria.departmentName) &&
+            (criteria.classYear == null || e.offerings?.classYear == criteria.classYear)
+        }
+    }
+
+    private fun buildTitle(): String {
+        if (criteria.isEmpty) return getString(R.string.export_pdf_admin_title)
+        val parts = mutableListOf<String>()
+        criteria.departmentName?.let { parts += "Bölüm: $it" }
+        criteria.classYear?.let { parts += "${it}. Sınıf" }
+        criteria.lecturerName?.let { parts += "Hoca: $it" }
+        criteria.classroomCode?.let { parts += "Derslik: $it" }
+        return parts.joinToString(" • ")
+    }
+
+    /**
+     * Dosya adı: filtreye göre şekillenir, son kullanıcı içeriği
+     * dosya adından anlayabilsin. Türkçe karakterler ASCII'ye
+     * çevrilir; boşluk/özel karakter "-" olur.
+     */
+    private fun buildFileName(): String {
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            .format(java.util.Date())
+        if (criteria.isEmpty) return "program-tumu-$today.pdf"
+
+        val slugs = mutableListOf<String>()
+        criteria.departmentName?.let { slugs += slugify(it) }
+        criteria.classYear?.let { slugs += "${it}sinif" }
+        criteria.lecturerName?.let { slugs += slugify(it) }
+        criteria.classroomCode?.let { slugs += slugify(it) }
+        val combined = slugs.joinToString("-").take(80)
+        return "program-$combined-$today.pdf"
+    }
+
+    private fun slugify(s: String): String {
+        val map = mapOf(
+            'ç' to 'c', 'Ç' to 'c', 'ğ' to 'g', 'Ğ' to 'g',
+            'ı' to 'i', 'İ' to 'i', 'ö' to 'o', 'Ö' to 'o',
+            'ş' to 's', 'Ş' to 's', 'ü' to 'u', 'Ü' to 'u'
+        )
+        val sb = StringBuilder()
+        for (c in s) {
+            val mapped = map[c] ?: c.lowercaseChar()
+            when {
+                mapped.isLetterOrDigit() -> sb.append(mapped)
+                sb.isNotEmpty() && sb.last() != '-' -> sb.append('-')
+            }
+        }
+        return sb.toString().trim('-')
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentWeeklyScheduleBinding.inflate(inflater, container, false)
@@ -89,12 +149,11 @@ class AdminCalendarFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.tvTitle.text = getString(R.string.export_pdf_admin_title)
-        currentTitle = getString(R.string.export_pdf_admin_title)
         binding.btnRetry.setOnClickListener { viewModel.loadAllEntries() }
         binding.swipeRefresh.setOnRefreshListener { viewModel.loadAllEntries() }
         binding.chipGroupFilter.visibility = View.VISIBLE
         binding.btnExportPdf.setOnClickListener {
-            pdfSaveLauncher.launch(getString(R.string.export_pdf_default_filename))
+            pdfSaveLauncher.launch(buildFileName())
         }
 
         binding.weeklySchedule.setOnEntryClickListener { entry ->
@@ -139,64 +198,106 @@ class AdminCalendarFragment : Fragment() {
                         )
                     )
 
-                    buildFilterChips(data.entries)
-                    applyFilter(data.entries)
+                    buildFilterChips()
+                    refreshView()
                 }
             }
         }
     }
 
-    private fun buildFilterChips(entries: List<ScheduleEntry>) {
+    private fun buildFilterChips() {
         binding.chipGroupFilter.removeAllViews()
 
-        val chipAll = createChip("Tümü")
-        chipAll.isChecked = true
+        val chipAll = createChip(if (criteria.isEmpty) "Tümü ✓" else "Tümü")
         chipAll.setOnClickListener {
-            activeFilter = FilterType.ALL
-            currentTitle = getString(R.string.export_pdf_admin_title)
-            binding.tvTitle.text = currentTitle
-            applyFilter(allEntries)
+            criteria = FilterCriteria()
+            buildFilterChips()
+            refreshView()
         }
         binding.chipGroupFilter.addView(chipAll)
 
-        val lecturers = entries.map { it.lecturerName }.distinct().sorted()
+        val lecturers = allEntries.map { it.lecturerName }.filter { it.isNotBlank() }.distinct().sorted()
         if (lecturers.isNotEmpty()) {
-            val chipLecturer = createChip("Hocaya Göre")
-            chipLecturer.setOnClickListener { showFilterDialog("Hoca Seç", lecturers) { name ->
-                activeFilter = FilterType.LECTURER
-                val filtered = allEntries.filter { it.lecturerName == name }
-                showFiltered(filtered, "Hoca: $name")
-            }}
+            val label = criteria.lecturerName?.let { "Hoca: $it ✕" } ?: "Hocaya Göre"
+            val chipLecturer = createChip(label)
+            chipLecturer.setOnClickListener {
+                if (criteria.lecturerName != null) {
+                    criteria = criteria.copy(lecturerName = null)
+                    buildFilterChips(); refreshView()
+                } else {
+                    showFilterDialog("Hoca Seç", lecturers) { name ->
+                        criteria = criteria.copy(lecturerName = name)
+                        buildFilterChips(); refreshView()
+                    }
+                }
+            }
             binding.chipGroupFilter.addView(chipLecturer)
         }
 
-        val classrooms = entries.map { it.classroomCode }.filter { it.isNotBlank() }.distinct().sorted()
+        val classrooms = allEntries.map { it.classroomCode }.filter { it.isNotBlank() }.distinct().sorted()
         if (classrooms.isNotEmpty()) {
-            val chipClassroom = createChip("Dersliğe Göre")
-            chipClassroom.setOnClickListener { showFilterDialog("Derslik Seç", classrooms) { code ->
-                activeFilter = FilterType.CLASSROOM
-                val filtered = allEntries.filter { it.classroomCode == code }
-                showFiltered(filtered, "Derslik: $code")
-            }}
+            val label = criteria.classroomCode?.let { "Derslik: $it ✕" } ?: "Dersliğe Göre"
+            val chipClassroom = createChip(label)
+            chipClassroom.setOnClickListener {
+                if (criteria.classroomCode != null) {
+                    criteria = criteria.copy(classroomCode = null)
+                    buildFilterChips(); refreshView()
+                } else {
+                    showFilterDialog("Derslik Seç", classrooms) { code ->
+                        criteria = criteria.copy(classroomCode = code)
+                        buildFilterChips(); refreshView()
+                    }
+                }
+            }
             binding.chipGroupFilter.addView(chipClassroom)
         }
 
-        val departments = entries.mapNotNull { it.offerings?.courses?.departments?.name }.distinct().sorted()
+        val departments = allEntries.mapNotNull { it.offerings?.courses?.departments?.name }
+            .filter { it.isNotBlank() }.distinct().sorted()
         if (departments.isNotEmpty()) {
-            val chipDept = createChip("Bölüme Göre")
-            chipDept.setOnClickListener { showFilterDialog("Bölüm Seç", departments) { dept ->
-                activeFilter = FilterType.DEPARTMENT
-                val filtered = allEntries.filter { it.offerings?.courses?.departments?.name == dept }
-                showFiltered(filtered, "Bölüm: $dept")
-            }}
+            val label = criteria.departmentName?.let { "Bölüm: $it ✕" } ?: "Bölüme Göre"
+            val chipDept = createChip(label)
+            chipDept.setOnClickListener {
+                if (criteria.departmentName != null) {
+                    criteria = criteria.copy(departmentName = null)
+                    buildFilterChips(); refreshView()
+                } else {
+                    showFilterDialog("Bölüm Seç", departments) { dept ->
+                        criteria = criteria.copy(departmentName = dept)
+                        buildFilterChips(); refreshView()
+                    }
+                }
+            }
             binding.chipGroupFilter.addView(chipDept)
+        }
+
+        val classYears = allEntries.mapNotNull { it.offerings?.classYear }.distinct().sorted()
+        if (classYears.isNotEmpty()) {
+            val label = criteria.classYear?.let { "${it}. Sınıf ✕" } ?: "Sınıfa Göre"
+            val chipYear = createChip(label)
+            chipYear.setOnClickListener {
+                if (criteria.classYear != null) {
+                    criteria = criteria.copy(classYear = null)
+                    buildFilterChips(); refreshView()
+                } else {
+                    val labels = classYears.map { "${it}. Sınıf" }
+                    showFilterDialog("Sınıf Seç", labels) { selected ->
+                        val year = selected.substringBefore(".").toIntOrNull()
+                        if (year != null) {
+                            criteria = criteria.copy(classYear = year)
+                            buildFilterChips(); refreshView()
+                        }
+                    }
+                }
+            }
+            binding.chipGroupFilter.addView(chipYear)
         }
     }
 
     private fun createChip(label: String): Chip {
         return Chip(requireContext()).apply {
             text = label
-            isCheckable = true
+            isCheckable = false
             isClickable = true
         }
     }
@@ -209,8 +310,9 @@ class AdminCalendarFragment : Fragment() {
             .show()
     }
 
-    private fun applyFilter(entries: List<ScheduleEntry>) {
-        displayedEntries = entries
+    private fun refreshView() {
+        val entries = filteredEntries()
+        binding.tvTitle.text = buildTitle()
         if (entries.isEmpty()) {
             binding.tvEmpty.visibility = View.VISIBLE
             binding.weeklySchedule.setEntries(emptyList())
@@ -220,18 +322,13 @@ class AdminCalendarFragment : Fragment() {
         }
     }
 
-    private fun showFiltered(entries: List<ScheduleEntry>, label: String) {
-        binding.tvTitle.text = label
-        currentTitle = label
-        applyFilter(entries)
-    }
-
     private fun showEntryDetail(entry: ScheduleEntry) {
         val msg = buildString {
             append("Ders: ${entry.courseCode} — ${entry.courseName}\n")
             append("Hoca: ${entry.lecturerName}\n")
             append("Sınıf: ${entry.classroomCode}\n")
             append("Saat: ${entry.timeRange}\n")
+            entry.offerings?.classYear?.let { append("Sınıf Yılı: ${it}. Sınıf\n") }
             val deptName = entry.offerings?.courses?.departments?.name
             if (!deptName.isNullOrBlank()) append("Bölüm: $deptName")
         }

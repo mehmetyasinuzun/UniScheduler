@@ -28,6 +28,7 @@
             android:id="@+id/tvWelcome"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:text=""
             android:textSize="22sp"
             android:textStyle="bold"
             android:visibility="gone"
@@ -37,6 +38,7 @@
             android:id="@+id/tvDepartment"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:text=""
             android:textSize="16sp"
             android:visibility="gone"
             android:layout_marginTop="8dp" />
@@ -64,6 +66,7 @@
                     android:id="@+id/tvWeeklyCount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:text="0"
                     android:textSize="32sp"
                     android:textStyle="bold"
                     android:textColor="?attr/colorPrimary" />
@@ -128,6 +131,7 @@
             android:id="@+id/tvError"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:text=""
             android:textColor="?attr/colorError"
             android:visibility="gone"
             android:layout_marginTop="80dp" />

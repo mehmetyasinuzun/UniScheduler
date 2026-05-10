@@ -551,17 +551,28 @@ async function loadSecurityPage() {
             + '<thead><tr>'
             + '<th>Zaman</th><th>Kullanici</th><th>Sonuc</th><th>Asama</th>'
             + '<th>Cihaz Modeli</th><th>OS</th><th>App</th>'
-            + '<th>Cihaz Hash</th><th>IP</th><th>Risk</th>'
+            + '<th>Cihaz Hash</th><th>IP</th><th>Risk</th><th>İşlem</th>'
             + '</tr></thead><tbody>'
             + rows.map(r => {
                 const t = new Date(r.created_at);
                 const okBadge = r.succeeded
                     ? '<span class="badge bg-success">OK</span>'
                     : '<span class="badge bg-danger">FAIL</span>';
+                const emuBadge = r.is_emulator === true
+                    ? ' <span class="badge bg-warning text-dark" title="Emülatör imzası">EMU</span>'
+                    : '';
                 const riskColor = r.risk >= 60 ? 'bg-danger' : r.risk >= 30 ? 'bg-warning' : 'bg-secondary';
+                // Hesap dondurma butonu — sadece başarısız girişlerde anlamlı
+                // değil ama kullanıcı en azından bilinen bir kullanıcı adı
+                // aramışsa freeze edilebilir. Boş username değilse butonu göster.
+                const freezeBtn = r.username && r.username !== '(empty)' && r.username !== '(unknown)'
+                    ? `<button class="btn btn-sm btn-outline-danger" data-freeze-user="${escapeHtml(r.username)}" title="Bu kullanıcı adına ait hesabı geçici dondur">
+                         <i class="bi bi-snow"></i> Dondur
+                       </button>`
+                    : '<span class="text-muted small">—</span>';
                 return `<tr>
                     <td>${t.toLocaleString('tr-TR')}</td>
-                    <td><strong>${escapeHtml(r.username)}</strong></td>
+                    <td><strong>${escapeHtml(r.username)}</strong>${emuBadge}</td>
                     <td>${okBadge}</td>
                     <td>${escapeHtml(r.failure_step || '-')}</td>
                     <td>${escapeHtml(r.device_model || '-')}</td>
@@ -570,13 +581,97 @@ async function loadSecurityPage() {
                     <td><code style="font-size:0.7rem">${escapeHtml((r.device_id||'-').substring(0,10))}</code></td>
                     <td><code style="font-size:0.75rem">${escapeHtml(r.ip_address || '-')}</code></td>
                     <td><span class="badge ${riskColor}">${r.risk}</span></td>
+                    <td>${freezeBtn}</td>
                 </tr>`;
             }).join('')
             + '</tbody></table></div>';
         document.getElementById('secAttempts').innerHTML = tbl;
+        // Freeze butonlarını event delegasyonu ile bağla
+        document.getElementById('secAttempts').querySelectorAll('[data-freeze-user]').forEach(btn => {
+            btn.addEventListener('click', () => freezeUserPrompt(btn.dataset.freezeUser));
+        });
     } catch (e) {
         document.getElementById('secAttempts').innerHTML = `<div class="alert alert-danger">Detay yuklenemedi: ${escapeHtml(e.message)}</div>`;
     }
+
+    // Saatlik dağılım grafiği — pencere değişikliklerinde tekrar çiz
+    loadHourlyHeatmap(win);
+}
+
+/* ── Saatlik dağılım grafiği (Chart.js) ─────────────────────────── */
+let _hourlyChart = null;
+async function loadHourlyHeatmap(win) {
+    try {
+        const res = await apiFetch('/api/login-attempts/heatmap?since=' + encodeURIComponent(win));
+        const j = await res.json();
+        const labels = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2,'0')}:00`);
+        const succ   = j.byHour.map(h => h.total - h.failed);
+        const fail   = j.byHour.map(h => h.failed);
+        const ctx = document.getElementById('secHourlyChart');
+        if (!ctx || !window.Chart) return;
+        if (_hourlyChart) _hourlyChart.destroy();
+        _hourlyChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    { label: 'Başarılı', data: succ, backgroundColor: 'rgba(40,167,69,0.75)' },
+                    { label: 'Başarısız', data: fail, backgroundColor: 'rgba(220,53,69,0.85)' }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'top' } },
+                scales: {
+                    x: { stacked: true, ticks: { autoSkip: false, maxRotation: 0 } },
+                    y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }
+                }
+            }
+        });
+    } catch (e) {
+        // Grafik kritik değil — sessizce geç
+        console.warn('hourly heatmap failed:', e?.message);
+    }
+}
+
+/* ── Hesap dondurma (manuel) ───────────────────────────────────── */
+async function freezeUserPrompt(username) {
+    if (!username) return;
+    if (!confirm(`"${username}" kullanıcısının hesabı geçici olarak dondurulsun mu?\n\nDondurulan hesap login yapamaz; aynı butondan istediğiniz zaman aktive edebilirsiniz. Otomatik blok yok — bu manuel bir işlemdir.`)) return;
+
+    try {
+        // Kullanıcı UUID'sini bulmak için /api/lecturers veya /api/admins
+        // toplu listeyi taramaktansa, server'dan username bazında bir
+        // resolve endpoint'ine bakacağız. Şimdilik basit yol:
+        // tüm orgs'dan adminler ve hocalar arasında ara.
+        const userId = await resolveUserIdByUsername(username);
+        if (!userId) {
+            alert('Kullanıcı bulunamadı (silinmiş olabilir).');
+            return;
+        }
+        const r = await apiFetch(`/api/users/${userId}/active`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_active: false })
+        });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        alert(`"${username}" donduruldu. Tekrar aktive etmek için kullanıcılar sayfasından açabilirsiniz.`);
+    } catch (e) {
+        alert('Dondurma başarısız: ' + e.message);
+    }
+}
+
+async function resolveUserIdByUsername(username) {
+    // Basit lookup: panel zaten orgs sayfasında listeyi yüklemiş olabilir
+    // ama burada bağımsız sorgu yapalım. Hem hocaları hem adminleri tara.
+    try {
+        const r = await apiFetch('/api/users/lookup?username=' + encodeURIComponent(username));
+        if (r.ok) {
+            const j = await r.json();
+            return j?.id || null;
+        }
+    } catch (_) { /* fallthrough */ }
+    return null;
 }
 
 function escapeHtml(s) {
@@ -590,5 +685,28 @@ document.getElementById('btnSecResetThresholds').addEventListener('click', reset
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', loadSecurityPage);
 });
+
+const btnCleanupOld = document.getElementById('btnCleanupOld');
+if (btnCleanupOld) {
+    btnCleanupOld.addEventListener('click', async () => {
+        const days = parseInt(document.getElementById('cleanupDays').value, 10) || 90;
+        if (!confirm(`${days} günden eski tüm giriş denemeleri silinsin mi?`)) return;
+        const resultEl = document.getElementById('cleanupResult');
+        resultEl.textContent = 'Temizleniyor…';
+        try {
+            const r = await apiFetch('/api/login-attempts/cleanup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ days })
+            });
+            const j = await r.json();
+            if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+            resultEl.textContent = `${j.deleted} kayıt silindi.`;
+            setTimeout(loadSecurityPage, 500);
+        } catch (e) {
+            resultEl.textContent = 'Hata: ' + e.message;
+        }
+    });
+}
 
 checkAuth()});

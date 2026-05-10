@@ -42,38 +42,40 @@ class CredentialGeneratorTest {
     }
 
     @Test
-    fun `generatePassword produces 12-character string`() {
+    fun `generatePassword produces 6-character string`() {
         val password = CredentialGenerator.generatePassword()
-        assertEquals(12, password.length)
+        assertEquals(6, password.length)
     }
 
     @Test
-    fun `generatePassword always contains at least one of each category`() {
-        val specials = setOf('!', '@', '#', '$', '%', '&', '*', '?', '+', '-', '_', '=')
+    fun `generatePassword uses only A-Z and 1-6`() {
+        val allowed = (('A'..'Z') + ('1'..'6')).toSet()
         repeat(200) {
             val pwd = CredentialGenerator.generatePassword()
-            assertTrue("'$pwd' missing uppercase", pwd.any { it.isUpperCase() })
-            assertTrue("'$pwd' missing lowercase", pwd.any { it.isLowerCase() })
-            assertTrue("'$pwd' missing digit",     pwd.any { it.isDigit() })
-            assertTrue("'$pwd' missing special",   pwd.any { it in specials })
+            for (c in pwd) {
+                assertTrue("'$pwd' contains illegal char '$c'", c in allowed)
+            }
         }
     }
 
     @Test
-    fun `generatePassword produces unique values`() {
-        val passwords = (1..200).map { CredentialGenerator.generatePassword() }.toSet()
-        // 12 char alphabet ~70+ → trivially distinct
-        assertEquals("Duplicate passwords detected", 200, passwords.size)
-    }
-
-    @Test
-    fun `generatePassword has no whitespace or ambiguous chars`() {
+    fun `generatePassword excludes 0 7 8 9 and lowercase`() {
+        val forbidden = setOf('0', '7', '8', '9') + ('a'..'z').toSet()
         repeat(100) {
             val pwd = CredentialGenerator.generatePassword()
-            assertFalse("'$pwd' has whitespace",   pwd.any { it.isWhitespace() })
-            assertFalse("'$pwd' has backtick",     pwd.contains('`'))
-            assertFalse("'$pwd' has quote",        pwd.contains('"'))
+            for (c in pwd) {
+                assertFalse("'$pwd' contains forbidden char '$c'", c in forbidden)
+            }
         }
+    }
+
+    @Test
+    fun `generatePassword produces varied values across calls`() {
+        // 32^6 ≈ 1 billion possible passwords. 200 calls should give
+        // close-to-distinct results; we accept up to 1 collision.
+        val passwords = (1..200).map { CredentialGenerator.generatePassword() }.toSet()
+        assertTrue("Suspicious collision rate: ${200 - passwords.size} duplicates",
+            passwords.size >= 199)
     }
 
     @Test

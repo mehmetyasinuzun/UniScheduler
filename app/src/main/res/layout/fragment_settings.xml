@@ -53,7 +53,8 @@
                         android:id="@+id/etDeptName"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="text" />
+                        android:inputType="text"
+                        android:text="" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <TextView
@@ -62,7 +63,8 @@
                     android:layout_height="wrap_content"
                     android:textColor="?attr/colorError"
                     android:visibility="gone"
-                    android:layout_marginTop="4dp" />
+                    android:layout_marginTop="4dp"
+                    android:text="" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnAddDept"
@@ -94,7 +96,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textColor="?attr/colorError"
-            android:visibility="gone" />
+            android:visibility="gone"
+            android:text="" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRetry"
@@ -208,9 +211,9 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- ─── Excel Templates (B6) ─────────────────────────────────────── -->
+        <!-- ─── Örnek Excel Dosyaları (formati gormek icin) ────────────── -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardTemplates"
+            android:id="@+id/cardSamples"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp">
@@ -224,45 +227,48 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/settings_templates_title"
+                    android:text="@string/settings_samples_title"
                     android:textStyle="bold"
                     android:textSize="16sp" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/settings_templates_description"
+                    android:text="@string/settings_samples_description"
                     android:textSize="13sp"
                     android:layout_marginTop="4dp"
                     android:layout_marginBottom="8dp" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnTemplateCourses"
+                    android:id="@+id/btnSampleCourses"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/export_template_courses"
-                    android:layout_marginBottom="4dp" />
+                    android:text="@string/settings_sample_courses"
+                    android:layout_marginBottom="4dp"
+                    app:icon="@android:drawable/ic_menu_save" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnTemplateLecturers"
+                    android:id="@+id/btnSampleLecturers"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/export_template_lecturers"
-                    android:layout_marginBottom="4dp" />
+                    android:text="@string/settings_sample_lecturers"
+                    android:layout_marginBottom="4dp"
+                    app:icon="@android:drawable/ic_menu_save" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnTemplateClassrooms"
+                    android:id="@+id/btnSampleClassrooms"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/export_template_classrooms" />
+                    android:text="@string/settings_sample_classrooms"
+                    app:icon="@android:drawable/ic_menu_save" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- ─── Backup (B7) ──────────────────────────────────────────────── -->
+        <!-- ─── Yedek + Geri Yükleme ─────────────────────────────────────── -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardBackup"
             android:layout_width="match_parent"
@@ -296,7 +302,19 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/settings_backup_button"
+                    android:layout_marginBottom="4dp"
                     app:icon="@android:drawable/ic_menu_save" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnRestore"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_restore_button"
+                    android:textColor="?attr/colorError"
+                    app:icon="@android:drawable/ic_menu_revert"
+                    app:iconTint="?attr/colorError"
+                    app:strokeColor="?attr/colorError" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

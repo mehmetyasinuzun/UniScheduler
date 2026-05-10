@@ -6,15 +6,18 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-<ScrollView
+<androidx.core.widget.NestedScrollView
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    android:fillViewport="true"
+    android:clipToPadding="false">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:paddingBottom="96dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -87,7 +90,8 @@
             android:layout_height="wrap_content"
             android:textColor="?attr/colorError"
             android:visibility="gone"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="8dp"
+            android:text="" />
 
         <!-- ══════════ HOCALAR AKORDIYON ══════════ -->
         <com.google.android.material.card.MaterialCardView
@@ -158,7 +162,8 @@
                             android:id="@+id/etFirstName"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="textPersonName" />
+                            android:inputType="textPersonName"
+                            android:text="" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -171,7 +176,8 @@
                             android:id="@+id/etLastName"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="textPersonName" />
+                            android:inputType="textPersonName"
+                            android:text="" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <TextView
@@ -193,7 +199,8 @@
                         android:layout_height="wrap_content"
                         android:textColor="?attr/colorError"
                         android:visibility="gone"
-                        android:layout_marginBottom="4dp" />
+                        android:layout_marginBottom="4dp"
+                        android:text="" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -241,7 +248,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:textColor="?attr/colorError"
-                        android:visibility="gone" />
+                        android:visibility="gone"
+                        android:text="" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnRetryLecturers"
@@ -263,7 +271,8 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:imeOptions="actionSearch"
-                            android:inputType="text" />
+                            android:inputType="text"
+                            android:text="" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <LinearLayout
@@ -365,7 +374,8 @@
                             android:id="@+id/etCourseCode"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="text" />
+                            android:inputType="text"
+                            android:text="" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -378,7 +388,8 @@
                             android:id="@+id/etCourseName"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="text" />
+                            android:inputType="text"
+                            android:text="" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <LinearLayout
@@ -399,7 +410,8 @@
                                 android:id="@+id/etTheoryHours"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:inputType="number" />
+                                android:inputType="number"
+                                android:text="" />
                         </com.google.android.material.textfield.TextInputLayout>
 
                         <com.google.android.material.textfield.TextInputLayout
@@ -413,7 +425,8 @@
                                 android:id="@+id/etLabHours"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:inputType="number" />
+                                android:inputType="number"
+                                android:text="" />
                         </com.google.android.material.textfield.TextInputLayout>
 
                         <com.google.android.material.textfield.TextInputLayout
@@ -427,7 +440,8 @@
                                 android:id="@+id/etCredits"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:inputType="number" />
+                                android:inputType="number"
+                                android:text="" />
                         </com.google.android.material.textfield.TextInputLayout>
                     </LinearLayout>
 
@@ -450,7 +464,8 @@
                         android:layout_height="wrap_content"
                         android:textColor="?attr/colorError"
                         android:visibility="gone"
-                        android:layout_marginBottom="4dp" />
+                        android:layout_marginBottom="4dp"
+                        android:text="" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -498,7 +513,8 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:imeOptions="actionSearch"
-                            android:inputType="text" />
+                            android:inputType="text"
+                            android:text="" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <LinearLayout
@@ -624,7 +640,8 @@
                             android:id="@+id/etAcademicYear"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="text" />
+                            android:inputType="text"
+                            android:text="" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <LinearLayout
@@ -688,7 +705,8 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:inputType="textCapCharacters"
-                                android:maxLength="4" />
+                                android:maxLength="4"
+                                android:text="" />
                         </com.google.android.material.textfield.TextInputLayout>
 
                         <com.google.android.material.textfield.TextInputLayout
@@ -702,7 +720,8 @@
                                 android:id="@+id/etOfferingCapacity"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:inputType="number" />
+                                android:inputType="number"
+                                android:text="" />
                         </com.google.android.material.textfield.TextInputLayout>
                     </LinearLayout>
 
@@ -713,7 +732,8 @@
                         android:textColor="?attr/colorError"
                         android:visibility="gone"
                         android:layout_marginBottom="4dp"
-                        android:layout_marginTop="4dp" />
+                        android:layout_marginTop="4dp"
+                        android:text="" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnAddOffering"
@@ -743,7 +763,8 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:imeOptions="actionSearch"
-                            android:inputType="text" />
+                            android:inputType="text"
+                            android:text="" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <LinearLayout
@@ -789,5 +810,5 @@
         </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
-</ScrollView>
+</androidx.core.widget.NestedScrollView>
 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

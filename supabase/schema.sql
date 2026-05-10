@@ -431,12 +431,18 @@ CREATE TABLE login_attempts (
     -- (Supabase rejected) / 'profile' (auth ok but public.users miss)
     -- / 'lecturer' / 'network' / 'other'. Empty for successes.
     failure_step TEXT,
+    -- Mobil tarafı emülatör tespitinden gelen flag. NULL = bilinmiyor
+    -- (panel kayıtları), TRUE = "Build.FINGERPRINT" generic / goldfish /
+    -- ranchu / vbox patterns matched. Aktif blok yok — sadece risk
+    -- skorunu ve panel rozetini etkiler.
+    is_emulator  BOOLEAN,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX idx_login_attempts_username ON login_attempts(username, created_at DESC);
 CREATE INDEX idx_login_attempts_recent   ON login_attempts(created_at DESC);
 CREATE INDEX idx_login_attempts_device   ON login_attempts(device_id, created_at DESC) WHERE device_id IS NOT NULL;
 CREATE INDEX idx_login_attempts_failed   ON login_attempts(created_at DESC) WHERE succeeded = FALSE;
+CREATE INDEX idx_login_attempts_emu      ON login_attempts(created_at DESC) WHERE is_emulator IS TRUE;
 
 -- ──────────────────────────────────────────────────────────────────────────
 -- 17. RLS — turn it on everywhere
@@ -553,9 +559,18 @@ CREATE POLICY orgset_admin_write ON org_settings
 CREATE POLICY users_select ON users
     FOR SELECT TO authenticated
     USING (id = auth.uid() OR org_id = public.current_org_id());
--- Self insert only — used during signup flow before role/orgs are written.
+-- Self insert — used during signup flow before role/orgs are written.
 CREATE POLICY users_insert_self ON users
     FOR INSERT TO authenticated WITH CHECK (id = auth.uid());
+-- Admin insert — lets the mobile app insert a lecturer profile row in
+-- the admin's own session (no need to bounce JWT to the new user). The
+-- old "lecturer inserts their own users row" pattern was racy: the
+-- in-flight Auth session switch from signUpWith could land on the
+-- wrong RLS context. Admin-side insert is straightforward and the
+-- common production pattern.
+CREATE POLICY users_insert_admin ON users
+    FOR INSERT TO authenticated
+    WITH CHECK (public.is_admin() AND org_id = public.current_org_id());
 CREATE POLICY users_update_self ON users
     FOR UPDATE TO authenticated USING (id = auth.uid())
     WITH CHECK (id = auth.uid());
@@ -748,6 +763,69 @@ SELECT
     (SELECT COUNT(*) FROM schedule_entries WHERE org_id = o.id) AS schedule_entry_count
 FROM organizations o
 ORDER BY o.created_at DESC;
+
+-- ──────────────────────────────────────────────────────────────────────────
+-- 22b. Admin RPC — reset a lecturer's auth password
+-- ──────────────────────────────────────────────────────────────────────────
+-- Mobile admins do not carry service_role, so they cannot rewrite
+-- auth.users directly. This SECURITY DEFINER function lets the org
+-- admin reset a lecturer's password in their own tenant. Guarantees:
+--   • Only admins of the same org can call it
+--   • Target must be a non-deleted lecturer in the caller's org
+--   • Password must be at least 6 chars
+--   • New hash uses bcrypt via pgcrypto (compatible with GoTrue)
+--   • must_change_password is forced TRUE so the lecturer is prompted
+--     to pick their own password on next login
+CREATE OR REPLACE FUNCTION public.admin_reset_lecturer_password(
+    p_lecturer_id  INT,
+    p_new_password TEXT
+) RETURNS VOID
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth, extensions
+AS $$
+DECLARE
+    v_user_id     UUID;
+    v_lect_org_id INT;
+BEGIN
+    IF NOT public.is_admin() THEN
+        RAISE EXCEPTION 'Yetkisiz işlem: yalnızca admin sıfırlayabilir.'
+          USING ERRCODE = 'insufficient_privilege';
+    END IF;
+
+    IF p_new_password IS NULL OR length(p_new_password) < 6 THEN
+        RAISE EXCEPTION 'Şifre en az 6 karakter olmalı.'
+          USING ERRCODE = 'check_violation';
+    END IF;
+
+    SELECT user_id, org_id
+      INTO v_user_id, v_lect_org_id
+      FROM public.lecturers
+     WHERE id = p_lecturer_id
+       AND deleted_at IS NULL;
+
+    IF v_user_id IS NULL THEN
+        RAISE EXCEPTION 'Hoca bulunamadı veya silinmiş.'
+          USING ERRCODE = 'no_data_found';
+    END IF;
+
+    IF v_lect_org_id <> public.current_org_id() THEN
+        RAISE EXCEPTION 'Bu hoca farklı bir kuruma ait.'
+          USING ERRCODE = 'insufficient_privilege';
+    END IF;
+
+    UPDATE auth.users
+       SET encrypted_password = extensions.crypt(p_new_password,
+                                                  extensions.gen_salt('bf', 10)),
+           updated_at         = NOW()
+     WHERE id = v_user_id;
+
+    UPDATE public.users
+       SET must_change_password = TRUE
+     WHERE id = v_user_id;
+END;
+$$;
+
+REVOKE ALL    ON FUNCTION public.admin_reset_lecturer_password(INT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.admin_reset_lecturer_password(INT, TEXT) TO authenticated;
 
 -- ──────────────────────────────────────────────────────────────────────────
 -- 23. Done

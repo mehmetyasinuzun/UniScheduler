@@ -18,6 +18,31 @@ const path     = require('path');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 const app = express();
+
+// Reverse proxy arkasında çalışırken (nginx, Cloudflare, Heroku vs.)
+// req.ip 'X-Forwarded-For' başlığından gerçek client IP'yi okur.
+// Localhost'ta etki göstermez ama prod deploy için zorunludur.
+app.set('trust proxy', true);
+
+/**
+ * IP normalize — Express + Node bazen IPv4 adresleri IPv6 formatında
+ * sarar (`::ffff:127.0.0.1`). Localhost'ta da `::1` döner. Bu temsiller
+ * panel/CTI tablolarında kullanıcının gözüne kötü görünüyor; tek bir
+ * normalize fonksiyonundan geçirmek hem okunaklılık hem analiz için
+ * gerekli (gruplandırma `::1` ve `127.0.0.1`'i aynı kabul etmeli).
+ */
+function normalizeIp(raw) {
+    if (!raw) return null;
+    let ip = String(raw).trim();
+    // X-Forwarded-For başlığı virgülle ayrılmış olabilir, ilkini al
+    if (ip.includes(',')) ip = ip.split(',')[0].trim();
+    // IPv6-mapped IPv4 prefix
+    if (ip.startsWith('::ffff:')) ip = ip.slice(7);
+    // IPv6 loopback → IPv4 loopback
+    if (ip === '::1' || ip === '::') ip = '127.0.0.1';
+    return ip || null;
+}
+
 app.use(helmet({ contentSecurityPolicy: false }));
 
 // CORS: in production, only allow explicit origins (ALLOWED_ORIGINS env).
@@ -45,7 +70,7 @@ const allowedIps = (process.env.ALLOWED_IPS || '')
     .split(',').map(s => s.trim()).filter(Boolean);
 if (allowedIps.length > 0) {
     app.use((req, res, next) => {
-        const clientIp = (req.headers['x-forwarded-for']?.split(',')[0]?.trim()) || req.ip;
+        const clientIp = normalizeIp(req.headers['x-forwarded-for'] || req.ip);
         // Match exact IP. CIDR support intentionally omitted; keep this simple
         // and use a real firewall (nginx, iptables, cloud security groups) for
         // network-level filtering. This is a defense-in-depth backup.
@@ -128,8 +153,11 @@ const supabase = createClient(supabaseUrl, serviceKey, {
 
 // ── Auth Endpoints ───────────────────────────────────────────────────
 app.post('/api/auth/login', async (req, res) => {
-    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
-        || req.ip || req.connection.remoteAddress;
+    const ip = normalizeIp(
+        req.headers['x-forwarded-for']
+        || req.ip
+        || req.connection.remoteAddress
+    );
     if (!checkRateLimit(ip)) {
         // Even rate-limit hits go to login_attempts so the CTI dashboard
         // surfaces "this IP is hammering us" without us having to grep
@@ -246,7 +274,7 @@ const API_MAX_REQ   = 100;
 const API_WINDOW_MS = 60 * 1000; // 1 min
 
 function apiRateLimiter(req, res, next) {
-    const ip = req.ip || req.connection.remoteAddress;
+    const ip = normalizeIp(req.ip || req.connection.remoteAddress);
     const now = Date.now();
     const entry = apiRateMap.get(ip) || { count: 0, start: now };
     if (now - entry.start > API_WINDOW_MS) {
@@ -1317,6 +1345,9 @@ app.get('/api/login-attempts', wrap(async (req, res) => {
         if (deviceChurn >= churnHigh) risk += 30;
         else if (deviceChurn >= churnMid) risk += 15;
         if (!r.succeeded && r.failure_step === 'signIn') risk += 5;
+        // Emülatörden gelen istek: production app'i emülatörde açma legitim
+        // değil, otomasyon imzası. Skoru +25 — orta seviye uyarı.
+        if (r.is_emulator === true) risk += 25;
         return { ...r, risk: Math.min(100, risk) };
     });
 
@@ -1385,6 +1416,81 @@ app.get('/api/login-attempts/summary', wrap(async (req, res) => {
     });
 }));
 
+// ── Login attempts — saat × gün heatmap ────────────────────────────────
+//   24x7 ızgara: pencerede her (gün, saat) için deneme sayısı.
+//   Panel'de Chart.js bar grafiği ile gösteriliyor; gece 03:00'te zirve
+//   = bot ihtimali yüksek tipi insight'lar için.
+app.get('/api/login-attempts/heatmap', wrap(async (req, res) => {
+    const sinceArg = (req.query.since || '7d').toString();
+    const sinceMatch = /^(\d+)([hdw])$/.exec(sinceArg);
+    let sinceMs = 7 * 24 * 60 * 60 * 1000;
+    if (sinceMatch) {
+        const n = parseInt(sinceMatch[1], 10);
+        const u = sinceMatch[2];
+        sinceMs = n * (u === 'h' ? 36e5 : u === 'd' ? 864e5 : 6048e5);
+    }
+    const sinceIso = new Date(Date.now() - sinceMs).toISOString();
+    const { data, error } = await supabase.from('login_attempts')
+        .select('succeeded, created_at')
+        .gte('created_at', sinceIso)
+        .limit(50000);
+    if (error) return res.status(500).json({ error: error.message });
+
+    // Hourly bins (0-23) + ayrıca total + fail
+    const byHour = Array.from({ length: 24 }, () => ({ total: 0, failed: 0 }));
+    for (const r of data || []) {
+        const h = new Date(r.created_at).getHours();
+        byHour[h].total++;
+        if (!r.succeeded) byHour[h].failed++;
+    }
+    res.json({ windowSince: sinceIso, byHour });
+}));
+
+// ── Username → user_id resolve (CTI panelindeki "Dondur" butonu için) ──
+app.get('/api/users/lookup', wrap(async (req, res) => {
+    const username = (req.query.username || '').toString().trim();
+    if (!username) return res.status(400).json({ error: 'username required' });
+    const { data, error } = await supabase.from('users')
+        .select('id, username, role, org_id, is_active')
+        .eq('username', username)
+        .is('deleted_at', null)
+        .limit(1)
+        .maybeSingle();
+    if (error) return res.status(500).json({ error: error.message });
+    if (!data) return res.status(404).json({ error: 'not found' });
+    res.json(data);
+}));
+
+// ── Hesap dondur / aktive et (manuel) ──────────────────────────────────
+//   Otomatik blok yok — süper-admin CTI panelinde şüpheli görüyorsa
+//   tek tıkla `is_active=false` yapar. Hoca login denerken
+//   `is_lecturer()` SECURITY DEFINER fonksiyonu false döner ve RLS tüm
+//   istekleri reddeder. Aktive etme aynı yoldan true'ya çekiyor.
+app.patch('/api/users/:id/active', wrap(async (req, res) => {
+    const userId = req.params.id;
+    const isActive = req.body?.is_active === true;
+    const { error } = await supabase.from('users')
+        .update({ is_active: isActive })
+        .eq('id', userId);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ ok: true, user_id: userId, is_active: isActive });
+}));
+
+// ── Login attempts retention cleanup ───────────────────────────────────
+//   Manuel tetik: panel "Eski kayıtları temizle" butonu → 90 günden
+//   eski denemeleri siler. Otomatik nightly job sunucu kalkışında
+//   schedule edilir (aşağıda). Manuel buton ekstra kontrol için.
+app.post('/api/login-attempts/cleanup', wrap(async (req, res) => {
+    const days = Math.max(7, parseInt(req.body?.days, 10) || 90);
+    const cutoff = new Date(Date.now() - days * 864e5).toISOString();
+    const { error, count } = await supabase
+        .from('login_attempts')
+        .delete({ count: 'exact' })
+        .lt('created_at', cutoff);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ ok: true, deleted: count ?? 0, cutoff });
+}));
+
 // ── Super-admin self-management (just metadata, real auth is the panel
 //   login above) ──
 app.get('/api/super-admins', wrap(async (req, res) => {
@@ -1420,7 +1526,35 @@ const server = app.listen(PORT, async () => {
         console.log('  NODE_ENV=production active — strict security policies enforced.');
     }
     await ensureOrgSettings();
+    scheduleLoginAttemptsCleanup();
 });
+
+/**
+ * 24 saatte bir 90 günden eski login denemelerini siler. Tablo CTI
+ * için çok değerli ama sınırsız büyürse Postgres index'leri yavaşlar.
+ * 90 gün penceresi: brute-force pattern analizi için yeterli, GDPR
+ * benzeri saklama prensibi için makul.
+ */
+function scheduleLoginAttemptsCleanup() {
+    const ONE_DAY = 24 * 60 * 60 * 1000;
+    const RETENTION_DAYS = parseInt(process.env.LOGIN_ATTEMPTS_RETENTION_DAYS, 10) || 90;
+    const run = async () => {
+        try {
+            const cutoff = new Date(Date.now() - RETENTION_DAYS * 864e5).toISOString();
+            const { error, count } = await supabase
+                .from('login_attempts')
+                .delete({ count: 'exact' })
+                .lt('created_at', cutoff);
+            if (error) console.error('login_attempts cleanup error:', error.message);
+            else console.log(`[cleanup] removed ${count ?? 0} login_attempts older than ${RETENTION_DAYS}d`);
+        } catch (e) {
+            console.error('login_attempts cleanup threw:', e?.message || e);
+        }
+    };
+    // İlk çalıştırma 1 dakika sonra (boot fırtınasını rahatsız etmesin),
+    // sonra her 24 saatte bir.
+    setTimeout(() => { run(); setInterval(run, ONE_DAY); }, 60_000).unref();
+}
 
 // Graceful shutdown — important when running under Docker/PM2 so in-flight
 // requests aren't killed mid-write. SIGTERM is the standard signal.

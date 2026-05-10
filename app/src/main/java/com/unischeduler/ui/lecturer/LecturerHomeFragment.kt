@@ -124,16 +124,26 @@ class LecturerHomeFragment : Fragment() {
         // Notification preferences card (B3) — also re-arms tomorrow's
         // alarms whenever the user changes any setting so the change is
         // reflected immediately, not at the next 23:00 worker run.
+        // Tüm setup'lar defansif sarmalandı: card layout'u eksik veya
+        // tema değişimi sonrası view restoration başarısızsa fragment
+        // çökmesin, kullanıcı en azından çıkış yapabilsin.
         val ctx = requireContext().applicationContext
-        NotificationPreferencesUi.bind(
-            root = binding.cardNotifications.root,
-            prefs = NotificationPreferences(ctx),
-            permissionLauncher = notifPermissionLauncher,
-            onAnyChange = { NotificationPreferencesUi.rescheduleAfterChange(ctx) }
-        )
+        runCatching {
+            NotificationPreferencesUi.bind(
+                root = binding.cardNotifications.root,
+                prefs = NotificationPreferences(ctx),
+                permissionLauncher = notifPermissionLauncher,
+                onAnyChange = { NotificationPreferencesUi.rescheduleAfterChange(ctx) }
+            )
+        }.onFailure {
+            android.util.Log.e("LecturerHome", "Notif card bind failed", it)
+            binding.cardNotifications.root.visibility = View.GONE
+        }
 
-        setupThemeSelector()
-        setupLanguageSelector()
+        runCatching { setupThemeSelector() }
+            .onFailure { android.util.Log.e("LecturerHome", "Theme setup failed", it) }
+        runCatching { setupLanguageSelector() }
+            .onFailure { android.util.Log.e("LecturerHome", "Lang setup failed", it) }
 
         binding.btnLogout.setOnClickListener {
             AlertDialog.Builder(requireContext())

@@ -40,6 +40,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/notif_master_switch"
+            android:textOn=""
+            android:textOff=""
+            android:showText="false"
             android:checked="true" />
 
         <View
@@ -94,7 +97,10 @@
             android:id="@+id/swQuietHours"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/notif_quiet_switch" />
+            android:text="@string/notif_quiet_switch"
+            android:textOn=""
+            android:textOff=""
+            android:showText="false" />
 
         <TextView
             android:layout_width="match_parent"

@@ -12,7 +12,8 @@
         android:id="@+id/cbImportRow"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp" />
+        android:layout_marginEnd="8dp"
+        android:text="" />
 
     <LinearLayout
         android:layout_width="0dp"
@@ -26,14 +27,16 @@
             android:layout_height="wrap_content"
             android:textSize="14sp"
             android:textStyle="bold"
-            android:textColor="?attr/colorOnSurface" />
+            android:textColor="?attr/colorOnSurface"
+            android:text="" />
 
         <TextView
             android:id="@+id/tvImportSubtitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="12sp"
-            android:textColor="?attr/colorOnSurfaceVariant" />
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:text="" />
     </LinearLayout>
 
 </LinearLayout>

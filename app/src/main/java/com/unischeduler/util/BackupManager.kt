@@ -148,6 +148,175 @@ object BackupManager {
         append("• Müsaitlik kaydı: ${d.availability.size}")
     }
 
+    /**
+     * Parse a JSON file produced by createBackup(). Doesn't touch the
+     * database — pure deserialisation so the caller can validate and
+     * confirm with the user before committing.
+     */
+    fun parseBackup(jsonText: String): Backup =
+        json.decodeFromString(Backup.serializer(), jsonText)
+
+    /**
+     * Restore the data half of a backup (departments / courses /
+     * classrooms / org_settings) into the caller's organization.
+     *
+     * Senior decision — what we DO and DON'T restore:
+     *   ✅ org_settings (idempotent UPSERT)
+     *   ✅ departments
+     *   ✅ courses
+     *   ✅ classrooms
+     *   ❌ lecturers   — these depend on auth.users entries that the
+     *                    mobile app cannot recreate without service_role
+     *   ❌ offerings   — FK to lecturers, would dangle
+     *   ❌ schedule    — FK to offerings/lecturers/classrooms, dangling
+     *   ❌ availability — FK to lecturers
+     *
+     * What this means for users: the "lookup" data (what departments,
+     * which courses, which rooms) is restored. Personnel (lecturers)
+     * and the actual timetable need to be re-entered or re-imported
+     * from Excel. This is the safe subset that doesn't require us to
+     * have RLS-bypassing keys on the phone.
+     *
+     * The caller is expected to:
+     *   1. Show the user a confirmation with summarise() output
+     *   2. Verify backup.orgId matches session.orgId (refuse otherwise)
+     *   3. Run this on Dispatchers.IO
+     *
+     * Strategy:
+     *   • Wipe target tables in dependency-safe order (we use the same
+     *     CASCADE Postgres would use, but explicit deletes go through
+     *     RLS so admins of other orgs are safe).
+     *   • Insert in the same dependency-safe order. id columns are
+     *     SERIAL so we can't preserve the originals; instead we map
+     *     old_id → new_id for departments/courses/classrooms so any
+     *     joined fields could be back-filled in a future enhancement
+     *     (offerings/schedule restore via panel).
+     */
+    suspend fun restoreLookupData(orgId: Int, backup: Backup): RestoreResult {
+        require(backup.orgId == orgId) {
+            "Backup org_id (${backup.orgId}) does not match current org ($orgId)"
+        }
+
+        val deptRepo     = DepartmentRepository()
+        val courseRepo   = CourseRepository()
+        val classroomRepo = ClassroomRepository()
+        val settingsRepo = OrgSettingsRepository()
+
+        // 1) Wipe — order matters: courses & classrooms reference departments.
+        //    All deletes go through RLS (admin-only writes inside our org).
+        for (c in courseRepo.getAllCourses(orgId))      runCatching { courseRepo.deleteCourse(c.id, orgId) }
+        for (r in classroomRepo.getAllClassrooms(orgId)) runCatching { classroomRepo.deleteClassroom(r.id, orgId) }
+        for (d in deptRepo.getAllDepartments(orgId))    runCatching { deptRepo.deleteDepartment(d.id, orgId) }
+
+        // 2) Restore departments first (others FK them by name lookup).
+        var deptsRestored = 0
+        val nameToNewId = HashMap<String, Int>()
+        for (dep in backup.data.departments) {
+            runCatching {
+                deptRepo.insertDepartment(dep.name, orgId)
+                deptsRestored++
+            }
+        }
+        // Re-fetch to pick up the new SERIAL ids, build a name→id map.
+        for (d in deptRepo.getAllDepartments(orgId)) {
+            nameToNewId[d.name] = d.id
+        }
+
+        // 3) Courses — re-resolve department by NAME (the original
+        //    department_id is dead since departments were re-inserted
+        //    with new SERIAL ids).
+        var coursesRestored = 0
+        for (c in backup.data.courses) {
+            val newDeptId = c.departments?.name?.let { nameToNewId[it] }
+                ?: c.departmentId?.let { oldId ->
+                    backup.data.departments.firstOrNull { it.id == oldId }?.name?.let(nameToNewId::get)
+                }
+            runCatching {
+                courseRepo.insertCourse(
+                    code = c.code, name = c.name,
+                    departmentId = newDeptId ?: -1,
+                    orgId = orgId,
+                    theoryHours = c.theoryHours,
+                    labHours = c.labHours,
+                    credits = c.credits
+                )
+                coursesRestored++
+            }
+        }
+
+        // 4) Classrooms — same dept-by-name resolution.
+        var classroomsRestored = 0
+        for (r in backup.data.classrooms) {
+            val newDeptId = r.departments?.name?.let { nameToNewId[it] }
+                ?: r.departmentId?.let { oldId ->
+                    backup.data.departments.firstOrNull { it.id == oldId }?.name?.let(nameToNewId::get)
+                }
+            runCatching {
+                classroomRepo.insertClassroom(
+                    roomCode = r.roomCode, capacity = r.capacity,
+                    departmentId = newDeptId, orgId = orgId, type = r.type
+                )
+                classroomsRestored++
+            }
+        }
+
+        // 5) org_settings — single-row table per org; UPSERT semantics.
+        var settingsRestored = false
+        backup.data.settings?.let { src ->
+            runCatching {
+                settingsRepo.updateSettings(
+                    orgId = orgId,
+                    timeStepMinutes = src.timeStepMinutes,
+                    activeDays = src.activeDays.ifEmpty {
+                        listOf("Monday","Tuesday","Wednesday","Thursday","Friday")
+                    },
+                    dayStart = src.dayStart,
+                    dayEnd = src.dayEnd
+                )
+                settingsRestored = true
+            }
+        }
+
+        return RestoreResult(
+            departments = deptsRestored,
+            courses = coursesRestored,
+            classrooms = classroomsRestored,
+            settingsRestored = settingsRestored,
+            skippedLecturers = backup.data.lecturers.size,
+            skippedOfferings = backup.data.offerings.size,
+            skippedSchedule = backup.data.schedule.size,
+            skippedAvailability = backup.data.availability.size
+        )
+    }
+
+    data class RestoreResult(
+        val departments: Int,
+        val courses: Int,
+        val classrooms: Int,
+        val settingsRestored: Boolean,
+        val skippedLecturers: Int,
+        val skippedOfferings: Int,
+        val skippedSchedule: Int,
+        val skippedAvailability: Int
+    ) {
+        fun summary(): String = buildString {
+            appendLine("Geri yüklendi:")
+            appendLine("• Bölüm: $departments")
+            appendLine("• Ders: $courses")
+            appendLine("• Derslik: $classrooms")
+            if (settingsRestored) appendLine("• Org ayarları: ✓")
+            val skipTotal = skippedLecturers + skippedOfferings + skippedSchedule + skippedAvailability
+            if (skipTotal > 0) {
+                appendLine()
+                appendLine("Geri yüklenmeyen (mobil yetkisi yetmiyor — panelden ekleyin):")
+                if (skippedLecturers > 0)    appendLine("• Hoca: $skippedLecturers")
+                if (skippedOfferings > 0)    appendLine("• Açılan ders: $skippedOfferings")
+                if (skippedSchedule > 0)     appendLine("• Program kaydı: $skippedSchedule")
+                if (skippedAvailability > 0) appendLine("• Müsaitlik: $skippedAvailability")
+            }
+        }
+    }
+
     private fun isoTimestamp(): String =
         SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US).apply {
             timeZone = TimeZone.getDefault()
