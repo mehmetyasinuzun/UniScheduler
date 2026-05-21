@@ -151,8 +151,20 @@
                 android:text="" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/assignment_day_label" android:textStyle="bold"/>
-        <Spinner android:id="@+id/spinnerDay" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="8dp"/>
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"
+            android:hint="@string/assignment_day_label">
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                android:id="@+id/actvDay"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none"
+                android:text="" />
+        </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilStartTime"

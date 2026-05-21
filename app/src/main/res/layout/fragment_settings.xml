@@ -246,7 +246,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/settings_sample_courses"
                     android:layout_marginBottom="4dp"
-                    app:icon="@android:drawable/ic_menu_save" />
+                    app:icon="@drawable/ic_save" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSampleLecturers"
@@ -255,7 +255,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/settings_sample_lecturers"
                     android:layout_marginBottom="4dp"
-                    app:icon="@android:drawable/ic_menu_save" />
+                    app:icon="@drawable/ic_save" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSampleClassrooms"
@@ -263,7 +263,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/settings_sample_classrooms"
-                    app:icon="@android:drawable/ic_menu_save" />
+                    app:icon="@drawable/ic_save" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -303,7 +303,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/settings_backup_button"
                     android:layout_marginBottom="4dp"
-                    app:icon="@android:drawable/ic_menu_save" />
+                    app:icon="@drawable/ic_save" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnRestore"
@@ -312,7 +312,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/settings_restore_button"
                     android:textColor="?attr/colorError"
-                    app:icon="@android:drawable/ic_menu_revert"
+                    app:icon="@drawable/ic_restore"
                     app:iconTint="?attr/colorError"
                     app:strokeColor="?attr/colorError" />
 
@@ -330,7 +330,7 @@
             android:text="@string/logout_button"
             android:textColor="?attr/colorError"
             app:strokeColor="?attr/colorError"
-            app:icon="@android:drawable/ic_lock_power_off"
+            app:icon="@drawable/ic_logout"
             app:iconTint="?attr/colorError" />
 
     </LinearLayout>

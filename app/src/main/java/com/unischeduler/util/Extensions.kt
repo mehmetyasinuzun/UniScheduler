@@ -3,12 +3,12 @@ package com.unischeduler.util
 
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
-import androidx.core.content.FileProvider
+import androidx.annotation.StringRes
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.snackbar.Snackbar
 import com.unischeduler.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -25,23 +25,56 @@ fun <T> Fragment.collectFlow(flow: Flow<T>, action: suspend (T) -> Unit) {
 }
 
 /**
+ * Material 3 önerisi: kısa kullanıcı geri bildirimi için Snackbar tercih edilir
+ * (Toast yerine). Snackbar ekrana asılı olduğu için Bottom Navigation üstüne
+ * doğru oturur ve TalkBack ile düzgün duyurulur. Fragment view'ı henüz hazır
+ * değilse sessizce yutarız — onCreateView öncesi tetiklenen IO callback'leri
+ * için crash önler.
+ */
+fun Fragment.showSnackbar(message: String, duration: Int = Snackbar.LENGTH_SHORT): Snackbar? {
+    val root = view ?: return null
+    return Snackbar.make(root, message, duration).also { it.show() }
+}
+
+fun Fragment.showSnackbar(@StringRes messageRes: Int, duration: Int = Snackbar.LENGTH_SHORT): Snackbar? =
+    showSnackbar(getString(messageRes), duration)
+
+fun Fragment.showSnackbar(@StringRes messageRes: Int, vararg formatArgs: Any, duration: Int = Snackbar.LENGTH_LONG): Snackbar? =
+    showSnackbar(getString(messageRes, *formatArgs), duration)
+
+/**
+ * Hata için kırmızı vurgu — Snackbar'ın action text'ini colorError ile boyar
+ * ve daha uzun gösterir. Mesajın kendi rengi Material varsayılan (light/dark
+ * auto) kalır; renk tonu sadece "Tamam" gibi minimal action butonu üstünde.
+ */
+fun Fragment.showErrorSnackbar(message: String): Snackbar? {
+    val root = view ?: return null
+    val ctx = requireContext()
+    return Snackbar.make(root, message, Snackbar.LENGTH_LONG).also { bar ->
+        val errorColor = androidx.core.content.ContextCompat.getColor(ctx, R.color.color_error_dark)
+        bar.setActionTextColor(errorColor)
+        bar.show()
+    }
+}
+
+fun Fragment.showErrorSnackbar(@StringRes messageRes: Int): Snackbar? =
+    showErrorSnackbar(getString(messageRes))
+
+/**
  * Run [produce] on Dispatchers.IO and stream its bytes into the document
  * picked by the user via Storage Access Framework (writes to [destination]).
  *
  * On success calls [onDone] with the destination URI so the fragment can
- * surface a "Share" follow-up. On failure shows a Toast with the localised
+ * surface a "Share" follow-up. On failure shows a Snackbar with the localised
  * error message.
  *
  * Safe to call after the fragment has been destroyed — the returning
- * `if (!isAdded) return` guard prevents Toast / dialog access on a
- * detached fragment, which would crash with IllegalStateException.
+ * `if (!isAdded) return` guard prevents UI access on a detached fragment.
  */
 fun Fragment.writeBytesToUri(
     destination: Uri,
     produce: suspend () -> ByteArray,
-    onDone: (Uri) -> Unit = { _ ->
-        Toast.makeText(requireContext(), getString(R.string.export_success), Toast.LENGTH_SHORT).show()
-    }
+    onDone: (Uri) -> Unit = { _ -> showSnackbar(R.string.export_success) }
 ) {
     val ctx = requireContext().applicationContext
     lifecycleScope.launch {
@@ -58,11 +91,9 @@ fun Fragment.writeBytesToUri(
             .onSuccess { onDone(destination) }
             .onFailure {
                 if (it is kotlinx.coroutines.CancellationException) throw it
-                Toast.makeText(
-                    requireContext(),
-                    getString(R.string.export_failed, it.message ?: it::class.java.simpleName),
-                    Toast.LENGTH_LONG
-                ).show()
+                showErrorSnackbar(
+                    getString(R.string.export_failed, it.message ?: it::class.java.simpleName)
+                )
             }
     }
 }

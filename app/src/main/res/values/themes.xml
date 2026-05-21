@@ -9,6 +9,11 @@
         <item name="colorOnSurface">@color/onSurface</item>
         <item name="android:colorBackground">@color/background</item>
         <item name="colorOnSurfaceVariant">@color/onSurfaceVariant</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryDark</item>
+
+        <!-- Status bar: surface ile aynı renkte (edge-to-edge benzeri temiz görünüm).
+             windowLightStatusBar=true → açık temada sistem ikonları (saat/sinyal/pil) koyu çizilir;
+             açık arka plan üzerinde okunabilir. values-night/themes.xml false yapar. -->
+        <item name="android:statusBarColor">?attr/colorSurface</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>

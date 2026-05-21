@@ -453,4 +453,19 @@
     <string name="notif_reminder_title">%1$s — %2$s\'da</string>
     <string name="notif_reminder_body">%1$s • %2$s</string>
     <string name="notif_reminder_body_no_room">%1$s</string>
+
+    <!-- ACCESSIBILITY — TalkBack contentDescription'ları için.
+         Görsel-olmayan UI öğeleri (ikonlar, dekoratif elementler) önemsiz işaretlenir;
+         interaktif öğeler aşağıdaki cd_* string'leri ile duyurulur. -->
+    <string name="cd_expand_section">Bölümü aç</string>
+    <string name="cd_collapse_section">Bölümü kapat</string>
+    <string name="cd_edit">Düzenle</string>
+    <string name="cd_delete">Sil</string>
+    <string name="cd_save">Kaydet</string>
+    <string name="cd_search">Ara</string>
+    <string name="cd_more_options">Daha fazla seçenek</string>
+    <string name="cd_logout">Çıkış yap</string>
+    <string name="cd_manage_departments">Bölümleri yönet</string>
+    <string name="cd_run_auto_schedule">Otomatik programı çalıştır</string>
+    <string name="cd_restore_defaults">Varsayılanlara dön</string>
 </resources>

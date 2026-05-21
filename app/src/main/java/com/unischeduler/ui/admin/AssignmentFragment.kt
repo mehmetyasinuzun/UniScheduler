@@ -5,7 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
-import android.widget.Toast
+import com.unischeduler.util.showSnackbar
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -23,6 +23,7 @@ import com.unischeduler.data.model.ScheduleEntry
 import com.unischeduler.R
 import com.unischeduler.databinding.FragmentAssignmentBinding
 import com.unischeduler.databinding.ItemScheduleEntryBinding
+import com.unischeduler.util.DropdownController
 import com.unischeduler.util.UiState
 import com.unischeduler.util.collectFlow
 
@@ -40,6 +41,7 @@ class AssignmentFragment : Fragment() {
     private var editingEntryId: Int? = null
 
     private lateinit var scheduleEntryAdapter: ScheduleEntryAdapter
+    private var dayDropdown: DropdownController<String>? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentAssignmentBinding.inflate(inflater, container, false)
@@ -101,7 +103,7 @@ class AssignmentFragment : Fragment() {
                     binding.tvSaveError.visibility = View.GONE
                     val msg = if (editingEntryId != null) getString(R.string.assignment_update_success)
                               else getString(R.string.assignment_success)
-                    Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
+                    showSnackbar(msg)
                     exitEditMode(clearForm = false)
                     viewModel.resetSaveState()
                 }
@@ -127,7 +129,7 @@ class AssignmentFragment : Fragment() {
         binding.actvOffering.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, offeringNames))
         binding.actvLecturer.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, lecturerNames))
         binding.actvClassroom.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, classroomNames))
-        binding.spinnerDay.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, data.days)
+        dayDropdown = DropdownController(binding.actvDay, data.days)
 
         binding.actvOffering.threshold = 1
         binding.actvLecturer.threshold = 1
@@ -173,13 +175,14 @@ class AssignmentFragment : Fragment() {
         val selectedLecturerId: Int? = if (lecturerIdx >= 0) lecturers[lecturerIdx].id else null
 
         val editId = editingEntryId
+        val selectedDay = dayDropdown?.selectedItem().orEmpty()
         if (editId != null) {
             viewModel.updateEntry(
                 entryId = editId,
                 offeringId = offerings[offeringIdx].id,
                 lecturerId = selectedLecturerId,
                 classroomId = classrooms[classroomIdx].id,
-                day = binding.spinnerDay.selectedItem.toString(),
+                day = selectedDay,
                 startTime = binding.etStartTime.text?.toString().orEmpty(),
                 endTime = binding.etEndTime.text?.toString().orEmpty(),
                 force = force
@@ -189,7 +192,7 @@ class AssignmentFragment : Fragment() {
                 offeringId = offerings[offeringIdx].id,
                 lecturerId = selectedLecturerId,
                 classroomId = classrooms[classroomIdx].id,
-                day = binding.spinnerDay.selectedItem.toString(),
+                day = selectedDay,
                 startTime = binding.etStartTime.text?.toString().orEmpty(),
                 endTime = binding.etEndTime.text?.toString().orEmpty(),
                 force = force
@@ -203,10 +206,8 @@ class AssignmentFragment : Fragment() {
         binding.actvOffering.setText(offering?.displayName ?: "", false)
         binding.actvLecturer.setText(entry.lecturerName.takeIf { it != "Atanmadı" } ?: "", false)
         binding.actvClassroom.setText(entry.classroomCode, false)
-        @Suppress("UNCHECKED_CAST")
-        val dayAdapter = binding.spinnerDay.adapter as? ArrayAdapter<String>
-        val dayPos = dayAdapter?.getPosition(entry.day) ?: -1
-        if (dayPos >= 0) binding.spinnerDay.setSelection(dayPos)
+        val dayPos = dayDropdown?.items()?.indexOf(entry.day) ?: -1
+        if (dayPos >= 0) dayDropdown?.setSelection(dayPos)
         binding.etStartTime.setText(entry.startTime)
         binding.etEndTime.setText(entry.endTime)
         binding.btnAssign.text = getString(R.string.assignment_update_button)
@@ -372,11 +373,28 @@ class ScheduleEntryAdapter(
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val e = getItem(position)
-        holder.binding.tvCourse.text        = "${e.courseCode} — ${e.courseName}"
-        holder.binding.tvLecturer.text      = e.lecturerName
-        holder.binding.tvSlot.text          = "${e.day} ${e.timeRange} • ${e.classroomCode}"
-        holder.binding.btnDelete.visibility = View.VISIBLE
-        holder.binding.btnDelete.setOnClickListener { onDeleteClick(e) }
+        val ctx = holder.binding.root.context
+        holder.binding.tvCourse.text   = "${e.courseCode} — ${e.courseName}"
+        holder.binding.tvLecturer.text = e.lecturerName
+        holder.binding.tvSlot.text     = "${e.day} ${e.timeRange} • ${e.classroomCode}"
+
+        // Kebab menü → Düzenle + Sil. Uzun-bas keşfedilebilirlik sorununu
+        // burada gideriyoruz; eski uzun-bas davranışı korunuyor (gücendir
+        // ediliyor) ama görünür buton ile yeni kullanıcı da rahatça keşfeder.
+        holder.binding.btnMore.setOnClickListener { anchor ->
+            android.widget.PopupMenu(ctx, anchor).apply {
+                menu.add(0, 1, 0, ctx.getString(R.string.common_edit))
+                menu.add(0, 2, 1, ctx.getString(R.string.common_delete))
+                setOnMenuItemClickListener { item ->
+                    when (item.itemId) {
+                        1 -> { onLongClick(e); true }
+                        2 -> { onDeleteClick(e); true }
+                        else -> false
+                    }
+                }
+                show()
+            }
+        }
         holder.binding.root.setOnLongClickListener { onLongClick(e); true }
     }
 

@@ -10,7 +10,6 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -36,8 +35,11 @@ import com.unischeduler.util.ErrorReporter
 import com.unischeduler.util.ExcelHelper
 import com.unischeduler.util.FileTypeDetector
 import com.unischeduler.util.ImportPreviewDialog
+import com.unischeduler.util.DropdownController
 import com.unischeduler.util.UiState
 import com.unischeduler.util.collectFlow
+import com.unischeduler.util.showErrorSnackbar
+import com.unischeduler.util.showSnackbar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
@@ -70,6 +72,17 @@ class DataFragment : Fragment() {
     private val academicTitles = listOf("Dr.", "Prof.", "Asst. Prof.", "Lecturer", "Mr.", "Ms.")
     private val terms          = listOf("Fall", "Spring", "Summer")
     private val classYears     = listOf(1, 2, 3, 4)
+
+    // Material 3 ExposedDropdownMenu kontrolcüleri — Spinner.adapter / setSelection
+    // / selectedItemPosition API'sini DropdownController üzerinden gizliyoruz.
+    private var titleDropdown: DropdownController<String>? = null
+    private var lecturerDeptDropdown: DropdownController<String>? = null
+    private var courseDeptDropdown: DropdownController<String>? = null
+    private var offeringCourseDropdown: DropdownController<String>? = null
+    private var offeringLecturerDropdown: DropdownController<String>? = null
+    private var termDropdown: DropdownController<String>? = null
+    private var classYearDropdown: DropdownController<Int>? = null
+    private var deptFilterDropdown: DropdownController<String>? = null
 
     // ── File pickers ──────────────────────────────────────────────────────────
     private lateinit var courseImportLauncher: ActivityResultLauncher<String>
@@ -121,10 +134,10 @@ class DataFragment : Fragment() {
             }
             if (!isAdded) return@launch
             result
-                .onSuccess { Toast.makeText(requireContext(), successMessage, Toast.LENGTH_SHORT).show() }
+                .onSuccess { showSnackbar(successMessage) }
                 .onFailure {
                     if (it is kotlinx.coroutines.CancellationException) throw it
-                    Toast.makeText(requireContext(), getString(R.string.data_export_fail, it.message), Toast.LENGTH_LONG).show()
+                    showErrorSnackbar(getString(R.string.data_export_fail, it.message))
                 }
         } ?: lifecycleScope.launch {
             // Fallback: view destroyed before launcher returned — swallow silently
@@ -298,7 +311,7 @@ class DataFragment : Fragment() {
                     binding.tvLecturerListError.visibility = View.VISIBLE
                 }
                 is UiState.Success -> {
-                    Toast.makeText(requireContext(), getString(R.string.data_lecturer_deleted), Toast.LENGTH_SHORT).show()
+                    showSnackbar(R.string.data_lecturer_deleted)
                     viewModel.resetLecturerDeleteState()
                 }
             }
@@ -310,7 +323,7 @@ class DataFragment : Fragment() {
                 is UiState.Loading -> binding.btnImportLecturers.isEnabled = false
                 is UiState.Error   -> {
                     binding.btnImportLecturers.isEnabled = true
-                    Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
+                    showErrorSnackbar(state.message)
                     viewModel.resetLecturerImportState()
                 }
                 is UiState.Success -> {
@@ -338,7 +351,7 @@ class DataFragment : Fragment() {
                     binding.btnAddCourse.isEnabled      = true
                     binding.tvCourseAddError.visibility = View.GONE
                     clearCourseForm()
-                    Toast.makeText(requireContext(), getString(R.string.data_course_added), Toast.LENGTH_SHORT).show()
+                    showSnackbar(R.string.data_course_added)
                     viewModel.resetCourseAddState()
                     viewModel.loadCourses()
                 }
@@ -362,12 +375,12 @@ class DataFragment : Fragment() {
                 is UiState.Loading -> binding.btnImportCourses.isEnabled = false
                 is UiState.Error   -> {
                     binding.btnImportCourses.isEnabled = true
-                    Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
+                    showErrorSnackbar(state.message)
                     viewModel.resetCourseImportState()
                 }
                 is UiState.Success -> {
                     binding.btnImportCourses.isEnabled = true
-                    Toast.makeText(requireContext(), getString(R.string.data_course_import_count, state.data), Toast.LENGTH_SHORT).show()
+                    showSnackbar(getString(R.string.data_course_import_count, state.data))
                     viewModel.resetCourseImportState()
                 }
             }
@@ -389,7 +402,7 @@ class DataFragment : Fragment() {
                     binding.btnAddOffering.isEnabled   = true
                     binding.tvOfferingError.visibility = View.GONE
                     clearOfferingForm()
-                    Toast.makeText(requireContext(), getString(R.string.data_offering_added), Toast.LENGTH_SHORT).show()
+                    showSnackbar(R.string.data_offering_added)
                     viewModel.resetOfferingAddState()
                 }
             }
@@ -407,7 +420,7 @@ class DataFragment : Fragment() {
                 is UiState.Loading -> binding.progressOfferings.visibility = View.VISIBLE
                 is UiState.Error   -> {
                     binding.progressOfferings.visibility = View.GONE
-                    Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
+                    showErrorSnackbar(state.message)
                 }
                 is UiState.Success -> {
                     binding.progressOfferings.visibility = View.GONE
@@ -422,11 +435,11 @@ class DataFragment : Fragment() {
                 is UiState.Idle    -> Unit
                 is UiState.Loading -> Unit
                 is UiState.Error   -> {
-                    Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
+                    showErrorSnackbar(state.message)
                     viewModel.resetLecturerEditState()
                 }
                 is UiState.Success -> {
-                    Toast.makeText(requireContext(), getString(R.string.data_lecturer_updated), Toast.LENGTH_SHORT).show()
+                    showSnackbar(R.string.data_lecturer_updated)
                     viewModel.resetLecturerEditState()
                 }
             }
@@ -437,11 +450,11 @@ class DataFragment : Fragment() {
                 is UiState.Idle    -> Unit
                 is UiState.Loading -> Unit
                 is UiState.Error   -> {
-                    Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
+                    showErrorSnackbar(state.message)
                     viewModel.resetOfferingEditState()
                 }
                 is UiState.Success -> {
-                    Toast.makeText(requireContext(), getString(R.string.data_offering_updated), Toast.LENGTH_SHORT).show()
+                    showSnackbar(R.string.data_offering_updated)
                     viewModel.resetOfferingEditState()
                 }
             }
@@ -456,10 +469,10 @@ class DataFragment : Fragment() {
             return
         }
         viewModel.addLecturer(
-            title        = academicTitles[binding.spinnerTitle.selectedItemPosition],
+            title        = academicTitles[titleDropdown?.selectedPosition() ?: 0],
             firstName    = binding.etFirstName.text?.toString().orEmpty(),
             lastName     = binding.etLastName.text?.toString().orEmpty(),
-            departmentId = departments[binding.spinnerLecturerDept.selectedItemPosition].id
+            departmentId = departments[lecturerDeptDropdown?.selectedPosition() ?: 0].id
         )
     }
 
@@ -471,7 +484,7 @@ class DataFragment : Fragment() {
         viewModel.addCourse(
             code         = binding.etCourseCode.text?.toString().orEmpty(),
             name         = binding.etCourseName.text?.toString().orEmpty(),
-            departmentId = departments[binding.spinnerCourseDept.selectedItemPosition].id,
+            departmentId = departments[courseDeptDropdown?.selectedPosition() ?: 0].id,
             theoryHours  = binding.etTheoryHours.text?.toString()?.toIntOrNull() ?: 0,
             labHours     = binding.etLabHours.text?.toString()?.toIntOrNull() ?: 0,
             credits      = binding.etCredits.text?.toString()?.toIntOrNull() ?: 0
@@ -484,11 +497,11 @@ class DataFragment : Fragment() {
             return
         }
         viewModel.addOffering(
-            courseId      = courses[binding.spinnerOfferingCourse.selectedItemPosition].id,
+            courseId      = courses[offeringCourseDropdown?.selectedPosition() ?: 0].id,
             lecturerId   = getSelectedLecturerId(),
             academicYear = binding.etAcademicYear.text?.toString().orEmpty(),
-            term         = terms[binding.spinnerTerm.selectedItemPosition],
-            classYear    = classYears[binding.spinnerClassYear.selectedItemPosition],
+            term         = terms[termDropdown?.selectedPosition() ?: 0],
+            classYear    = classYears[classYearDropdown?.selectedPosition() ?: 0],
             section      = binding.etSection.text?.toString().orEmpty(),
             capacity     = binding.etOfferingCapacity.text?.toString().orEmpty()
         )
@@ -685,10 +698,10 @@ class DataFragment : Fragment() {
 
     private fun showCourseImportPreview(result: CsvImporter.ParseResult<CsvImporter.CourseRow>) {
         if (departments.isEmpty()) {
-            Toast.makeText(requireContext(), getString(R.string.import_load_depts_first), Toast.LENGTH_LONG).show()
+            showErrorSnackbar(R.string.import_load_depts_first)
             return
         }
-        val deptPos  = binding.spinnerCourseDept.selectedItemPosition
+        val deptPos  = courseDeptDropdown?.selectedPosition() ?: 0
         val deptName = departments.getOrNull(deptPos)?.name ?: "Bilinmiyor"
         val deptId   = departments.getOrNull(deptPos)?.id ?: return
 
@@ -718,10 +731,10 @@ class DataFragment : Fragment() {
 
     private fun showLecturerImportPreview(result: CsvImporter.ParseResult<CsvImporter.LecturerRow>) {
         if (departments.isEmpty()) {
-            Toast.makeText(requireContext(), getString(R.string.import_load_depts_first), Toast.LENGTH_LONG).show()
+            showErrorSnackbar(R.string.import_load_depts_first)
             return
         }
-        val deptPos  = binding.spinnerLecturerDept.selectedItemPosition
+        val deptPos  = lecturerDeptDropdown?.selectedPosition() ?: 0
         val deptName = departments.getOrNull(deptPos)?.name ?: "Bilinmiyor"
         val deptId   = departments.getOrNull(deptPos)?.id ?: return
 
@@ -779,7 +792,7 @@ class DataFragment : Fragment() {
                 val cm = requireContext().getSystemService(android.content.Context.CLIPBOARD_SERVICE)
                     as android.content.ClipboardManager
                 cm.setPrimaryClip(android.content.ClipData.newPlainText("Hocalar", credentialsBlock))
-                Toast.makeText(requireContext(), getString(R.string.data_all_users_copied), Toast.LENGTH_SHORT).show()
+                showSnackbar(R.string.data_all_users_copied)
             }
             .show()
     }
@@ -801,7 +814,7 @@ class DataFragment : Fragment() {
                 cm.setPrimaryClip(android.content.ClipData.newPlainText(
                     "Hoca Bilgileri", "$username  /  $password"
                 ))
-                Toast.makeText(requireContext(), getString(R.string.common_copied_clipboard), Toast.LENGTH_SHORT).show()
+                showSnackbar(R.string.common_copied_clipboard)
             }
             .show()
     }
@@ -859,11 +872,7 @@ class DataFragment : Fragment() {
                     .getSystemService(android.content.Context.CLIPBOARD_SERVICE)
                     as android.content.ClipboardManager
                 clip.setPrimaryClip(android.content.ClipData.newPlainText("password", password))
-                android.widget.Toast.makeText(
-                    requireContext(),
-                    R.string.lecturer_reset_password_copied,
-                    android.widget.Toast.LENGTH_SHORT
-                ).show()
+                showSnackbar(R.string.lecturer_reset_password_copied)
             }
             .setNegativeButton(R.string.common_ok, null)
             .show()
@@ -907,7 +916,8 @@ class DataFragment : Fragment() {
         fun toggle(header: View, content: View, arrow: View) {
             if (content.visibility == View.GONE) {
                 content.visibility = View.VISIBLE
-                arrow.rotation = 180f
+                arrow.animate().rotation(180f).setDuration(180L).start()
+                arrow.contentDescription = getString(R.string.cd_collapse_section)
                 // Wait one frame so `content`'s width is non-zero, then:
                 content.post {
                     // 1) Forced layout pass — the RecyclerViews inside
@@ -922,7 +932,8 @@ class DataFragment : Fragment() {
                 }
             } else {
                 content.visibility = View.GONE
-                arrow.rotation = 0f
+                arrow.animate().rotation(0f).setDuration(180L).start()
+                arrow.contentDescription = getString(R.string.cd_expand_section)
             }
         }
 
@@ -944,50 +955,41 @@ class DataFragment : Fragment() {
         binding.etAcademicYear.setText(academicYear)
 
         val termIdx = if (month in 1..6) 1 else 0
-        binding.spinnerTerm.setSelection(termIdx)
+        termDropdown?.setSelection(termIdx)
 
         binding.etSection.setText("A")
     }
 
     private fun setupStaticSpinners() {
-        binding.spinnerTitle.adapter = ArrayAdapter(
-            requireContext(), android.R.layout.simple_spinner_item, academicTitles
-        ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
-
-        binding.spinnerTerm.adapter = ArrayAdapter(
-            requireContext(), android.R.layout.simple_spinner_item, terms
-        ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
-
-        binding.spinnerClassYear.adapter = ArrayAdapter(
-            requireContext(), android.R.layout.simple_spinner_item, classYears.map { "Year $it" }
-        ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        titleDropdown = DropdownController(binding.actvTitle, academicTitles)
+        termDropdown = DropdownController(binding.actvTerm, terms)
+        classYearDropdown = DropdownController(binding.actvClassYear, classYears) { "Year $it" }
     }
 
     private fun populateDeptSpinners(depts: List<Department>) {
-        val names   = depts.map { it.name }
-        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, names)
-            .also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
-        binding.spinnerLecturerDept.adapter = adapter
-        binding.spinnerCourseDept.adapter   = ArrayAdapter(
-            requireContext(), android.R.layout.simple_spinner_item, names
-        ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        val names = depts.map { it.name }
 
+        // Lecturer / Course form dropdown'ları
+        lecturerDeptDropdown?.let { it.setItems(names) } ?: run {
+            lecturerDeptDropdown = DropdownController(binding.actvLecturerDept, names)
+        }
+        courseDeptDropdown?.let { it.setItems(names) } ?: run {
+            courseDeptDropdown = DropdownController(binding.actvCourseDept, names)
+        }
+
+        // Üst filtre dropdown'ı — "Tüm Bölümler" prefix'i ile + selection callback
         val filterNames = listOf(getString(R.string.common_all_departments)) + names
-        binding.spinnerDeptFilter.adapter = ArrayAdapter(
-            requireContext(), android.R.layout.simple_spinner_item, filterNames
-        ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
-
-        binding.spinnerDeptFilter.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, pos: Int, id: Long) {
-                selectedDeptId = if (pos == 0) null else depts[pos - 1].id
-                applyDeptFilter()
-
-                if (pos > 0) {
-                    binding.spinnerLecturerDept.setSelection(pos - 1)
-                    binding.spinnerCourseDept.setSelection(pos - 1)
+        deptFilterDropdown?.let { it.setItems(filterNames) } ?: run {
+            deptFilterDropdown = DropdownController(binding.actvDeptFilter, filterNames).apply {
+                onSelected { _, pos ->
+                    selectedDeptId = if (pos == 0) null else depts[pos - 1].id
+                    applyDeptFilter()
+                    if (pos > 0) {
+                        lecturerDeptDropdown?.setSelection(pos - 1)
+                        courseDeptDropdown?.setSelection(pos - 1)
+                    }
                 }
             }
-            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
         }
     }
 
@@ -1052,27 +1054,28 @@ class DataFragment : Fragment() {
     }
 
     private fun populateCourseSpinner(courseList: List<Course>) {
-        binding.spinnerOfferingCourse.adapter = ArrayAdapter(
-            requireContext(), android.R.layout.simple_spinner_item, courseList.map { it.displayName }
-        ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        val items = courseList.map { it.displayName }
+        offeringCourseDropdown?.let { it.setItems(items) } ?: run {
+            offeringCourseDropdown = DropdownController(binding.actvOfferingCourse, items)
+        }
     }
 
     private fun populateLecturerSpinner() {
-        val names = listOf(getString(R.string.common_not_assigned)) + lecturers.map { it.fullName }
-        binding.spinnerOfferingLecturer.adapter = ArrayAdapter(
-            requireContext(), android.R.layout.simple_spinner_item, names
-        ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        val items = listOf(getString(R.string.common_not_assigned)) + lecturers.map { it.fullName }
+        offeringLecturerDropdown?.let { it.setItems(items) } ?: run {
+            offeringLecturerDropdown = DropdownController(binding.actvOfferingLecturer, items)
+        }
     }
 
     private fun getSelectedLecturerId(): Int? {
-        val pos = binding.spinnerOfferingLecturer.selectedItemPosition
+        val pos = offeringLecturerDropdown?.selectedPosition() ?: 0
         return if (pos > 0) lecturers[pos - 1].id else null
     }
 
     private fun clearLecturerForm() {
         binding.etFirstName.text?.clear()
         binding.etLastName.text?.clear()
-        binding.spinnerTitle.setSelection(0)
+        titleDropdown?.setSelection(0)
     }
 
     private fun clearCourseForm() {
@@ -1085,7 +1088,7 @@ class DataFragment : Fragment() {
 
     private fun clearOfferingForm() {
         binding.etOfferingCapacity.text?.clear()
-        binding.spinnerOfferingLecturer.setSelection(0)
+        offeringLecturerDropdown?.setSelection(0)
         setupDefaults()
     }
 

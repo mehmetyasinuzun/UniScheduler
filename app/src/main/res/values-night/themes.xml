@@ -9,6 +9,9 @@
         <item name="colorOnSurface">@color/onSurface</item>
         <item name="android:colorBackground">@color/background</item>
         <item name="colorOnSurfaceVariant">@color/onSurfaceVariant</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryDark</item>
+
+        <!-- Karanlık tema: koyu surface + light status bar icons. -->
+        <item name="android:statusBarColor">?attr/colorSurface</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

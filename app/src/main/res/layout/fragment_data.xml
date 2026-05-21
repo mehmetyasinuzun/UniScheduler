@@ -41,7 +41,8 @@
                 android:layout_height="wrap_content"
                 android:text="@string/data_departments_button"
                 android:textSize="12sp"
-                app:icon="@android:drawable/ic_menu_manage" />
+                android:contentDescription="@string/cd_manage_departments"
+                app:icon="@drawable/ic_tune" />
         </LinearLayout>
 
         <com.google.android.material.card.MaterialCardView
@@ -61,19 +62,19 @@
                 android:paddingHorizontal="12dp"
                 android:paddingVertical="4dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/data_dept_label"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
-                    android:layout_marginEnd="8dp" />
-
-                <Spinner
-                    android:id="@+id/spinnerDeptFilter"
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1" />
+                    android:layout_weight="1"
+                    android:hint="@string/data_dept_label">
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/actvDeptFilter"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"
+                        android:text="" />
+                </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -129,8 +130,9 @@
                         android:id="@+id/ivExpandLecturers"
                         android:layout_width="24dp"
                         android:layout_height="24dp"
-                        android:src="@android:drawable/arrow_down_float"
-                        android:contentDescription="Expand" />
+                        android:src="@drawable/ic_expand_more"
+                        app:tint="?attr/colorOnSurfaceVariant"
+                        android:contentDescription="@string/cd_expand_section" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -141,17 +143,19 @@
                     android:visibility="gone"
                     android:padding="12dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/data_title_label"
-                        android:textSize="12sp" />
-
-                    <Spinner
-                        android:id="@+id/spinnerTitle"
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp" />
+                        android:layout_marginBottom="8dp"
+                        android:hint="@string/data_title_label">
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/actvTitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:text="" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -180,18 +184,20 @@
                             android:text="" />
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Bölüm"
-                        android:textSize="12sp"
-                        android:layout_marginTop="8dp" />
-
-                    <Spinner
-                        android:id="@+id/spinnerLecturerDept"
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp" />
+                        android:layout_marginTop="8dp"
+                        android:layout_marginBottom="8dp"
+                        android:hint="@string/data_dept_label">
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/actvLecturerDept"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:text="" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
                     <TextView
                         android:id="@+id/tvLecturerAddError"
@@ -264,7 +270,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:hint="@string/ux_search_hint_lecturer"
-                        app:startIconDrawable="@android:drawable/ic_menu_search"
+                        app:startIconDrawable="@drawable/ic_search"
                         app:endIconMode="clear_text">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etSearchLecturers"
@@ -353,8 +359,9 @@
                         android:id="@+id/ivExpandCourses"
                         android:layout_width="24dp"
                         android:layout_height="24dp"
-                        android:src="@android:drawable/arrow_down_float"
-                        android:contentDescription="Expand" />
+                        android:src="@drawable/ic_expand_more"
+                        app:tint="?attr/colorOnSurfaceVariant"
+                        android:contentDescription="@string/cd_expand_section" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -445,18 +452,20 @@
                         </com.google.android.material.textfield.TextInputLayout>
                     </LinearLayout>
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Bölüm"
-                        android:textSize="12sp"
-                        android:layout_marginTop="8dp" />
-
-                    <Spinner
-                        android:id="@+id/spinnerCourseDept"
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp" />
+                        android:layout_marginTop="8dp"
+                        android:layout_marginBottom="8dp"
+                        android:hint="@string/data_dept_label">
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/actvCourseDept"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:text="" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
                     <TextView
                         android:id="@+id/tvCourseAddError"
@@ -506,7 +515,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:hint="@string/ux_search_hint_course"
-                        app:startIconDrawable="@android:drawable/ic_menu_search"
+                        app:startIconDrawable="@drawable/ic_search"
                         app:endIconMode="clear_text">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etSearchCourses"
@@ -595,8 +604,9 @@
                         android:id="@+id/ivExpandOfferings"
                         android:layout_width="24dp"
                         android:layout_height="24dp"
-                        android:src="@android:drawable/arrow_down_float"
-                        android:contentDescription="Expand" />
+                        android:src="@drawable/ic_expand_more"
+                        app:tint="?attr/colorOnSurfaceVariant"
+                        android:contentDescription="@string/cd_expand_section" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -607,29 +617,33 @@
                     android:visibility="gone"
                     android:padding="12dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/data_offering_course_label"
-                        android:textSize="12sp" />
-
-                    <Spinner
-                        android:id="@+id/spinnerOfferingCourse"
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp" />
+                        android:layout_marginBottom="8dp"
+                        android:hint="@string/data_offering_course_label">
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/actvOfferingCourse"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:text="" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/data_offering_lecturer_optional"
-                        android:textSize="12sp" />
-
-                    <Spinner
-                        android:id="@+id/spinnerOfferingLecturer"
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp" />
+                        android:layout_marginBottom="8dp"
+                        android:hint="@string/data_offering_lecturer_optional">
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/actvOfferingLecturer"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:text="" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -651,39 +665,35 @@
                         android:layout_marginTop="8dp"
                         android:weightSum="2">
 
-                        <LinearLayout
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:layout_marginEnd="4dp">
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/data_offering_term_label"
-                                android:textSize="12sp" />
-                            <Spinner
-                                android:id="@+id/spinnerTerm"
+                            android:layout_marginEnd="4dp"
+                            android:hint="@string/data_offering_term_label">
+                            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                                android:id="@+id/actvTerm"
                                 android:layout_width="match_parent"
-                                android:layout_height="wrap_content" />
-                        </LinearLayout>
+                                android:layout_height="wrap_content"
+                                android:inputType="none"
+                                android:text="" />
+                        </com.google.android.material.textfield.TextInputLayout>
 
-                        <LinearLayout
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:layout_marginStart="4dp">
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/data_offering_class_year_label"
-                                android:textSize="12sp" />
-                            <Spinner
-                                android:id="@+id/spinnerClassYear"
+                            android:layout_marginStart="4dp"
+                            android:hint="@string/data_offering_class_year_label">
+                            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                                android:id="@+id/actvClassYear"
                                 android:layout_width="match_parent"
-                                android:layout_height="wrap_content" />
-                        </LinearLayout>
+                                android:layout_height="wrap_content"
+                                android:inputType="none"
+                                android:text="" />
+                        </com.google.android.material.textfield.TextInputLayout>
                     </LinearLayout>
 
                     <LinearLayout
@@ -756,7 +766,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:hint="@string/ux_search_hint_offering"
-                        app:startIconDrawable="@android:drawable/ic_menu_search"
+                        app:startIconDrawable="@drawable/ic_search"
                         app:endIconMode="clear_text">
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etSearchOfferings"

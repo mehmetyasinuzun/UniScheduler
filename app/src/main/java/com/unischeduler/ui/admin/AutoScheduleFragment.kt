@@ -6,7 +6,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import android.widget.Toast
+import com.google.android.material.snackbar.Snackbar
+import com.unischeduler.util.showErrorSnackbar
+import com.unischeduler.util.showSnackbar
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -93,13 +95,13 @@ class AutoScheduleFragment : Fragment() {
                     binding.btnApprove.text = "Kaydediliyor..."
                 }
                 is UiState.Success -> {
-                    Toast.makeText(requireContext(), getString(R.string.auto_schedule_save_success, state.data), Toast.LENGTH_LONG).show()
+                    showSnackbar(R.string.auto_schedule_save_success, state.data, duration = Snackbar.LENGTH_LONG)
                     findNavController().popBackStack()
                 }
                 is UiState.Error -> {
                     binding.btnApprove.isEnabled = true
                     binding.btnApprove.text = "Onayla ve Kaydet"
-                    Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
+                    showErrorSnackbar(state.message)
                 }
                 else -> {
                     binding.btnApprove.isEnabled = true

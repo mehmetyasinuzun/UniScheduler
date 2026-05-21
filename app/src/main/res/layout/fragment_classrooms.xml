@@ -84,31 +84,33 @@
                             android:text="" />
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/classroom_type_label"
-                        android:textSize="12sp"
-                        android:layout_marginTop="8dp" />
-
-                    <Spinner
-                        android:id="@+id/spinnerType"
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="4dp" />
+                        android:layout_marginTop="8dp"
+                        android:hint="@string/classroom_type_label">
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/actvType"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:text="" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/classroom_dept_optional"
-                        android:textSize="12sp"
-                        android:layout_marginTop="8dp" />
-
-                    <Spinner
-                        android:id="@+id/spinnerDept"
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="4dp" />
+                        android:layout_marginTop="8dp"
+                        android:hint="@string/classroom_dept_optional">
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/actvDept"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:text="" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
                     <TextView
                         android:id="@+id/tvAddError"
@@ -194,7 +196,7 @@
                 android:layout_marginTop="4dp"
                 android:layout_marginBottom="8dp"
                 android:hint="@string/ux_search_hint_classroom"
-                app:startIconDrawable="@android:drawable/ic_menu_search"
+                app:startIconDrawable="@drawable/ic_search"
                 app:endIconMode="clear_text">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etSearchClassrooms"

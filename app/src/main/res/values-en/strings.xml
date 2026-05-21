@@ -442,4 +442,17 @@
     <string name="notif_reminder_title">%1$s at %2$s</string>
     <string name="notif_reminder_body">%1$s • %2$s</string>
     <string name="notif_reminder_body_no_room">%1$s</string>
+
+    <!-- ACCESSIBILITY — TalkBack contentDescription strings. -->
+    <string name="cd_expand_section">Expand section</string>
+    <string name="cd_collapse_section">Collapse section</string>
+    <string name="cd_edit">Edit</string>
+    <string name="cd_delete">Delete</string>
+    <string name="cd_save">Save</string>
+    <string name="cd_search">Search</string>
+    <string name="cd_more_options">More options</string>
+    <string name="cd_logout">Log out</string>
+    <string name="cd_manage_departments">Manage departments</string>
+    <string name="cd_run_auto_schedule">Run auto schedule</string>
+    <string name="cd_restore_defaults">Restore defaults</string>
 </resources>

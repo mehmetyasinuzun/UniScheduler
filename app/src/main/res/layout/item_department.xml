@@ -21,7 +21,7 @@
         android:layout_width="36dp"
         android:layout_height="36dp"
         android:layout_marginEnd="4dp"
-        android:src="@android:drawable/ic_menu_edit"
+        android:src="@drawable/ic_edit"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/item_edit_description" />
 
@@ -29,7 +29,7 @@
         android:id="@+id/btnDeleteDept"
         android:layout_width="36dp"
         android:layout_height="36dp"
-        android:src="@android:drawable/ic_menu_delete"
+        android:src="@drawable/ic_delete"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/item_delete_description" />
 

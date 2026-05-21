@@ -40,7 +40,7 @@
             android:layout_height="wrap_content"
             android:text="@string/export_pdf_share"
             android:textSize="12sp"
-            app:icon="@android:drawable/ic_menu_save" />
+            app:icon="@drawable/ic_save" />
     </LinearLayout>
 
     <ProgressBar

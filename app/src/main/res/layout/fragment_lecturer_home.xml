@@ -253,7 +253,7 @@
             android:text="@string/logout_button"
             android:textColor="?attr/colorError"
             app:strokeColor="?attr/colorError"
-            app:icon="@android:drawable/ic_lock_power_off"
+            app:icon="@drawable/ic_logout"
             app:iconTint="?attr/colorError" />
 
     </LinearLayout>

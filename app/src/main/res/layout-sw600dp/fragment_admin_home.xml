@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Tablet adaptasyonu (sw600dp).
+  Aynı içerik, ama 3 panel kart 2 sütunlu grid'e dağılır. Geniş ekranda
+  scroll yapmadan ana göstergeler görünür kalır. NestedScrollView wrapper'ı
+  yine var — landscape tablet veya küçük tablet'te dikey scroll lazım
+  olabilir.
+
+  Atanmamış hocalar ve Atanmamış dersler ilk satırda yan yana; mevcut
+  derslikler altta tam genişlikte. Burada GridLayout yerine LinearLayout
+  ile manuel kompozisyon — RecyclerView'lar wrap_content olduğu için
+  GridLayout'un eşit-yükseklik davranışı yanıltıcı oluyordu.
+-->
+<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/swipeRefresh"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="@dimen/screen_padding">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/admin_home_title"
+                android:textSize="@dimen/page_title_size"
+                android:textStyle="bold"
+                android:layout_marginBottom="16dp" />
+
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                android:layout_gravity="center_horizontal" />
+
+            <TextView
+                android:id="@+id/tvError"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/colorError"
+                android:visibility="gone"
+                android:text="" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnRetry"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/common_retry"
+                android:visibility="gone" />
+
+            <!-- 1. satır: Atanmamış hocalar + Atanmamış dersler yan yana -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="@dimen/card_padding">
+                        <TextView
+                            android:id="@+id/tvLecturerPanelTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/admin_home_unassigned_lecturers"
+                            android:textStyle="bold"
+                            android:textSize="16sp" />
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/rvUnassignedLecturers"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:nestedScrollingEnabled="false" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="@dimen/card_padding">
+                        <TextView
+                            android:id="@+id/tvCoursePanelTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/admin_home_unassigned_courses"
+                            android:textStyle="bold"
+                            android:textSize="16sp" />
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/rvUnassignedCourses"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:nestedScrollingEnabled="false" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <!-- 2. satır: Müsait derslikler — tam genişlik -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/card_padding">
+                    <TextView
+                        android:id="@+id/tvClassroomPanelTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/admin_home_available_classrooms"
+                        android:textStyle="bold"
+                        android:textSize="16sp" />
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rvAvailableClassrooms"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:nestedScrollingEnabled="false" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

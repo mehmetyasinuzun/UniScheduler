@@ -4,8 +4,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import android.widget.Toast
+import com.unischeduler.util.DropdownController
+import com.unischeduler.util.showSnackbar
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -24,6 +24,8 @@ class AvailabilityFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: AvailabilityViewModel by viewModels()
 
+    private lateinit var dayDropdown: DropdownController<String>
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentAvailabilityBinding.inflate(inflater, container, false)
         return binding.root
@@ -32,9 +34,7 @@ class AvailabilityFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.spinnerDay.adapter = ArrayAdapter(
-            requireContext(), android.R.layout.simple_spinner_item, DAYS
-        ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        dayDropdown = DropdownController(binding.actvDay, DAYS)
 
         binding.etStartTime.setOnClickListener { showTimePicker { binding.etStartTime.setText(it) } }
         binding.etEndTime.setOnClickListener   { showTimePicker { binding.etEndTime.setText(it) } }
@@ -51,7 +51,7 @@ class AvailabilityFragment : Fragment() {
         }
 
         binding.availabilityGrid.setOnEmptyCellClickListener { day, startTime, endTime ->
-            binding.spinnerDay.setSelection(DAYS.indexOf(day).coerceAtLeast(0))
+            dayDropdown.setSelection(DAYS.indexOf(day).coerceAtLeast(0))
             binding.etStartTime.setText(startTime)
             binding.etEndTime.setText(endTime)
         }
@@ -94,7 +94,7 @@ class AvailabilityFragment : Fragment() {
                     binding.tvSaveError.visibility = View.GONE
                     binding.etStartTime.text?.clear()
                     binding.etEndTime.text?.clear()
-                    Toast.makeText(requireContext(), getString(R.string.availability_slot_added), Toast.LENGTH_SHORT).show()
+                    showSnackbar(R.string.availability_slot_added)
                     viewModel.resetSaveState()
                 }
             }
@@ -103,7 +103,7 @@ class AvailabilityFragment : Fragment() {
 
     private fun onAddClicked() {
         viewModel.addSlot(
-            day       = DAYS[binding.spinnerDay.selectedItemPosition],
+            day       = DAYS[dayDropdown.selectedPosition()],
             startTime = binding.etStartTime.text?.toString().orEmpty(),
             endTime   = binding.etEndTime.text?.toString().orEmpty()
         )

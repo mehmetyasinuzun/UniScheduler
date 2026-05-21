@@ -32,7 +32,7 @@
             android:text="@string/export_save_pdf"
             android:textSize="12sp"
             android:visibility="gone"
-            app:icon="@android:drawable/ic_menu_save" />
+            app:icon="@drawable/ic_save" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRetry"

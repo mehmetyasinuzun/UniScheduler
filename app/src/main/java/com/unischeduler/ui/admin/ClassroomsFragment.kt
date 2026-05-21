@@ -5,7 +5,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
-import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -26,8 +25,11 @@ import com.unischeduler.util.ErrorReporter
 import com.unischeduler.util.ExcelHelper
 import com.unischeduler.util.FileTypeDetector
 import com.unischeduler.util.ImportPreviewDialog
+import com.unischeduler.util.DropdownController
 import com.unischeduler.util.PendingDelete
 import com.unischeduler.util.UiState
+import com.unischeduler.util.showErrorSnackbar
+import com.unischeduler.util.showSnackbar
 import com.unischeduler.util.collectFlow
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
@@ -47,6 +49,8 @@ class ClassroomsFragment : Fragment() {
     private var classroomQuery: String = ""
 
     private lateinit var classroomAdapter: ClassroomAdapter
+    private var typeDropdown: DropdownController<String>? = null
+    private var deptDropdown: DropdownController<String>? = null
 
     private lateinit var classroomImportLauncher: ActivityResultLauncher<String>
     private lateinit var classroomExportLauncher: ActivityResultLauncher<String>
@@ -73,10 +77,10 @@ class ClassroomsFragment : Fragment() {
                 }
                 if (!isAdded) return@launch
                 result
-                    .onSuccess { Toast.makeText(requireContext(), getString(R.string.classroom_export_success), Toast.LENGTH_SHORT).show() }
+                    .onSuccess { showSnackbar(R.string.classroom_export_success) }
                     .onFailure {
                         if (it is kotlinx.coroutines.CancellationException) throw it
-                        Toast.makeText(requireContext(), getString(R.string.classroom_export_fail, it.message), Toast.LENGTH_LONG).show()
+                        showErrorSnackbar(getString(R.string.classroom_export_fail, it.message))
                     }
             }
         }
@@ -112,10 +116,11 @@ class ClassroomsFragment : Fragment() {
         )
         binding.rvClassrooms.adapter = classroomAdapter
 
-        // Type spinner (theory/lab)
-        binding.spinnerType.adapter = ArrayAdapter(
-            requireContext(), android.R.layout.simple_spinner_item, classroomTypes.map { it.replaceFirstChar { c -> c.uppercase() } }
-        ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        // Type dropdown (theory/lab) — Material 3 ExposedDropdownMenu
+        typeDropdown = DropdownController(
+            binding.actvType,
+            classroomTypes.map { it.replaceFirstChar { c -> c.uppercase() } }
+        )
 
         binding.btnRetry.setOnClickListener            { viewModel.loadClassrooms() }
         binding.btnGoAssignment.setOnClickListener     { findNavController().navigate(R.id.action_classrooms_to_assignment) }
@@ -126,9 +131,12 @@ class ClassroomsFragment : Fragment() {
         collectFlow(viewModel.departments) { depts ->
             departments = depts
             val names = listOf(getString(R.string.common_none_option)) + depts.map { it.name }
-            binding.spinnerDept.adapter = ArrayAdapter(
-                requireContext(), android.R.layout.simple_spinner_item, names
-            ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+            val previous = deptDropdown
+            if (previous == null) {
+                deptDropdown = DropdownController(binding.actvDept, names)
+            } else {
+                previous.setItems(names)
+            }
         }
 
         collectFlow(viewModel.state) { state ->
@@ -162,9 +170,9 @@ class ClassroomsFragment : Fragment() {
                     binding.tvAddError.visibility     = View.GONE
                     binding.etRoomCode.text?.clear()
                     binding.etCapacity.text?.clear()
-                    binding.spinnerType.setSelection(0)
-                    binding.spinnerDept.setSelection(0)
-                    Toast.makeText(requireContext(), getString(R.string.classroom_added), Toast.LENGTH_SHORT).show()
+                    typeDropdown?.setSelection(0)
+                    deptDropdown?.setSelection(0)
+                    showSnackbar(R.string.classroom_added)
                     viewModel.resetAddState()
                 }
             }
@@ -175,11 +183,11 @@ class ClassroomsFragment : Fragment() {
                 is UiState.Idle    -> Unit
                 is UiState.Loading -> Unit
                 is UiState.Error   -> {
-                    Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
+                    showErrorSnackbar(state.message)
                     viewModel.resetEditState()
                 }
                 is UiState.Success -> {
-                    Toast.makeText(requireContext(), getString(R.string.classroom_updated), Toast.LENGTH_SHORT).show()
+                    showSnackbar(R.string.classroom_updated)
                     viewModel.resetEditState()
                 }
             }
@@ -191,12 +199,12 @@ class ClassroomsFragment : Fragment() {
                 is UiState.Loading -> binding.btnImportClassrooms.isEnabled = false
                 is UiState.Error   -> {
                     binding.btnImportClassrooms.isEnabled = true
-                    Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
+                    showErrorSnackbar(state.message)
                     viewModel.resetImportState()
                 }
                 is UiState.Success -> {
                     binding.btnImportClassrooms.isEnabled = true
-                    Toast.makeText(requireContext(), getString(R.string.classroom_import_count, state.data), Toast.LENGTH_SHORT).show()
+                    showSnackbar(getString(R.string.classroom_import_count, state.data))
                     viewModel.resetImportState()
                 }
             }
@@ -204,10 +212,10 @@ class ClassroomsFragment : Fragment() {
     }
 
     private fun onAddClicked() {
-        val selectedPos  = binding.spinnerDept.selectedItemPosition
+        val selectedPos  = deptDropdown?.selectedPosition() ?: 0
         val departmentId = if (selectedPos > 0 && departments.isNotEmpty())
             departments[selectedPos - 1].id else null
-        val type = classroomTypes[binding.spinnerType.selectedItemPosition]
+        val type = classroomTypes[typeDropdown?.selectedPosition() ?: 0]
         viewModel.addClassroom(
             roomCode     = binding.etRoomCode.text?.toString().orEmpty(),
             capacity     = binding.etCapacity.text?.toString().orEmpty(),
@@ -292,7 +300,7 @@ class ClassroomsFragment : Fragment() {
     }
 
     private fun showImportPreview(result: CsvImporter.ParseResult<CsvImporter.ClassroomRow>) {
-        val selectedPos  = binding.spinnerDept.selectedItemPosition
+        val selectedPos  = deptDropdown?.selectedPosition() ?: 0
         val deptName     = if (selectedPos > 0) departments.getOrNull(selectedPos - 1)?.name else null
         val departmentId = if (selectedPos > 0) departments.getOrNull(selectedPos - 1)?.id else null
 

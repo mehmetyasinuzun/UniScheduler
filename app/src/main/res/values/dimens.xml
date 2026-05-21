@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Form ve içerik genişlik sınırı. Telefonda match_parent kullanılıyor;
+         tablet için values-sw600dp/dimens.xml bu değeri override ediyor. -->
+    <dimen name="content_max_width">0dp</dimen>
+
+    <!-- Genel padding/margin değerleri. Tablet'te ferah görünüm için
+         values-sw600dp override eder. -->
+    <dimen name="screen_padding">16dp</dimen>
+    <dimen name="screen_padding_horizontal">16dp</dimen>
+    <dimen name="card_padding">12dp</dimen>
+    <dimen name="section_spacing">12dp</dimen>
+
+    <!-- Form alanı maksimum genişlikleri. Telefonda match_parent (= ekran), tablette
+         daha dar tutarak okunaklı satır uzunluğu (Material önerisi: 60-80 karakter). -->
+    <dimen name="form_max_width">10000dp</dimen>
+
+    <!-- Tipografi — küçük ekranda mevcut değerler, sw600dp'de hafif büyütülmüş. -->
+    <dimen name="page_title_size">22sp</dimen>
+    <dimen name="page_subtitle_size">13sp</dimen>
+    <dimen name="body_text_size">14sp</dimen>
+
+    <!-- Empty state ikonları — telefonda 80dp, tabletde 120dp. -->
+    <dimen name="empty_state_icon">80dp</dimen>
+</resources>

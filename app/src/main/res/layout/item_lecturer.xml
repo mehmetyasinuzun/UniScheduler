@@ -74,7 +74,7 @@
             android:minHeight="0dp"
             android:paddingHorizontal="8dp"
             android:contentDescription="@string/lecturer_more_actions"
-            app:icon="@android:drawable/ic_menu_more"
+            app:icon="@drawable/ic_more_vert"
             app:iconGravity="textStart"
             app:iconPadding="0dp"
             android:text="" />

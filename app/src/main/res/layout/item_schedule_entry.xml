@@ -42,14 +42,16 @@
 
         </LinearLayout>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnDelete"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/item_delete"
-            android:textColor="?attr/colorError"
-            android:textSize="12sp" />
+        <!-- Kebab menü — uzun-bas edit + sil için keşfedilebilir alternatif.
+             Long-press hâlâ direkt edit'i tetikler; bu buton aynı menüyü
+             tek tıkla açar. -->
+        <ImageButton
+            android:id="@+id/btnMore"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_more_vert"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/cd_more_options" />
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

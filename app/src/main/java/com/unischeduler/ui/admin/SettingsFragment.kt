@@ -6,7 +6,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
-import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -28,6 +27,8 @@ import com.unischeduler.databinding.FragmentSettingsBinding
 import com.unischeduler.databinding.ItemDepartmentBinding
 import com.unischeduler.util.BackupManager
 import com.unischeduler.util.SessionManager
+import com.unischeduler.util.showErrorSnackbar
+import com.unischeduler.util.showSnackbar
 import com.unischeduler.util.UiState
 import com.unischeduler.util.collectFlow
 import com.unischeduler.util.writeBytesToUri
@@ -98,7 +99,7 @@ class SettingsFragment : Fragment() {
             val ctx = requireContext().applicationContext
             val orgId = SessionManager(ctx).orgId
             if (orgId <= 0) {
-                Toast.makeText(ctx, R.string.export_failed, Toast.LENGTH_SHORT).show()
+                showErrorSnackbar(R.string.export_failed)
                 return@registerForActivityResult
             }
             writeBytesToUri(
@@ -147,19 +148,11 @@ class SettingsFragment : Fragment() {
             if (!isAdded) return@launch
             val backup = parsed.getOrNull()
             if (backup == null) {
-                Toast.makeText(
-                    requireContext(),
-                    getString(R.string.settings_restore_invalid_file),
-                    Toast.LENGTH_LONG
-                ).show()
+                showErrorSnackbar(R.string.settings_restore_invalid_file)
                 return@launch
             }
             if (backup.orgId != orgId) {
-                Toast.makeText(
-                    requireContext(),
-                    getString(R.string.settings_restore_wrong_org, backup.orgId),
-                    Toast.LENGTH_LONG
-                ).show()
+                showErrorSnackbar(getString(R.string.settings_restore_wrong_org, backup.orgId))
                 return@launch
             }
 
@@ -329,7 +322,7 @@ class SettingsFragment : Fragment() {
                     binding.btnAddDept.isEnabled      = true
                     binding.tvDeptAddError.visibility = View.GONE
                     binding.etDeptName.text?.clear()
-                    Toast.makeText(requireContext(), getString(R.string.settings_dept_added), Toast.LENGTH_SHORT).show()
+                    showSnackbar(R.string.settings_dept_added)
                     viewModel.resetAddState()
                 }
             }
@@ -340,11 +333,11 @@ class SettingsFragment : Fragment() {
                 is UiState.Idle    -> Unit
                 is UiState.Loading -> Unit
                 is UiState.Error   -> {
-                    Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
+                    showErrorSnackbar(state.message)
                     viewModel.resetEditState()
                 }
                 is UiState.Success -> {
-                    Toast.makeText(requireContext(), getString(R.string.settings_dept_updated), Toast.LENGTH_SHORT).show()
+                    showSnackbar(R.string.settings_dept_updated)
                     viewModel.resetEditState()
                 }
             }
@@ -355,11 +348,11 @@ class SettingsFragment : Fragment() {
                 is UiState.Idle    -> Unit
                 is UiState.Loading -> Unit
                 is UiState.Error   -> {
-                    Toast.makeText(requireContext(), state.message, Toast.LENGTH_LONG).show()
+                    showErrorSnackbar(state.message)
                     viewModel.resetDeleteState()
                 }
                 is UiState.Success -> {
-                    Toast.makeText(requireContext(), getString(R.string.settings_dept_deleted), Toast.LENGTH_SHORT).show()
+                    showSnackbar(R.string.settings_dept_deleted)
                     viewModel.resetDeleteState()
                 }
             }
