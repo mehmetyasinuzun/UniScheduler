@@ -129,7 +129,7 @@
             </div>
             <div class="card">
                 <h3 data-i18n="org.list_title">Mevcut Organizasyonlar</h3>
-                <div id="orgList"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
+                <div id="orgList"><div class="skeleton skeleton-row full"></div><div class="skeleton skeleton-row medium"></div><div class="skeleton skeleton-row short"></div></div>
             </div>
         </div>
 
@@ -162,7 +162,7 @@
             </div>
             <div class="card">
                 <h3 data-i18n="admin.list_title">Tüm Adminler</h3>
-                <div id="adminList"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
+                <div id="adminList"><div class="skeleton skeleton-row full"></div><div class="skeleton skeleton-row medium"></div><div class="skeleton skeleton-row short"></div></div>
             </div>
         </div>
 
@@ -246,7 +246,7 @@
                                 <button class="btn btn-outline-warning btn-sm" id="btnBulkReset"><i class="bi bi-key"></i> <span data-i18n="dashboard.btn_bulk_reset">Tüm Şifreleri Sıfırla</span></button>
                             </div>
                             <div id="importLecAlert"></div>
-                            <div id="lecturerList"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
+                            <div id="lecturerList"><div class="skeleton skeleton-row full"></div><div class="skeleton skeleton-row medium"></div><div class="skeleton skeleton-row short"></div></div>
                         </div>
                     </div>
                 </div>
@@ -273,7 +273,7 @@
                                 <button class="btn btn-outline-primary btn-sm" id="btnExportCourses"><i class="bi bi-download"></i> <span data-i18n="dashboard.btn_excel_export">Excel Dışarı</span></button>
                             </div>
                             <div id="importCourseAlert"></div>
-                            <div id="courseList"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
+                            <div id="courseList"><div class="skeleton skeleton-row full"></div><div class="skeleton skeleton-row medium"></div><div class="skeleton skeleton-row short"></div></div>
                         </div>
                     </div>
                 </div>
@@ -298,7 +298,7 @@
                                 <button class="btn btn-outline-primary btn-sm" id="btnExportClassrooms"><i class="bi bi-download"></i> <span data-i18n="dashboard.btn_excel_export">Excel Dışarı</span></button>
                             </div>
                             <div id="importClassroomAlert"></div>
-                            <div id="classroomList"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
+                            <div id="classroomList"><div class="skeleton skeleton-row full"></div><div class="skeleton skeleton-row medium"></div><div class="skeleton skeleton-row short"></div></div>
                         </div>
                     </div>
                 </div>
@@ -335,7 +335,7 @@
             </div>
             <div class="card">
                 <h3 data-i18n="offering.list_title">Açılan Dersler</h3>
-                <div id="offeringList"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
+                <div id="offeringList"><div class="skeleton skeleton-row full"></div><div class="skeleton skeleton-row medium"></div><div class="skeleton skeleton-row short"></div></div>
             </div>
         </div>
 
@@ -441,7 +441,7 @@
             <div id="logStats" class="stats-grid mb-3"></div>
             <div class="card">
                 <h3 data-i18n="logs.list_title">Son 200 Log</h3>
-                <div id="logList"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
+                <div id="logList"><div class="skeleton skeleton-row full"></div><div class="skeleton skeleton-row medium"></div><div class="skeleton skeleton-row short"></div></div>
             </div>
         </div>
 
@@ -469,6 +469,9 @@
                 </label>
                 <button class="btn btn-sm btn-primary ms-3" id="btnSecRefresh">
                     <i class="bi bi-arrow-clockwise"></i> <span data-i18n="common.refresh">Yenile</span>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary ms-2" id="btnSecExportCsv">
+                    <i class="bi bi-download"></i> <span data-i18n="sec.export_csv">CSV İndir</span>
                 </button>
             </div>
 
@@ -521,31 +524,39 @@
                 <canvas id="secHourlyChart" height="80"></canvas>
             </div>
 
+            <div class="card">
+                <h3><i class="bi bi-graph-up"></i> <span data-i18n="sec.daily_trend">Günlük Trend (Son 30 Gün)</span></h3>
+                <small class="text-muted d-block mb-2" data-i18n="sec.daily_trend_subtitle">
+                    Günlük başarılı ve başarısız giriş sayıları. Ani sıçramalar koordineli saldırı sinyali olabilir.
+                </small>
+                <canvas id="secDailyChart" height="80"></canvas>
+            </div>
+
             <div class="row g-2">
                 <div class="col-md-4">
                     <div class="card">
                         <h3 data-i18n="sec.top_users">Saldırıya Uğrayan Kullanıcılar</h3>
-                        <div id="secTopUsers"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
+                        <div id="secTopUsers"><div class="skeleton skeleton-row full"></div><div class="skeleton skeleton-row medium"></div><div class="skeleton skeleton-row short"></div></div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="card">
                         <h3 data-i18n="sec.sus_devices">Şüpheli Cihazlar</h3>
                         <small class="text-muted d-block mb-2" data-i18n="sec.sus_devices_hint">3+ farklı kullanıcı denemiş ya da 3+ başarısız giriş</small>
-                        <div id="secSusDevices"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
+                        <div id="secSusDevices"><div class="skeleton skeleton-row full"></div><div class="skeleton skeleton-row medium"></div><div class="skeleton skeleton-row short"></div></div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="card">
                         <h3 data-i18n="sec.top_ips">IP Yoğunluğu</h3>
-                        <div id="secTopIps"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
+                        <div id="secTopIps"><div class="skeleton skeleton-row full"></div><div class="skeleton skeleton-row medium"></div><div class="skeleton skeleton-row short"></div></div>
                     </div>
                 </div>
             </div>
 
             <div class="card">
                 <h3 data-i18n="sec.all_attempts">Tüm Denemeler</h3>
-                <div id="secAttempts"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
+                <div id="secAttempts"><div class="skeleton skeleton-row full"></div><div class="skeleton skeleton-row medium"></div><div class="skeleton skeleton-row short"></div></div>
             </div>
 
             <div class="card">
@@ -673,6 +684,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
     <script src="js/i18n.js"></script>
+    <script src="js/geo.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

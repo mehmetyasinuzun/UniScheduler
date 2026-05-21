@@ -24,6 +24,69 @@ async function apiFetch(url,opts={}){
 
 function escapeHtml(v){return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function showAlert(id,msg,type){const el=document.getElementById(id);if(!el)return;el.innerHTML='<div class="alert-box '+type+'">'+msg+'</div>';setTimeout(()=>{if(el)el.innerHTML=''},5000)}
+
+// ── Empty state + skeleton helper'ları ───────────────────────────────
+// `tt()` i18n yüklenmeden de güvenli — fallback key döndürür. Empty state
+// için ikon Bootstrap Icons class'ı (`bi-...`), başlık ve hint i18n key'leri.
+function tt(key, vars){ try { return (window.t ? window.t(key, vars) : key); } catch(_) { return key; } }
+
+function renderEmpty(icon, titleKey, hintKey, ctaText, ctaHandler){
+    const id = ctaHandler ? ('empty_cta_' + Math.random().toString(36).slice(2,9)) : null;
+    const html = '<div class="empty-state">'
+        + '<i class="bi ' + icon + ' empty-icon"></i>'
+        + '<div class="empty-title">' + escapeHtml(tt(titleKey)) + '</div>'
+        + (hintKey ? '<div class="empty-hint">' + escapeHtml(tt(hintKey)) + '</div>' : '')
+        + (ctaText ? '<button type="button" class="empty-cta" id="' + id + '">' + escapeHtml(ctaText) + '</button>' : '')
+        + '</div>';
+    // CTA handler — DOM eklendikten sonra bağlanır (caller render sonrası tetiklemeli)
+    if (id && ctaHandler) {
+        // microtask sonrasında attach et
+        Promise.resolve().then(() => {
+            const btn = document.getElementById(id);
+            if (btn) btn.addEventListener('click', ctaHandler);
+        });
+    }
+    return html;
+}
+
+// Pre-built skeleton iskeletleri — variant'lara göre 3-5 placeholder satır
+// üretir. Asıl içerik geldiğinde innerHTML üzerine yazılır.
+function skeletonRows(count){
+    let h = '';
+    for (let i = 0; i < count; i++) {
+        const w = i % 3 === 0 ? 'full' : (i % 3 === 1 ? 'medium' : 'short');
+        h += '<div class="skeleton skeleton-row ' + w + '"></div>';
+    }
+    return h;
+}
+function skeletonTable(rows){
+    let h = '<div class="skeleton-table">';
+    h += '<div class="skeleton-table-row">'
+        + '<div class="skeleton narrow"></div>'
+        + '<div class="skeleton wide"></div>'
+        + '<div class="skeleton"></div>'
+        + '<div class="skeleton narrow"></div>'
+        + '</div>';
+    for (let i = 0; i < (rows||4); i++) {
+        h += '<div class="skeleton-table-row">'
+            + '<div class="skeleton narrow"></div>'
+            + '<div class="skeleton wide"></div>'
+            + '<div class="skeleton"></div>'
+            + '<div class="skeleton narrow"></div>'
+            + '</div>';
+    }
+    return h + '</div>';
+}
+function skeletonCards(count){
+    let h = '';
+    for (let i = 0; i < (count||3); i++) h += '<div class="skeleton skeleton-card"></div>';
+    return h;
+}
+function skeletonStats(count){
+    let h = '<div class="stats-grid">';
+    for (let i = 0; i < (count||4); i++) h += '<div class="skeleton skeleton-stat"></div>';
+    return h + '</div>';
+}
 function toMin(t){if(!t)return 0;const p=t.split(':');return(parseInt(p[0])||0)*60+(parseInt(p[1])||0)}
 function fmtTime(m){return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')}
 function colorFor(id){return COLORS[(id||0)%COLORS.length]}
@@ -55,7 +118,7 @@ if(page==='security'){setTimeout(loadSecurityPage,100)}}
 
 // ── Organizations
 async function loadOrganizations(){try{const r=await apiFetch('/api/organizations');orgs=await r.json();renderOrgTable();populateOrgSelects()}catch(e){if(e.message!=='Auth')showAlert('orgAlert','Organizasyonlar yuklenemedi: '+e.message,'error')}}
-function renderOrgTable(){if(!orgs.length){document.getElementById('orgList').innerHTML='<div class="empty-state">Henuz organizasyon yok.</div>';return}let h='<table><tr><th>ID</th><th>Ad</th><th>Kod</th><th>Tarih</th><th></th></tr>';orgs.forEach(o=>{h+='<tr><td>'+o.id+'</td><td><strong>'+escapeHtml(o.name)+'</strong></td><td><span class="badge-blue">'+escapeHtml(o.code)+'</span></td><td>'+new Date(o.created_at).toLocaleDateString('tr-TR')+'</td><td><button class="btn btn-danger btn-sm btn-del-org" data-id="'+o.id+'">Sil</button></td></tr>'});document.getElementById('orgList').innerHTML=h+'</table>'}
+function renderOrgTable(){if(!orgs.length){document.getElementById('orgList').innerHTML=renderEmpty('bi-building','org.no_orgs','org.empty_hint');return}let h='<table><tr><th>ID</th><th>Ad</th><th>Kod</th><th>Tarih</th><th></th></tr>';orgs.forEach(o=>{h+='<tr><td>'+o.id+'</td><td><strong>'+escapeHtml(o.name)+'</strong></td><td><span class="badge-blue">'+escapeHtml(o.code)+'</span></td><td>'+new Date(o.created_at).toLocaleDateString('tr-TR')+'</td><td><button class="btn btn-danger btn-sm btn-del-org" data-id="'+o.id+'">Sil</button></td></tr>'});document.getElementById('orgList').innerHTML=h+'</table>'}
 function populateOrgSelects(){
   const opts=orgs.map(o=>'<option value="'+o.id+'">'+escapeHtml(o.name)+'</option>').join('');
   // Global selector
@@ -85,7 +148,7 @@ async function addOrganization(){const name=document.getElementById('orgName').v
 async function deleteOrg(id){if(!confirm('Organizasyonu silmek istediginize emin misiniz?'))return;await apiFetch('/api/organizations/'+id,{method:'DELETE'});loadOrganizations()}
 
 // ── Admins
-async function loadAdmins(){const r=await apiFetch('/api/admins');const admins=await r.json();if(!admins.length){document.getElementById('adminList').innerHTML='<div class="empty-state">Admin yok.</div>';return}let h='<table><tr><th>Kullanici</th><th>Org</th><th>Sifre</th><th>Tarih</th><th></th></tr>';admins.forEach(a=>{const on=a.organizations?a.organizations.name:'-';h+='<tr><td><strong>'+escapeHtml(a.username)+'</strong></td><td>'+escapeHtml(on)+'</td><td>'+(a.must_change_password?'<span class="badge-orange">Gecici</span>':'<span class="badge-green">OK</span>')+'</td><td>'+new Date(a.created_at).toLocaleDateString('tr-TR')+'</td><td><button class="btn btn-outline-secondary btn-sm btn-reset-pw" data-id="'+a.id+'">Sifre</button> <button class="btn btn-danger btn-sm btn-del-admin" data-id="'+a.id+'">Sil</button></td></tr>'});document.getElementById('adminList').innerHTML=h+'</table>'}
+async function loadAdmins(){const r=await apiFetch('/api/admins');const admins=await r.json();if(!admins.length){document.getElementById('adminList').innerHTML=renderEmpty('bi-people','admin.no_admins','admin.empty_hint');return}let h='<table><tr><th>Kullanici</th><th>Org</th><th>Sifre</th><th>Tarih</th><th></th></tr>';admins.forEach(a=>{const on=a.organizations?a.organizations.name:'-';h+='<tr><td><strong>'+escapeHtml(a.username)+'</strong></td><td>'+escapeHtml(on)+'</td><td>'+(a.must_change_password?'<span class="badge-orange">Gecici</span>':'<span class="badge-green">OK</span>')+'</td><td>'+new Date(a.created_at).toLocaleDateString('tr-TR')+'</td><td><button class="btn btn-outline-secondary btn-sm btn-reset-pw" data-id="'+a.id+'">Sifre</button> <button class="btn btn-danger btn-sm btn-del-admin" data-id="'+a.id+'">Sil</button></td></tr>'});document.getElementById('adminList').innerHTML=h+'</table>'}
 async function addAdmin(){const orgId=document.getElementById('adminOrg').value||getCurrentOrgId(),u=document.getElementById('adminUsername').value.trim(),p=document.getElementById('adminPassword').value.trim();if(!u||!p||!orgId)return showAlert('adminAlert','Tum alanlar gerekli.','error');if(p.length<6)return showAlert('adminAlert','Sifre min 6 karakter.','error');const r=await apiFetch('/api/admins',{method:'POST',body:JSON.stringify({username:u,password:p,orgId,mustChangePassword:true})});const d=await r.json();if(d.error)return showAlert('adminAlert',d.error,'error');const created=d.finalUsername&&d.finalUsername!==u?'Olusturuldu! (Kullanici adi: <strong>'+escapeHtml(d.finalUsername)+'</strong> olarak kaydedildi)':'Olusturuldu!';showAlert('adminAlert',created,'success');document.getElementById('adminUsername').value='';document.getElementById('adminPassword').value='';loadAdmins()}
 async function deleteAdmin(id){if(!confirm('Silmek istediginize emin misiniz?'))return;await apiFetch('/api/admins/'+id,{method:'DELETE'});loadAdmins()}
 async function resetPassword(id){const pw=prompt('Yeni sifre (min 6):');if(!pw||pw.length<6){alert('Min 6 karakter.');return}await apiFetch('/api/admins/'+id+'/reset-password',{method:'PUT',body:JSON.stringify({password:pw})});alert('Sifre sifirlandi.');loadAdmins()}
@@ -96,15 +159,15 @@ const stats=await rStats.json();document.getElementById('dashStats').innerHTML=[
 const settings=await rSettings.json();document.getElementById('setTimeStep').value=settings.time_step_minutes||10;document.getElementById('setDayStart').value=settings.day_start||'08:00';document.getElementById('setDayEnd').value=settings.day_end||'18:00';
 const depts=await rDepts.json();['courseDept','lecDept','classroomDept'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">-</option>'+depts.map(d=>'<option value="'+d.id+'">'+escapeHtml(d.name)+'</option>').join('')});
 document.getElementById('countDepts').textContent=depts.length;
-document.getElementById('deptList').innerHTML=depts.length?'<table><tr><th>Ad</th><th>ID</th><th></th></tr>'+depts.map(d=>'<tr><td>'+escapeHtml(d.name)+'</td><td>'+d.id+'</td><td><button class="btn btn-danger btn-sm btn-del-dept" data-id="'+d.id+'">Sil</button></td></tr>').join('')+'</table>':'<div class="empty-state">Bolum yok.</div>';
+document.getElementById('deptList').innerHTML=depts.length?'<table><tr><th>Ad</th><th>ID</th><th></th></tr>'+depts.map(d=>'<tr><td>'+escapeHtml(d.name)+'</td><td>'+d.id+'</td><td><button class="btn btn-danger btn-sm btn-del-dept" data-id="'+d.id+'">Sil</button></td></tr>').join('')+'</table>':renderEmpty('bi-diagram-3','dashboard.no_depts','dashboard.depts_empty_hint');
 const lecs=await rLecs.json();document.getElementById('countLecs').textContent=lecs.length;
-if(!lecs.length)document.getElementById('lecturerList').innerHTML='<div class="empty-state">Akademisyen yok.</div>';
+if(!lecs.length)document.getElementById('lecturerList').innerHTML=renderEmpty('bi-person-badge','dashboard.no_lecturers','dashboard.lecturers_empty_hint');
 else{let h='<table><tr><th>Ad Soyad</th><th>Bolum</th><th>Kullanici</th><th>Durum</th><th></th></tr>';lecs.forEach(l=>{const dn=l.departments?l.departments.name:'-';const mc=l.users&&l.users.must_change_password;const st=mc?'<span class="status-pending">Gecici</span>':'<span class="status-active">Aktif</span>';const ed=encodeURIComponent(JSON.stringify(l));h+='<tr><td>'+escapeHtml((l.title||'')+' '+l.first_name+' '+l.last_name)+'</td><td>'+escapeHtml(dn)+'</td><td><span class="badge-blue">@'+escapeHtml(l.users?l.users.username:'-')+'</span></td><td>'+st+'</td><td><button class="btn btn-warning btn-sm btn-edit-lec me-1" data-data="'+ed+'">Duzenle</button><button class="btn btn-secondary btn-sm btn-reset-lec-pw me-1" data-id="'+l.id+'">Sifre</button><button class="btn btn-danger btn-sm btn-del-lec" data-id="'+l.id+'">Sil</button></td></tr>'});document.getElementById('lecturerList').innerHTML=h+'</table>'}
 const courses=await rCourses.json();document.getElementById('countCourses').textContent=courses.length;
-if(!courses.length)document.getElementById('courseList').innerHTML='<div class="empty-state">Ders yok.</div>';
+if(!courses.length)document.getElementById('courseList').innerHTML=renderEmpty('bi-book','dashboard.no_courses','dashboard.courses_empty_hint');
 else{let h='<table><tr><th>Kod</th><th>Ad</th><th>T/L</th><th>Kredi</th><th>Bolum</th><th></th></tr>';courses.forEach(c=>{const ed=encodeURIComponent(JSON.stringify(c));h+='<tr><td><strong>'+escapeHtml(c.code)+'</strong></td><td>'+escapeHtml(c.name)+'</td><td>'+c.theory_hours+'T/'+c.lab_hours+'L</td><td>'+c.credits+'</td><td>'+escapeHtml(c.departments?c.departments.name:'-')+'</td><td><button class="btn btn-warning btn-sm btn-edit-course me-1" data-data="'+ed+'">Duzenle</button><button class="btn btn-danger btn-sm btn-del-course" data-id="'+c.id+'">Sil</button></td></tr>'});document.getElementById('courseList').innerHTML=h+'</table>'}
 const classrooms=await rClassrooms.json();document.getElementById('countClassrooms').textContent=classrooms.length;
-if(!classrooms.length)document.getElementById('classroomList').innerHTML='<div class="empty-state">Sinif yok.</div>';
+if(!classrooms.length)document.getElementById('classroomList').innerHTML=renderEmpty('bi-door-open','dashboard.no_classrooms','dashboard.classrooms_empty_hint');
 else{let h='<table><tr><th>Kod</th><th>Kap.</th><th>Tur</th><th>Bolum</th><th></th></tr>';classrooms.forEach(c=>{const ed=encodeURIComponent(JSON.stringify(c));h+='<tr><td><strong>'+escapeHtml(c.room_code)+'</strong></td><td>'+c.capacity+'</td><td><span class="'+(c.type==='lab'?'badge-purple':'badge-blue')+'">'+c.type+'</span></td><td>'+escapeHtml(c.departments?c.departments.name:'-')+'</td><td><button class="btn btn-warning btn-sm btn-edit-classroom me-1" data-data="'+ed+'">Duzenle</button><button class="btn btn-danger btn-sm btn-del-classroom" data-id="'+c.id+'">Sil</button></td></tr>'});document.getElementById('classroomList').innerHTML=h+'</table>'}}
 
 async function saveSettings(){const orgId=getCurrentOrgId();if(!orgId)return;const r=await apiFetch('/api/settings/'+orgId,{method:'PUT',body:JSON.stringify({timeStepMinutes:document.getElementById('setTimeStep').value,dayStart:document.getElementById('setDayStart').value,dayEnd:document.getElementById('setDayEnd').value})});const d=await r.json();if(d.error)return showAlert('settingsAlert',d.error,'error');showAlert('settingsAlert','Kaydedildi!','success')}
@@ -131,7 +194,7 @@ allOfferings=await rOff.json();const courses=await rCourses.json();const lecs=aw
 document.getElementById('offCourse').innerHTML=courses.map(c=>'<option value="'+c.id+'">'+escapeHtml(c.code+' - '+c.name)+'</option>').join('');
 document.getElementById('offLecturer').innerHTML='<option value="">- Yok -</option>'+lecs.map(l=>'<option value="'+l.id+'">'+escapeHtml((l.title||'')+' '+l.first_name+' '+l.last_name)+'</option>').join('');
 renderOfferings()}
-function renderOfferings(){if(!allOfferings.length){document.getElementById('offeringList').innerHTML='<div class="empty-state">Acilan ders yok.</div>';return}let h='<table><tr><th>Ders</th><th>Hoca</th><th>Sinif/Sube</th><th>Kont.</th><th>Donem</th><th></th></tr>';allOfferings.forEach(o=>{const code=o.courses?o.courses.code:'-';const name=o.courses?o.courses.name:'';const lec=o.lecturers?(o.lecturers.title||'')+' '+o.lecturers.first_name+' '+o.lecturers.last_name:'<span class="badge-orange">Atanmamis</span>';h+='<tr><td><strong>'+escapeHtml(code)+'</strong> '+escapeHtml(name)+'</td><td>'+lec+'</td><td>'+o.class_year+'/'+escapeHtml(o.section)+'</td><td>'+o.capacity+'</td><td>'+(TERM_TR[o.term]||o.term)+' '+escapeHtml(o.academic_year)+'</td><td><button class="btn btn-danger btn-sm btn-del-offering" data-id="'+o.id+'">Sil</button></td></tr>'});document.getElementById('offeringList').innerHTML=h+'</table>'}
+function renderOfferings(){if(!allOfferings.length){document.getElementById('offeringList').innerHTML=renderEmpty('bi-journal-text','offering.no_offerings','offering.empty_hint');return}let h='<table><tr><th>Ders</th><th>Hoca</th><th>Sinif/Sube</th><th>Kont.</th><th>Donem</th><th></th></tr>';allOfferings.forEach(o=>{const code=o.courses?o.courses.code:'-';const name=o.courses?o.courses.name:'';const lec=o.lecturers?(o.lecturers.title||'')+' '+o.lecturers.first_name+' '+o.lecturers.last_name:'<span class="badge-orange">Atanmamis</span>';h+='<tr><td><strong>'+escapeHtml(code)+'</strong> '+escapeHtml(name)+'</td><td>'+lec+'</td><td>'+o.class_year+'/'+escapeHtml(o.section)+'</td><td>'+o.capacity+'</td><td>'+(TERM_TR[o.term]||o.term)+' '+escapeHtml(o.academic_year)+'</td><td><button class="btn btn-danger btn-sm btn-del-offering" data-id="'+o.id+'">Sil</button></td></tr>'});document.getElementById('offeringList').innerHTML=h+'</table>'}
 async function addOffering(){const orgId=getCurrentOrgId();const r=await apiFetch('/api/offerings',{method:'POST',body:JSON.stringify({orgId,courseId:document.getElementById('offCourse').value,lecturerId:document.getElementById('offLecturer').value||null,classYear:document.getElementById('offYear').value,section:document.getElementById('offSection').value.trim()||'A',capacity:document.getElementById('offCapacity').value,term:document.getElementById('offTerm').value,academicYear:'2025-2026'})});const d=await r.json();if(d.error)return showAlert('offAlert',d.error,'error');showAlert('offAlert','Ders acildi!','success');loadOfferingsPage()}
 async function deleteOffering(id){if(!confirm('Silmek istediginize emin misiniz?'))return;const orgId=getCurrentOrgId();await apiFetch('/api/offerings/'+id+'?orgId='+orgId,{method:'DELETE'});loadOfferingsPage()}
 
@@ -351,7 +414,7 @@ async function deleteAvailability(id){await apiFetch('/api/availability/'+id,{me
 
 // ── Error Logs
 function renderLogTable(data){
-  if(!data||!data.length){document.getElementById('logList').innerHTML='<div class="empty-state">Log yok.</div>';return}
+  if(!data||!data.length){document.getElementById('logList').innerHTML=renderEmpty('bi-shield-check','logs.no_logs','logs.empty_hint');return}
   let h='<table><tr><th>Tarih</th><th>Kaynak</th><th>Kullanici</th><th>Rol</th><th>Cihaz</th><th>Versiyon</th><th>Ekran</th><th>Aksiyon</th><th>Mesaj</th><th>Detay</th></tr>';
   data.forEach((l,i)=>{const isPanel=l.screen&&l.screen.startsWith('PANEL');const sourceBadge=isPanel?'<span class="badge-purple">WEB</span>':'<span class="badge-blue">MOBiL</span>';const roleBadge=l.role==='super_admin'?'badge-orange':l.role==='admin'?'badge-blue':l.role==='lecturer'?'badge-purple':'badge-orange';h+='<tr><td style="white-space:nowrap">'+new Date(l.created_at).toLocaleString('tr-TR')+'</td><td>'+sourceBadge+'</td><td>'+(l.username?'<span class="'+roleBadge+'">'+escapeHtml(l.username)+'</span>':'-')+'</td><td>'+(l.role||'-')+'</td><td>'+(l.device_model?escapeHtml(l.device_model):'-')+'</td><td>'+(l.app_version||'-')+'</td><td>'+escapeHtml(l.screen||'-')+'</td><td>'+escapeHtml(l.action||'-')+'</td><td style="max-width:260px;word-break:break-word">'+escapeHtml(l.message||'')+'</td><td>'+(l.stack_trace?'<button class="btn btn-outline-secondary btn-sm btn-show-stack" data-idx="'+i+'">Stack</button>':'')+'</td></tr>'});
   document.getElementById('logList').innerHTML=h+'</table>';
@@ -359,7 +422,7 @@ function renderLogTable(data){
 async function loadErrorLogs(){const orgId=document.getElementById('logOrg').value||'';const url=orgId?'/api/error-logs?orgId='+orgId:'/api/error-logs';const r=await apiFetch(url);const data=await r.json();
 _cachedLogData=Array.isArray(data)?data:[];
 const statsEl=document.getElementById('logStats');
-if(!_cachedLogData.length){document.getElementById('logList').innerHTML='<div class="empty-state">Log yok.</div>';if(statsEl)statsEl.innerHTML='';return}
+if(!_cachedLogData.length){document.getElementById('logList').innerHTML=renderEmpty('bi-shield-check','logs.no_logs','logs.empty_hint');if(statsEl)statsEl.innerHTML='';return}
 const todayLogs=_cachedLogData.filter(l=>{const d=new Date(l.created_at);const today=new Date();return d.toDateString()===today.toDateString()});
 const panelLogs=_cachedLogData.filter(l=>l.screen&&l.screen.startsWith('PANEL'));const mobileLogs=_cachedLogData.filter(l=>!l.screen||!l.screen.startsWith('PANEL'));
 if(statsEl)statsEl.innerHTML='<div class="stat-card"><div class="number">'+_cachedLogData.length+'</div><div class="label">Toplam Log</div></div><div class="stat-card"><div class="number">'+todayLogs.length+'</div><div class="label">Bugun</div></div><div class="stat-card"><div class="number">'+mobileLogs.length+'</div><div class="label">Mobil</div></div><div class="stat-card" style="border-top-color:#6a1b9a"><div class="number" style="color:#6a1b9a">'+panelLogs.length+'</div><div class="label">Web Panel</div></div>';
@@ -553,10 +616,15 @@ async function loadSecurityPage() {
             : '<table class="table table-sm"><thead><tr><th>Cihaz</th><th>Kullanici</th><th>Basarisiz</th></tr></thead><tbody>'
             + sum.suspiciousDevices.map(d => `<tr><td><code style="font-size:0.75rem">${escapeHtml((d.device_id||'').substring(0,12))}…</code></td><td>${d.usernameCount}</td><td style="color:#dc3545">${d.failed}</td></tr>`).join('')
             + '</tbody></table>';
+        // Top IP'ler için geo cache'i ısıt, sonra her satıra bayrak ekle
+        if (window.geoLookup) await window.geoLookup(sum.topIps.map(x => x.ip));
         document.getElementById('secTopIps').innerHTML = sum.topIps.length === 0
-            ? '<div class="text-muted">IP bilgisi yok (mobil tarafindan toplanmıyor)</div>'
-            : '<table class="table table-sm"><thead><tr><th>IP</th><th>Toplam</th><th>Basarisiz</th></tr></thead><tbody>'
-            + sum.topIps.map(ip => `<tr><td><code>${escapeHtml(ip.ip)}</code></td><td>${ip.total}</td><td style="color:#dc3545">${ip.failed}</td></tr>`).join('')
+            ? renderEmpty('bi-globe2','sec.no_ip_data')
+            : '<table class="table table-sm"><thead><tr><th>' + tt('sec.col_ip') + '</th><th>' + tt('sec.total_attempts') + '</th><th>' + tt('sec.failed') + '</th></tr></thead><tbody>'
+            + sum.topIps.map(ip => {
+                const badge = window.geoBadge ? window.geoBadge(ip.ip) : '';
+                return `<tr><td><code>${escapeHtml(ip.ip)}</code>${badge}</td><td>${ip.total}</td><td style="color:#dc3545">${ip.failed}</td></tr>`;
+            }).join('')
             + '</tbody></table>';
     } catch (e) {
         document.getElementById('secStats').innerHTML = `<div class="alert alert-danger">Ozet yuklenemedi: ${escapeHtml(e.message)}</div>`;
@@ -578,14 +646,16 @@ async function loadSecurityPage() {
         const data = await r.json();
         const rows = data.rows || [];
         if (rows.length === 0) {
-            document.getElementById('secAttempts').innerHTML = '<div class="text-muted">Bu pencerede deneme yok</div>';
+            document.getElementById('secAttempts').innerHTML = renderEmpty('bi-shield-check','sec.no_attempts');
             return;
         }
+        // Attempt tablosundaki tüm IP'leri tek seferde geo-lookup ile cache'le
+        if (window.geoLookup) await window.geoLookup(rows.map(r => r.ip_address).filter(Boolean));
         const tbl = '<div class="table-responsive"><table class="table table-sm table-hover">'
             + '<thead><tr>'
-            + '<th>Zaman</th><th>Kullanici</th><th>Sonuc</th><th>Asama</th>'
-            + '<th>Cihaz Modeli</th><th>OS</th><th>App</th>'
-            + '<th>Cihaz Hash</th><th>IP</th><th>Risk</th><th>İşlem</th>'
+            + `<th>${tt('sec.col_time')}</th><th>${tt('sec.col_user')}</th><th>${tt('sec.col_result')}</th><th>${tt('sec.col_step')}</th>`
+            + `<th>${tt('sec.col_device')}</th><th>${tt('sec.col_os')}</th><th>${tt('sec.col_app')}</th>`
+            + `<th>${tt('sec.col_devhash')}</th><th>${tt('sec.col_ip')}</th><th>${tt('sec.col_risk')}</th><th>${tt('sec.col_action')}</th>`
             + '</tr></thead><tbody>'
             + rows.map(r => {
                 const t = new Date(r.created_at);
@@ -613,7 +683,7 @@ async function loadSecurityPage() {
                     <td>${escapeHtml(r.os_version || '-')}</td>
                     <td>${escapeHtml(r.app_version || '-')}</td>
                     <td><code style="font-size:0.7rem">${escapeHtml((r.device_id||'-').substring(0,10))}</code></td>
-                    <td><code style="font-size:0.75rem">${escapeHtml(r.ip_address || '-')}</code></td>
+                    <td><code style="font-size:0.75rem">${escapeHtml(r.ip_address || '-')}</code>${window.geoBadge ? window.geoBadge(r.ip_address) : ''}</td>
                     <td><span class="badge ${riskColor}">${r.risk}</span></td>
                     <td>${freezeBtn}</td>
                 </tr>`;
@@ -628,8 +698,9 @@ async function loadSecurityPage() {
         document.getElementById('secAttempts').innerHTML = `<div class="alert alert-danger">Detay yuklenemedi: ${escapeHtml(e.message)}</div>`;
     }
 
-    // Saatlik dağılım grafiği — pencere değişikliklerinde tekrar çiz
+    // Saatlik dağılım + günlük trend grafikleri — pencere değişikliklerinde tekrar çiz
     loadHourlyHeatmap(win);
+    loadDailyTrend();   // Daima son 30 gün — pencereden bağımsız
 }
 
 /* ── Saatlik dağılım grafiği (Chart.js) ─────────────────────────── */
@@ -649,8 +720,8 @@ async function loadHourlyHeatmap(win) {
             data: {
                 labels,
                 datasets: [
-                    { label: 'Başarılı', data: succ, backgroundColor: 'rgba(40,167,69,0.75)' },
-                    { label: 'Başarısız', data: fail, backgroundColor: 'rgba(220,53,69,0.85)' }
+                    { label: tt('sec.succeeded'), data: succ, backgroundColor: 'rgba(40,167,69,0.75)' },
+                    { label: tt('sec.failed'),    data: fail, backgroundColor: 'rgba(220,53,69,0.85)' }
                 ]
             },
             options: {
@@ -665,6 +736,49 @@ async function loadHourlyHeatmap(win) {
     } catch (e) {
         // Grafik kritik değil — sessizce geç
         console.warn('hourly heatmap failed:', e?.message);
+    }
+}
+
+/* ── Günlük trend grafiği (son 30 gün) ─────────────────────────── */
+let _dailyChart = null;
+async function loadDailyTrend() {
+    try {
+        const res = await apiFetch('/api/login-attempts/timeseries?since=30d');
+        const j = await res.json();
+        // Sadece MM-DD label — uzun ISO yer kaplar
+        const labels = j.days.map(d => d.date.substring(5));
+        const succ   = j.days.map(d => d.total - d.failed);
+        const fail   = j.days.map(d => d.failed);
+        const ctx = document.getElementById('secDailyChart');
+        if (!ctx || !window.Chart) return;
+        if (_dailyChart) _dailyChart.destroy();
+        _dailyChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    { label: tt('sec.succeeded'), data: succ,
+                      borderColor: 'rgba(40,167,69,1)',
+                      backgroundColor: 'rgba(40,167,69,.18)',
+                      tension: .25, fill: true, pointRadius: 2 },
+                    { label: tt('sec.failed'), data: fail,
+                      borderColor: 'rgba(220,53,69,1)',
+                      backgroundColor: 'rgba(220,53,69,.18)',
+                      tension: .25, fill: true, pointRadius: 2 }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { position: 'top' } },
+                scales: {
+                    x: { ticks: { autoSkip: true, maxTicksLimit: 10, maxRotation: 0 } },
+                    y: { beginAtZero: true, ticks: { precision: 0 } }
+                }
+            }
+        });
+    } catch (e) {
+        console.warn('daily trend failed:', e?.message);
     }
 }
 
@@ -714,6 +828,23 @@ function escapeHtml(s) {
 }
 
 document.getElementById('btnSecRefresh').addEventListener('click', loadSecurityPage);
+// CSV indir — query params'ı CTI sayfasındaki filtre/pencere ile aynı tutar.
+// authToken URL'e gömülüyor çünkü <a download> ile XHR header eklenemiyor;
+// /api/export/* için zaten aynı pattern kullanılıyor.
+const btnSecExportCsv = document.getElementById('btnSecExportCsv');
+if (btnSecExportCsv) {
+    btnSecExportCsv.addEventListener('click', () => {
+        const params = new URLSearchParams();
+        const win  = document.getElementById('secWindow').value || '7d';
+        const user = document.getElementById('secUser').value.trim();
+        const onlyFailed = document.getElementById('secOnlyFailed').checked;
+        params.set('since', win);
+        if (user) params.set('username', user);
+        if (onlyFailed) params.set('onlyFailed', '1');
+        params.set('token', authToken);
+        window.open('/api/login-attempts/export.csv?' + params.toString(), '_blank');
+    });
+}
 document.getElementById('btnSecResetThresholds').addEventListener('click', resetThresholds);
 ['secWindow','secUser','secOnlyFailed'].forEach(id => {
     const el = document.getElementById(id);

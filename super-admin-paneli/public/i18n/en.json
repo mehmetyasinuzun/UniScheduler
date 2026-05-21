@@ -71,7 +71,8 @@
     "ad_and_code_required": "Name and code required.",
     "created": "Created!",
     "delete_confirm": "Are you sure you want to delete this organization?",
-    "selector_label": "Organization:"
+    "selector_label": "Organization:",
+    "empty_hint": "Use the form above to add the first university/institution."
   },
   "admin": {
     "page_title": "Admin Users",
@@ -99,7 +100,8 @@
     "delete_confirm": "Are you sure you want to delete?",
     "new_password_prompt": "New password (min 6):",
     "min_6_chars": "Min 6 chars.",
-    "password_reset_done": "Password reset."
+    "password_reset_done": "Password reset.",
+    "empty_hint": "Pick an organization, then create an admin account for it."
   },
   "dashboard": {
     "page_title": "Dashboard",
@@ -147,7 +149,11 @@
     "no_classrooms": "No classrooms.",
     "saved": "Saved!",
     "added": "Added!",
-    "settings_save_failed": "Could not save settings."
+    "settings_save_failed": "Could not save settings.",
+    "depts_empty_hint": "Add the first department for this organization.",
+    "lecturers_empty_hint": "Add manually or bulk-import from an Excel file.",
+    "courses_empty_hint": "Upload your course catalogue via Excel, or add one at a time.",
+    "classrooms_empty_hint": "Classroom list is empty — enter room code + capacity and add."
   },
   "offering": {
     "page_title": "Offerings",
@@ -166,7 +172,8 @@
     "list_title": "Open Courses",
     "no_offerings": "No offerings.",
     "opened": "Course opened!",
-    "unassigned": "Unassigned"
+    "unassigned": "Unassigned",
+    "empty_hint": "No course sections are open. Use the form above to open one."
   },
   "schedule": {
     "page_title": "Weekly Schedule",
@@ -255,7 +262,8 @@
     "stat_today": "Today",
     "stat_mobile": "Mobile",
     "stat_web": "Web Panel",
-    "btn_stack": "Stack"
+    "btn_stack": "Stack",
+    "empty_hint": "No error records for this selection. Mobile and panel errors will appear here when they happen."
   },
   "sec": {
     "page_title": "Login Attempts (CTI)",
@@ -279,6 +287,9 @@
     "changes_apply": "Changes apply when you press \"Refresh\". This page is visible to super admin only — not exposed to admins.",
     "hourly_dist": "Hourly Distribution",
     "hourly_subtitle": "Attempts per hour in the window (green = success, red = failure). Peaks at 02:00–05:00 raise bot likelihood.",
+    "daily_trend": "Daily Trend (Last 30 Days)",
+    "daily_trend_subtitle": "Daily successful vs failed login counts. Sudden spikes may indicate coordinated attacks.",
+    "export_csv": "Download CSV",
     "top_users": "Targeted Users",
     "sus_devices": "Suspicious Devices",
     "sus_devices_hint": "3+ different users tried, or 3+ failed logins",

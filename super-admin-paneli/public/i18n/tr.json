@@ -71,7 +71,8 @@
     "ad_and_code_required": "Ad ve kod gerekli.",
     "created": "Oluşturuldu!",
     "delete_confirm": "Organizasyonu silmek istediğinize emin misiniz?",
-    "selector_label": "Organizasyon:"
+    "selector_label": "Organizasyon:",
+    "empty_hint": "Sisteme yeni bir üniversite/kurum eklemek için yukarıdaki formu kullanın."
   },
   "admin": {
     "page_title": "Admin Kullanıcılar",
@@ -99,7 +100,8 @@
     "delete_confirm": "Silmek istediğinize emin misiniz?",
     "new_password_prompt": "Yeni şifre (min 6):",
     "min_6_chars": "Min 6 karakter.",
-    "password_reset_done": "Şifre sıfırlandı."
+    "password_reset_done": "Şifre sıfırlandı.",
+    "empty_hint": "Önce bir organizasyon seçin, sonra o organizasyon için admin hesabı oluşturun."
   },
   "dashboard": {
     "page_title": "Dashboard",
@@ -147,7 +149,11 @@
     "no_classrooms": "Sınıf yok.",
     "saved": "Kaydedildi!",
     "added": "Eklendi!",
-    "settings_save_failed": "Ayarlar kaydedilemedi."
+    "settings_save_failed": "Ayarlar kaydedilemedi.",
+    "depts_empty_hint": "Bu organizasyon için ilk bölümü yukarıdan ekleyin.",
+    "lecturers_empty_hint": "Manuel ekleyin veya Excel dosyası ile toplu içe aktarın.",
+    "courses_empty_hint": "Ders kataloğunuzu Excel ile yükleyin veya tek tek ekleyin.",
+    "classrooms_empty_hint": "Derslik listesi boş — sınıf kodu ve kapasitesini girip ekleyin."
   },
   "offering": {
     "page_title": "Açılan Dersler",
@@ -166,7 +172,8 @@
     "list_title": "Açılan Dersler",
     "no_offerings": "Açılan ders yok.",
     "opened": "Ders açıldı!",
-    "unassigned": "Atanmamış"
+    "unassigned": "Atanmamış",
+    "empty_hint": "Açılmış ders şubesi yok. Yeni bir ders açmak için yukarıdaki formu kullanın."
   },
   "schedule": {
     "page_title": "Haftalık Çizelge",
@@ -255,7 +262,8 @@
     "stat_today": "Bugün",
     "stat_mobile": "Mobil",
     "stat_web": "Web Panel",
-    "btn_stack": "Stack"
+    "btn_stack": "Stack",
+    "empty_hint": "Bu seçimde herhangi bir hata kaydı yok. Mobil uygulama ya da panel hatası oluştuğunda burada görünür."
   },
   "sec": {
     "page_title": "Giriş Denemeleri (CTI)",
@@ -279,6 +287,9 @@
     "changes_apply": "Değişiklikler \"Yenile\" tuşuna basıldığında uygulanır. Bu sayfa sadece süper admin tarafından görülür — admin'lere açık değildir.",
     "hourly_dist": "Saatlik Dağılım",
     "hourly_subtitle": "Pencerede saat başına deneme sayısı (yeşil = başarılı, kırmızı = başarısız). Gece 02:00–05:00 zirvesi bot olasılığını yükseltir.",
+    "daily_trend": "Günlük Trend (Son 30 Gün)",
+    "daily_trend_subtitle": "Günlük başarılı ve başarısız giriş sayıları. Ani sıçramalar koordineli saldırı sinyali olabilir.",
+    "export_csv": "CSV İndir",
     "top_users": "Saldırıya Uğrayan Kullanıcılar",
     "sus_devices": "Şüpheli Cihazlar",
     "sus_devices_hint": "3+ farklı kullanıcı denemiş ya da 3+ başarısız giriş",

@@ -1481,6 +1481,99 @@ app.get('/api/login-attempts/heatmap', wrap(async (req, res) => {
     res.json({ windowSince: sinceIso, byHour });
 }));
 
+// ── Time series — günlük başarı/başarısızlık trendi (CTI grafiği için) ──
+//   Pencerede her gün için 2 nokta: succeeded + failed. Frontend Chart.js
+//   line chart ile gösteriyor — "geçen Pazartesi spike vardı" pattern'ini
+//   yakalayan görsel.
+app.get('/api/login-attempts/timeseries', wrap(async (req, res) => {
+    const sinceArg = (req.query.since || '30d').toString();
+    const sinceMatch = /^(\d+)([hdw])$/.exec(sinceArg);
+    let sinceMs = 30 * 24 * 60 * 60 * 1000;
+    if (sinceMatch) {
+        const n = parseInt(sinceMatch[1], 10);
+        const u = sinceMatch[2];
+        sinceMs = n * (u === 'h' ? 36e5 : u === 'd' ? 864e5 : 6048e5);
+    }
+    const sinceIso = new Date(Date.now() - sinceMs).toISOString();
+    const { data, error } = await supabase.from('login_attempts')
+        .select('succeeded, created_at')
+        .gte('created_at', sinceIso)
+        .limit(100000);
+    if (error) return res.status(500).json({ error: error.message });
+
+    // Günlük bucket — YYYY-MM-DD key'i (UTC; client tarafı locale'a göre formatlar)
+    const byDay = new Map();
+    for (const r of data || []) {
+        const day = r.created_at.substring(0, 10); // ISO timestamp YYYY-MM-DD prefix
+        const e = byDay.get(day) || { date: day, total: 0, failed: 0 };
+        e.total++;
+        if (!r.succeeded) e.failed++;
+        byDay.set(day, e);
+    }
+    // Aralıktaki tüm günleri doldur — boş günler de noktada görünsün
+    const days = [];
+    const start = new Date(sinceIso);
+    start.setUTCHours(0, 0, 0, 0);
+    const end = new Date();
+    end.setUTCHours(0, 0, 0, 0);
+    for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+        const key = d.toISOString().substring(0, 10);
+        days.push(byDay.get(key) || { date: key, total: 0, failed: 0 });
+    }
+    res.json({ windowSince: sinceIso, days });
+}));
+
+// ── CSV export — login_attempts SIEM/Excel için ──────────────────────
+//   Query params heatmap/timeseries ile aynı (since, username, onlyFailed).
+//   Stream yerine basit concat — pencerede max 50k satır, ~5MB civarı CSV.
+app.get('/api/login-attempts/export.csv', wrap(async (req, res) => {
+    const sinceArg = (req.query.since || '7d').toString();
+    const sinceMatch = /^(\d+)([hdw])$/.exec(sinceArg);
+    let sinceMs = 7 * 24 * 60 * 60 * 1000;
+    if (sinceMatch) {
+        const n = parseInt(sinceMatch[1], 10);
+        const u = sinceMatch[2];
+        sinceMs = n * (u === 'h' ? 36e5 : u === 'd' ? 864e5 : 6048e5);
+    }
+    const sinceIso = new Date(Date.now() - sinceMs).toISOString();
+
+    let q = supabase.from('login_attempts')
+        .select('created_at, username, succeeded, ip_address, device_id, device_model, os_version, app_version, source, failure_step, is_emulator')
+        .gte('created_at', sinceIso)
+        .order('created_at', { ascending: false })
+        .limit(50000);
+    if (req.query.username) q = q.eq('username', req.query.username);
+    if (req.query.onlyFailed === '1') q = q.eq('succeeded', false);
+
+    const { data, error } = await q;
+    if (error) return res.status(500).json({ error: error.message });
+
+    // RFC 4180 — değerleri çift-tırnak içine al, içerideki çift-tırnağı escape et
+    const esc = (v) => {
+        if (v === null || v === undefined) return '';
+        const s = String(v);
+        if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
+            return '"' + s.replace(/"/g, '""') + '"';
+        }
+        return s;
+    };
+    const headers = [
+        'created_at','username','succeeded','ip_address','device_id',
+        'device_model','os_version','app_version','source','failure_step','is_emulator'
+    ];
+    let csv = headers.join(',') + '\n';
+    for (const r of (data || [])) {
+        csv += headers.map(h => esc(r[h])).join(',') + '\n';
+    }
+
+    const filename = `login-attempts-${sinceArg}-${new Date().toISOString().substring(0,10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    // UTF-8 BOM — Excel Türkçe karakterleri doğru görsün diye
+    res.write('﻿');
+    res.end(csv);
+}));
+
 // ── Username → user_id resolve (CTI panelindeki "Dondur" butonu için) ──
 app.get('/api/users/lookup', wrap(async (req, res) => {
     const username = (req.query.username || '').toString().trim();
@@ -1562,6 +1655,7 @@ const server = app.listen(PORT, async () => {
     }
     await ensureOrgSettings();
     scheduleLoginAttemptsCleanup();
+    scheduleAlertingWatcher();
 });
 
 /**
@@ -1589,6 +1683,57 @@ function scheduleLoginAttemptsCleanup() {
     // İlk çalıştırma 1 dakika sonra (boot fırtınasını rahatsız etmesin),
     // sonra her 24 saatte bir.
     setTimeout(() => { run(); setInterval(run, ONE_DAY); }, 60_000).unref();
+}
+
+// ── Alerting watcher ─────────────────────────────────────────────────────
+//   Slack/Discord webhook'a periyodik anomali bildirimi. ENV ayarları:
+//     ALERT_WEBHOOK_URL       — Slack incoming webhook veya Discord webhook
+//     ALERT_FAIL_THRESHOLD    — pencere içinde tetikleyici başarısız sayısı (default: 20)
+//     ALERT_WINDOW_MIN        — bakılan pencere (default: 5 dakika)
+//     ALERT_COOLDOWN_MIN      — alert sonrası sessizlik (default: 30 dakika)
+//   Slack/Discord webhook'larının her ikisi de basit JSON ile `text` veya
+//   `content` alanı kabul eder — her ikisi için fallback gönderiyoruz.
+function scheduleAlertingWatcher() {
+    const url = process.env.ALERT_WEBHOOK_URL;
+    if (!url) {
+        console.log('  Alerting disabled (ALERT_WEBHOOK_URL not set).');
+        return;
+    }
+    const threshold = parseInt(process.env.ALERT_FAIL_THRESHOLD, 10) || 20;
+    const windowMin = parseInt(process.env.ALERT_WINDOW_MIN, 10) || 5;
+    const cooldownMin = parseInt(process.env.ALERT_COOLDOWN_MIN, 10) || 30;
+    let lastAlertAt = 0;
+
+    const check = async () => {
+        try {
+            const since = new Date(Date.now() - windowMin * 60 * 1000).toISOString();
+            const { count, error } = await supabase.from('login_attempts')
+                .select('id', { count: 'exact', head: true })
+                .gte('created_at', since)
+                .eq('succeeded', false);
+            if (error) { console.error('alert check:', error.message); return; }
+            if ((count ?? 0) < threshold) return;
+            // Cooldown
+            if (Date.now() - lastAlertAt < cooldownMin * 60 * 1000) return;
+            lastAlertAt = Date.now();
+
+            const text = `🚨 *UniScheduler CTI*\nSon ${windowMin} dakikada *${count}* başarısız giriş tespit edildi (eşik: ${threshold}).\nPanel: ${process.env.PUBLIC_PANEL_URL || 'http://localhost:3000'}`;
+            // Slack: { text }   Discord: { content }   her iki anahtarı da göndererek uyumluyuz
+            await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, content: text })
+            }).catch(e => console.error('alert webhook send:', e.message));
+            console.log(`[alert] webhook sent — ${count} failures in last ${windowMin}min`);
+        } catch (e) {
+            console.error('alert check threw:', e.message);
+        }
+    };
+
+    const intervalMs = windowMin * 60 * 1000;
+    // İlk çalıştırma 30sn sonra (kalkış sonrası DB warm-up)
+    setTimeout(() => { check(); setInterval(check, intervalMs); }, 30_000).unref();
+    console.log(`  Alerting enabled — checking every ${windowMin}min, threshold ${threshold} fails, cooldown ${cooldownMin}min.`);
 }
 
 // Graceful shutdown — important when running under Docker/PM2 so in-flight

@@ -323,10 +323,126 @@ tr:hover { background: var(--bg-hover); }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
 .loading { text-align: center; padding: 30px; color: var(--fg-muted); }
-.empty-state { text-align: center; padding: 36px 24px; color: var(--fg-muted); font-size: 13px; }
-.empty-state .empty-icon { font-size: 40px; opacity: .55; margin-bottom: 8px; display: block; }
-.empty-state .empty-title { font-weight: 600; color: var(--fg-on-card); margin-bottom: 4px; font-size: 14px; }
-.empty-state .empty-hint { font-size: 12px; color: var(--fg-muted); }
+
+/* ── Empty state (modern pattern) ────────────────────────────────────────
+   Mobile uygulamadaki ic_empty_* + başlık + hint kombinasyonunun
+   web karşılığı. CTA buton opsiyonel — kullanılırsa `.empty-cta`
+   class'ı ile. */
+.empty-state {
+  text-align: center;
+  padding: 36px 24px;
+  color: var(--fg-muted);
+  font-size: 13px;
+}
+.empty-state .empty-icon {
+  font-size: 52px;
+  opacity: .35;
+  margin-bottom: 12px;
+  display: block;
+  color: var(--fg-muted);
+  line-height: 1;
+}
+.empty-state .empty-title {
+  font-weight: 600;
+  color: var(--fg-on-card);
+  margin-bottom: 4px;
+  font-size: 15px;
+}
+.empty-state .empty-hint {
+  font-size: 12px;
+  color: var(--fg-muted);
+  max-width: 360px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+.empty-state .empty-cta {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 6px 16px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+}
+.empty-state .empty-cta:hover { opacity: .9; }
+
+/* ── Skeleton screen (shimmer) ───────────────────────────────────────────
+   Yükleme sırasında metin yerine gri-shimmer placeholder. Algılanan
+   hızı 2-3× artırır + layout shift'i önler (içerik geldiğinde
+   ekran zıplamaz çünkü yer önceden alındı). */
+@keyframes skeleton-shimmer {
+  0%   { background-position: -800px 0; }
+  100% { background-position:  800px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-elev-2) 0%,
+    var(--bg-hover) 50%,
+    var(--bg-elev-2) 100%
+  );
+  background-size: 800px 100%;
+  animation: skeleton-shimmer 1.4s infinite linear;
+  border-radius: 4px;
+  display: block;
+}
+
+/* Pre-built skeleton variants */
+.skeleton-row {
+  height: 14px;
+  margin: 10px 0;
+}
+.skeleton-row.short { width: 40%; }
+.skeleton-row.medium { width: 70%; }
+.skeleton-row.full { width: 100%; }
+
+.skeleton-card {
+  height: 72px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.skeleton-stat {
+  height: 96px;
+  border-radius: 10px;
+}
+
+.skeleton-table-row {
+  display: flex;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.skeleton-table-row .skeleton {
+  height: 14px;
+  flex: 1;
+}
+.skeleton-table-row .skeleton.narrow { flex: 0 0 80px; }
+.skeleton-table-row .skeleton.wide { flex: 2; }
+
+/* Reduced motion — accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; opacity: .5; }
+}
+
+/* ── GeoIP badge (CTI tablosu IP kolonu yanında ülke bayrağı) ─────────── */
+.geo-badge {
+  display: inline-block;
+  font-size: 10px;
+  background: var(--bg-elev-2);
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-left: 4px;
+  color: var(--fg-secondary);
+  border: 1px solid var(--border-soft);
+  white-space: nowrap;
+  vertical-align: middle;
+}
 
 pre { white-space: pre-wrap; word-break: break-word; background: var(--bg-elev-2); padding: 6px; border-radius: 6px; font-size: 11px; color: var(--fg-on-card); }
 
