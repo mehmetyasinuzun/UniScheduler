@@ -1,0 +1,116 @@
+erDiagram
+    organizations ||--|| org_settings : "1:1"
+    organizations ||--o{ users : "has"
+    organizations ||--o{ departments : "has"
+    organizations ||--o{ lecturers : "has"
+    organizations ||--o{ courses : "has"
+    organizations ||--o{ classrooms : "has"
+    organizations ||--o{ offerings : "has"
+    organizations ||--o{ schedule_entries : "has"
+    organizations ||--o{ lecturer_availability : "has"
+
+    users ||--o| lecturers : "may be"
+    departments ||--o{ lecturers : "employs"
+    departments ||--o{ courses : "offers"
+    departments ||--o{ classrooms : "owns"
+
+    courses ||--o{ offerings : "opened as"
+    lecturers ||--o{ offerings : "teaches"
+    lecturers ||--o{ schedule_entries : "scheduled in"
+    lecturers ||--o{ lecturer_availability : "blocks time"
+
+    offerings ||--o{ schedule_entries : "appears in"
+    classrooms ||--o{ schedule_entries : "hosts"
+
+    organizations {
+        int id PK
+        text name
+        text code "UNIQUE"
+        timestamp created_at
+    }
+
+    org_settings {
+        int org_id PK_FK
+        int time_step_minutes
+        text day_start
+        text day_end
+        text_array active_days
+    }
+
+    users {
+        uuid id PK
+        int org_id FK
+        text username "UNIQUE"
+        text role "admin or lecturer"
+        bool must_change_password
+        bool is_active
+    }
+
+    departments {
+        int id PK
+        int org_id FK
+        text name
+    }
+
+    lecturers {
+        int id PK
+        int org_id FK
+        uuid user_id FK
+        text title
+        text first_name
+        text last_name
+        citext email
+        int department_id FK
+    }
+
+    courses {
+        int id PK
+        int org_id FK
+        text code
+        text name
+        int theory_hours
+        int lab_hours
+        int credits
+        int department_id FK
+    }
+
+    classrooms {
+        int id PK
+        int org_id FK
+        text room_code
+        int capacity
+        text type "theory or lab"
+        int department_id FK
+    }
+
+    offerings {
+        int id PK
+        int org_id FK
+        int course_id FK
+        int lecturer_id FK
+        text academic_year
+        text term
+        int class_year
+        text section
+        int capacity
+    }
+
+    schedule_entries {
+        int id PK
+        int org_id FK
+        int offering_id FK
+        int lecturer_id FK
+        int classroom_id FK
+        text day
+        text start_time
+        text end_time
+    }
+
+    lecturer_availability {
+        int id PK
+        int org_id FK
+        int lecturer_id FK
+        text day
+        text start_time
+        text end_time
+    }
