@@ -454,6 +454,11 @@
     <string name="notif_reminder_body">%1$s • %2$s</string>
     <string name="notif_reminder_body_no_room">%1$s</string>
 
+    <!-- Hardcoded-string temizliği için eklenen lokalizasyon kaynakları. -->
+    <string name="auto_schedule_save_in_progress">Kaydediliyor…</string>
+    <string name="calendar_my_schedule_title">Programım</string>
+    <string name="data_email_optional_hint">E-posta (opsiyonel)</string>
+
     <!-- ACCESSIBILITY — TalkBack contentDescription'ları için.
          Görsel-olmayan UI öğeleri (ikonlar, dekoratif elementler) önemsiz işaretlenir;
          interaktif öğeler aşağıdaki cd_* string'leri ile duyurulur. -->

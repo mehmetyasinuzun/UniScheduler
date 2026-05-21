@@ -92,7 +92,7 @@ class AutoScheduleFragment : Fragment() {
             when (state) {
                 is UiState.Loading -> {
                     binding.btnApprove.isEnabled = false
-                    binding.btnApprove.text = "Kaydediliyor..."
+                    binding.btnApprove.setText(R.string.auto_schedule_save_in_progress)
                 }
                 is UiState.Success -> {
                     showSnackbar(R.string.auto_schedule_save_success, state.data, duration = Snackbar.LENGTH_LONG)
@@ -100,12 +100,12 @@ class AutoScheduleFragment : Fragment() {
                 }
                 is UiState.Error -> {
                     binding.btnApprove.isEnabled = true
-                    binding.btnApprove.text = "Onayla ve Kaydet"
+                    binding.btnApprove.setText(R.string.auto_schedule_approve_confirm)
                     showErrorSnackbar(state.message)
                 }
                 else -> {
                     binding.btnApprove.isEnabled = true
-                    binding.btnApprove.text = "Onayla ve Kaydet"
+                    binding.btnApprove.setText(R.string.auto_schedule_approve_confirm)
                 }
             }
         }

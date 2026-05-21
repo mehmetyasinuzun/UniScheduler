@@ -29,7 +29,7 @@ class CalendarFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.tvTitle.text = "Programım"
+        binding.tvTitle.setText(R.string.calendar_my_schedule_title)
         binding.btnRetry.setOnClickListener { viewModel.loadEntries() }
         binding.swipeRefresh.setOnRefreshListener { viewModel.loadEntries() }
 

@@ -513,11 +513,11 @@ class DataFragment : Fragment() {
             orientation = LinearLayout.VERTICAL
             setPadding(48, 32, 48, 16)
         }
-        val etCode = EditText(requireContext()).apply { setText(course.code); hint = "Code" }
-        val etName = EditText(requireContext()).apply { setText(course.name); hint = "Name" }
-        val etTheory = EditText(requireContext()).apply { setText(course.theoryHours.toString()); hint = "Theory Hours"; inputType = android.text.InputType.TYPE_CLASS_NUMBER }
-        val etLab = EditText(requireContext()).apply { setText(course.labHours.toString()); hint = "Lab Hours"; inputType = android.text.InputType.TYPE_CLASS_NUMBER }
-        val etCredits = EditText(requireContext()).apply { setText(course.credits.toString()); hint = "Credits"; inputType = android.text.InputType.TYPE_CLASS_NUMBER }
+        val etCode = EditText(requireContext()).apply { setText(course.code); hint = getString(R.string.data_course_code_hint) }
+        val etName = EditText(requireContext()).apply { setText(course.name); hint = getString(R.string.data_course_name_hint) }
+        val etTheory = EditText(requireContext()).apply { setText(course.theoryHours.toString()); hint = getString(R.string.data_theory_hours_hint); inputType = android.text.InputType.TYPE_CLASS_NUMBER }
+        val etLab = EditText(requireContext()).apply { setText(course.labHours.toString()); hint = getString(R.string.data_lab_hours_hint); inputType = android.text.InputType.TYPE_CLASS_NUMBER }
+        val etCredits = EditText(requireContext()).apply { setText(course.credits.toString()); hint = getString(R.string.data_credits_hint); inputType = android.text.InputType.TYPE_CLASS_NUMBER }
 
         layout.addView(etCode)
         layout.addView(etName)
@@ -585,7 +585,7 @@ class DataFragment : Fragment() {
 
         val etFirst = EditText(ctx).apply { setText(lecturer.firstName); hint = getString(R.string.data_first_name_hint) }
         val etLast  = EditText(ctx).apply { setText(lecturer.lastName); hint = getString(R.string.data_last_name_hint) }
-        val etEmail = EditText(ctx).apply { setText(lecturer.email ?: ""); hint = "E-posta (opsiyonel)" }
+        val etEmail = EditText(ctx).apply { setText(lecturer.email ?: ""); hint = getString(R.string.data_email_optional_hint) }
 
         val deptTil = buildEdmTextInputLayout(ctx, getString(R.string.data_dept_label))
         val deptAcv = deptTil.editText as com.google.android.material.textfield.MaterialAutoCompleteTextView

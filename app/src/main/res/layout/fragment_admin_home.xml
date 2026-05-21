@@ -43,7 +43,7 @@
             android:id="@+id/btnRetry"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Yeniden Dene"
+            android:text="@string/common_retry"
             android:visibility="gone" />
 
         <!-- Panel: Unassigned Lecturers -->

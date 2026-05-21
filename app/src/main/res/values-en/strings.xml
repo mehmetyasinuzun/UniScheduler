@@ -443,6 +443,11 @@
     <string name="notif_reminder_body">%1$s • %2$s</string>
     <string name="notif_reminder_body_no_room">%1$s</string>
 
+    <!-- Hardcoded-string cleanup additions. -->
+    <string name="auto_schedule_save_in_progress">Saving…</string>
+    <string name="calendar_my_schedule_title">My Schedule</string>
+    <string name="data_email_optional_hint">Email (optional)</string>
+
     <!-- ACCESSIBILITY — TalkBack contentDescription strings. -->
     <string name="cd_expand_section">Expand section</string>
     <string name="cd_collapse_section">Collapse section</string>
