@@ -14,6 +14,7 @@ import com.unischeduler.scheduler.ProposedEntry
 import com.unischeduler.scheduler.ScheduleGenerator
 import com.unischeduler.scheduler.SchedulePreferences
 import com.unischeduler.scheduler.ScheduleResult
+import com.unischeduler.util.ErrorReporter
 import com.unischeduler.util.SessionManager
 import com.unischeduler.util.UiState
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +34,7 @@ class AutoScheduleViewModel(app: Application) : AndroidViewModel(app) {
     private val scheduleRepo = ScheduleRepository()
     private val settingsRepo = OrgSettingsRepository()
     private val session = SessionManager(app)
+    private val errorReporter = ErrorReporter(app)
 
     private val _state = MutableStateFlow<UiState<ScheduleResult>>(UiState.Idle)
     val state: StateFlow<UiState<ScheduleResult>> = _state
@@ -119,6 +121,7 @@ class AutoScheduleViewModel(app: Application) : AndroidViewModel(app) {
                 _state.value = if (lastResult != null) UiState.Success(lastResult!!) else UiState.Error("Hiç program oluşturulamadı", retryable = true)
             }.onFailure { e ->
                 if (e is kotlinx.coroutines.CancellationException) throw e
+                errorReporter.reportException("AutoSchedule", "generate", e)
                 _state.value = UiState.Error("Program oluşturma hatası: ${e.message}", retryable = true)
             }
         }
@@ -188,6 +191,7 @@ class AutoScheduleViewModel(app: Application) : AndroidViewModel(app) {
                 _saveState.value = UiState.Success(it)
             }.onFailure { e ->
                 if (e is kotlinx.coroutines.CancellationException) throw e
+                errorReporter.reportException("AutoSchedule", "save", e)
                 _saveState.value = UiState.Error("Kaydetme hatası: ${e.message}", retryable = true)
             }
         }

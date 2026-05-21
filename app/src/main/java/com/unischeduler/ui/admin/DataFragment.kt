@@ -8,7 +8,6 @@ import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import android.widget.Spinner
 import android.widget.TextView
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -170,7 +169,7 @@ class DataFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setupStaticSpinners()
+        setupStaticDropdowns()
         setupAccordion()
         setupDefaults()
         binding.rvCourses.layoutManager   = LinearLayoutManager(requireContext())
@@ -248,7 +247,7 @@ class DataFragment : Fragment() {
                     binding.progressDepts.visibility = View.GONE
                     binding.tvDeptsError.visibility  = View.GONE
                     departments = state.data
-                    populateDeptSpinners(state.data)
+                    populateDeptDropdowns(state.data)
                 }
             }
         }
@@ -569,44 +568,46 @@ class DataFragment : Fragment() {
     }
 
     private fun showEditLecturerDialog(lecturer: Lecturer) {
-        val layout = LinearLayout(requireContext()).apply {
+        if (departments.isEmpty()) {
+            showErrorSnackbar(R.string.data_no_dept_error)
+            return
+        }
+        val ctx = requireContext()
+        val layout = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(48, 32, 48, 16)
         }
-        val spinnerTitle = Spinner(requireContext())
-        spinnerTitle.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, academicTitles)
-            .also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
-        val titleIdx = academicTitles.indexOf(lecturer.title).takeIf { it >= 0 } ?: 0
-        spinnerTitle.setSelection(titleIdx)
 
-        val etFirst = EditText(requireContext()).apply { setText(lecturer.firstName); hint = "First Name" }
-        val etLast  = EditText(requireContext()).apply { setText(lecturer.lastName); hint = "Last Name" }
-        val etEmail = EditText(requireContext()).apply { setText(lecturer.email ?: ""); hint = "Email (optional)" }
+        val titleTil = buildEdmTextInputLayout(ctx, getString(R.string.data_title_label))
+        val titleAcv = titleTil.editText as com.google.android.material.textfield.MaterialAutoCompleteTextView
+        val titleCtl = DropdownController(titleAcv, academicTitles)
+        titleCtl.setSelection(academicTitles.indexOf(lecturer.title).takeIf { it >= 0 } ?: 0)
 
-        val spinnerDept = Spinner(requireContext())
-        spinnerDept.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, departments.map { it.name })
-            .also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
-        val deptIdx = departments.indexOfFirst { it.id == lecturer.departmentId }.takeIf { it >= 0 } ?: 0
-        spinnerDept.setSelection(deptIdx)
+        val etFirst = EditText(ctx).apply { setText(lecturer.firstName); hint = getString(R.string.data_first_name_hint) }
+        val etLast  = EditText(ctx).apply { setText(lecturer.lastName); hint = getString(R.string.data_last_name_hint) }
+        val etEmail = EditText(ctx).apply { setText(lecturer.email ?: ""); hint = "E-posta (opsiyonel)" }
 
-        layout.addView(TextView(requireContext()).apply { text = "Title" })
-        layout.addView(spinnerTitle)
+        val deptTil = buildEdmTextInputLayout(ctx, getString(R.string.data_dept_label))
+        val deptAcv = deptTil.editText as com.google.android.material.textfield.MaterialAutoCompleteTextView
+        val deptCtl = DropdownController(deptAcv, departments.map { it.name })
+        deptCtl.setSelection(departments.indexOfFirst { it.id == lecturer.departmentId }.takeIf { it >= 0 } ?: 0)
+
+        layout.addView(titleTil)
         layout.addView(etFirst)
         layout.addView(etLast)
         layout.addView(etEmail)
-        layout.addView(TextView(requireContext()).apply { text = "Department" })
-        layout.addView(spinnerDept)
+        layout.addView(deptTil)
 
-        AlertDialog.Builder(requireContext())
+        AlertDialog.Builder(ctx)
             .setTitle(getString(R.string.data_lecturer_edit_title))
-            .setView(ScrollView(requireContext()).apply { addView(layout) })
+            .setView(ScrollView(ctx).apply { addView(layout) })
             .setPositiveButton(getString(R.string.common_save)) { _, _ ->
                 viewModel.editLecturer(
                     id = lecturer.id,
-                    title = academicTitles[spinnerTitle.selectedItemPosition],
+                    title = academicTitles[titleCtl.selectedPosition()],
                     firstName = etFirst.text.toString(),
                     lastName = etLast.text.toString(),
-                    departmentId = departments[spinnerDept.selectedItemPosition].id,
+                    departmentId = departments[deptCtl.selectedPosition()].id,
                     email = etEmail.text.toString().takeIf { it.isNotBlank() }
                 )
             }
@@ -615,61 +616,91 @@ class DataFragment : Fragment() {
     }
 
     private fun showEditOfferingDialog(offering: Offering) {
-        val layout = LinearLayout(requireContext()).apply {
+        val ctx = requireContext()
+        val layout = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(48, 32, 48, 16)
         }
-        val etYear    = EditText(requireContext()).apply { setText(offering.academicYear); hint = "Academic Year" }
-        val etSection = EditText(requireContext()).apply { setText(offering.section); hint = "Section" }
-        val etCap     = EditText(requireContext()).apply { setText(offering.capacity.toString()); hint = "Capacity"; inputType = android.text.InputType.TYPE_CLASS_NUMBER }
+        val etYear    = EditText(ctx).apply { setText(offering.academicYear); hint = getString(R.string.data_offering_academic_year_hint) }
+        val etSection = EditText(ctx).apply { setText(offering.section); hint = getString(R.string.data_offering_section_hint) }
+        val etCap     = EditText(ctx).apply {
+            setText(offering.capacity.toString())
+            hint = getString(R.string.data_offering_quota_hint)
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+        }
 
-        val spinnerTerm = Spinner(requireContext())
-        spinnerTerm.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, terms)
-            .also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
-        spinnerTerm.setSelection(terms.indexOf(offering.term).takeIf { it >= 0 } ?: 0)
+        val termTil = buildEdmTextInputLayout(ctx, getString(R.string.data_offering_term_label))
+        val termAcv = termTil.editText as com.google.android.material.textfield.MaterialAutoCompleteTextView
+        val termCtl = DropdownController(termAcv, terms)
+        termCtl.setSelection(terms.indexOf(offering.term).takeIf { it >= 0 } ?: 0)
 
-        val spinnerYear = Spinner(requireContext())
-        spinnerYear.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, classYears.map { "Year $it" })
-            .also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
-        spinnerYear.setSelection(classYears.indexOf(offering.classYear).takeIf { it >= 0 } ?: 0)
+        val yearTil = buildEdmTextInputLayout(ctx, getString(R.string.data_offering_class_year_label))
+        val yearAcv = yearTil.editText as com.google.android.material.textfield.MaterialAutoCompleteTextView
+        val yearCtl = DropdownController(yearAcv, classYears) { "Year $it" }
+        yearCtl.setSelection(classYears.indexOf(offering.classYear).takeIf { it >= 0 } ?: 0)
 
         val lecturerNames = listOf(getString(R.string.common_not_assigned)) + lecturers.map { it.fullName }
-        val spinnerLecturer = Spinner(requireContext())
-        spinnerLecturer.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, lecturerNames)
-            .also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        val lecturerTil = buildEdmTextInputLayout(ctx, getString(R.string.data_offering_lecturer_optional))
+        val lecturerAcv = lecturerTil.editText as com.google.android.material.textfield.MaterialAutoCompleteTextView
+        val lecturerCtl = DropdownController(lecturerAcv, lecturerNames)
         val lecturerIdx = if (offering.lecturerId != null) {
             lecturers.indexOfFirst { it.id == offering.lecturerId }.takeIf { it >= 0 }?.plus(1) ?: 0
         } else 0
-        spinnerLecturer.setSelection(lecturerIdx)
+        lecturerCtl.setSelection(lecturerIdx)
 
         layout.addView(etYear)
-        layout.addView(TextView(requireContext()).apply { text = "Term" })
-        layout.addView(spinnerTerm)
-        layout.addView(TextView(requireContext()).apply { text = "Class Year" })
-        layout.addView(spinnerYear)
+        layout.addView(termTil)
+        layout.addView(yearTil)
         layout.addView(etSection)
         layout.addView(etCap)
-        layout.addView(TextView(requireContext()).apply { text = "Lecturer" })
-        layout.addView(spinnerLecturer)
+        layout.addView(lecturerTil)
 
-        AlertDialog.Builder(requireContext())
+        AlertDialog.Builder(ctx)
             .setTitle(getString(R.string.data_offering_edit_title))
-            .setView(ScrollView(requireContext()).apply { addView(layout) })
+            .setView(ScrollView(ctx).apply { addView(layout) })
             .setPositiveButton(getString(R.string.common_save)) { _, _ ->
-                val selectedLecturerId = if (spinnerLecturer.selectedItemPosition > 0)
-                    lecturers[spinnerLecturer.selectedItemPosition - 1].id else null
+                val pos = lecturerCtl.selectedPosition()
+                val selectedLecturerId = if (pos > 0) lecturers.getOrNull(pos - 1)?.id else null
                 viewModel.editOffering(
                     id = offering.id,
                     lecturerId = selectedLecturerId,
                     academicYear = etYear.text.toString(),
-                    term = terms[spinnerTerm.selectedItemPosition],
-                    classYear = classYears[spinnerYear.selectedItemPosition],
+                    term = terms[termCtl.selectedPosition()],
+                    classYear = classYears[yearCtl.selectedPosition()],
                     section = etSection.text.toString(),
                     capacity = etCap.text.toString().toIntOrNull() ?: 0
                 )
             }
             .setNegativeButton(getString(R.string.common_cancel), null)
             .show()
+    }
+
+    /**
+     * Programatik bir TextInputLayout (ExposedDropdownMenu stiliyle) + içinde
+     * boş bir MaterialAutoCompleteTextView üretir. DropdownController sonradan
+     * setItems ile doldurur. Dialog'larda Spinner yerine Material 3 standardı
+     * için kullanılır — form ekranlarındaki dropdown'larla aynı görünüm/davranış.
+     */
+    private fun buildEdmTextInputLayout(
+        ctx: android.content.Context,
+        hint: String
+    ): com.google.android.material.textfield.TextInputLayout {
+        val til = com.google.android.material.textfield.TextInputLayout(
+            ctx,
+            null,
+            com.google.android.material.R.attr.textInputOutlinedExposedDropdownMenuStyle
+        ).apply {
+            this.hint = hint
+            layoutParams = LinearLayout.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = 16 }
+        }
+        val acv = com.google.android.material.textfield.MaterialAutoCompleteTextView(ctx).apply {
+            inputType = android.text.InputType.TYPE_NULL
+        }
+        til.addView(acv)
+        return til
     }
 
     private fun showDeleteOfferingDialog(offering: Offering) {
@@ -960,13 +991,13 @@ class DataFragment : Fragment() {
         binding.etSection.setText("A")
     }
 
-    private fun setupStaticSpinners() {
+    private fun setupStaticDropdowns() {
         titleDropdown = DropdownController(binding.actvTitle, academicTitles)
         termDropdown = DropdownController(binding.actvTerm, terms)
         classYearDropdown = DropdownController(binding.actvClassYear, classYears) { "Year $it" }
     }
 
-    private fun populateDeptSpinners(depts: List<Department>) {
+    private fun populateDeptDropdowns(depts: List<Department>) {
         val names = depts.map { it.name }
 
         // Lecturer / Course form dropdown'ları
@@ -1008,7 +1039,7 @@ class DataFragment : Fragment() {
         // göstermeli — kullanıcı yeni atama yaparken arama filtresi
         // dropdown'ı kısıtlamamalı.
         lecturers = deptScopedLecturers
-        populateLecturerSpinner()
+        populateLecturerDropdown()
         binding.tvLecturerHeader.text = getString(R.string.data_lecturers_header_count, filteredLecturers.size)
         populateLecturerList(filteredLecturers)
 
@@ -1019,7 +1050,7 @@ class DataFragment : Fragment() {
             it.name.lowercase().contains(courseQuery)
         }
         courses = deptScopedCourses
-        populateCourseSpinner(deptScopedCourses)
+        populateCourseDropdown(deptScopedCourses)
         binding.tvCourseHeader.text = getString(R.string.data_courses_header_count, filteredCourses.size)
         courseAdapter.submitList(filteredCourses)
         binding.tvCoursesEmpty.visibility = if (filteredCourses.isEmpty()) View.VISIBLE else View.GONE
@@ -1053,14 +1084,14 @@ class DataFragment : Fragment() {
         lecturerAdapter.submitList(items)
     }
 
-    private fun populateCourseSpinner(courseList: List<Course>) {
+    private fun populateCourseDropdown(courseList: List<Course>) {
         val items = courseList.map { it.displayName }
         offeringCourseDropdown?.let { it.setItems(items) } ?: run {
             offeringCourseDropdown = DropdownController(binding.actvOfferingCourse, items)
         }
     }
 
-    private fun populateLecturerSpinner() {
+    private fun populateLecturerDropdown() {
         val items = listOf(getString(R.string.common_not_assigned)) + lecturers.map { it.fullName }
         offeringLecturerDropdown?.let { it.setItems(items) } ?: run {
             offeringLecturerDropdown = DropdownController(binding.actvOfferingLecturer, items)

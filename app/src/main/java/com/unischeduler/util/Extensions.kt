@@ -49,7 +49,10 @@ fun Fragment.showSnackbar(@StringRes messageRes: Int, vararg formatArgs: Any, du
  */
 fun Fragment.showErrorSnackbar(message: String): Snackbar? {
     val root = view ?: return null
-    val ctx = requireContext()
+    // Detached fragment'ta context null olabilir — requireContext() o senaryoda
+    // crash atar. View hâlâ tutuluyorsa context yine valid ama paranoid kontrol
+    // ucuz; arka plan IO callback'leri çok zaman gecikebiliyor.
+    val ctx = context ?: return null
     return Snackbar.make(root, message, Snackbar.LENGTH_LONG).also { bar ->
         val errorColor = androidx.core.content.ContextCompat.getColor(ctx, R.color.color_error_dark)
         bar.setActionTextColor(errorColor)

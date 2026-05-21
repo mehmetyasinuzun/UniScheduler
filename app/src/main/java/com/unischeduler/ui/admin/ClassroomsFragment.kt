@@ -247,46 +247,49 @@ class ClassroomsFragment : Fragment() {
     }
 
     private fun showEditDialog(classroom: Classroom) {
-        val container = android.widget.LinearLayout(requireContext()).apply {
+        val ctx = requireContext()
+        val container = android.widget.LinearLayout(ctx).apply {
             orientation = android.widget.LinearLayout.VERTICAL
             setPadding(48, 32, 48, 16)
         }
-        val etCode = android.widget.EditText(requireContext()).apply {
+        val etCode = android.widget.EditText(ctx).apply {
             setText(classroom.roomCode); hint = getString(R.string.classroom_edit_code_hint)
         }
-        val etCap = android.widget.EditText(requireContext()).apply {
+        val etCap = android.widget.EditText(ctx).apply {
             setText(classroom.capacity.toString())
             hint = getString(R.string.classroom_edit_capacity_hint)
             inputType = android.text.InputType.TYPE_CLASS_NUMBER
         }
-        val typeSpinner = android.widget.Spinner(requireContext()).apply {
-            adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item,
-                classroomTypes.map { if (it == "lab") getString(R.string.classroom_type_lab) else getString(R.string.classroom_type_theory) }
-            ).also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
-            setSelection(classroomTypes.indexOf(classroom.type).coerceAtLeast(0))
+
+        // Material 3 ExposedDropdownMenu — form'daki dropdown'larla aynı stil.
+        val typeLabels = classroomTypes.map {
+            if (it == "lab") getString(R.string.classroom_type_lab)
+            else getString(R.string.classroom_type_theory)
         }
-        val deptSpinner = android.widget.Spinner(requireContext()).apply {
-            val names = listOf(getString(R.string.classroom_unassigned_option)) + departments.map { it.name }
-            adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, names)
-                .also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
-            val curIdx = departments.indexOfFirst { it.id == classroom.departmentId }
-            setSelection(if (curIdx >= 0) curIdx + 1 else 0)
-        }
+        val typeTil = buildEdmTextInputLayout(ctx, getString(R.string.classroom_edit_type_label))
+        val typeAcv = typeTil.editText as com.google.android.material.textfield.MaterialAutoCompleteTextView
+        val typeCtl = DropdownController(typeAcv, typeLabels)
+        typeCtl.setSelection(classroomTypes.indexOf(classroom.type).coerceAtLeast(0))
+
+        val deptNames = listOf(getString(R.string.classroom_unassigned_option)) + departments.map { it.name }
+        val deptTil = buildEdmTextInputLayout(ctx, getString(R.string.classroom_edit_dept_label))
+        val deptAcv = deptTil.editText as com.google.android.material.textfield.MaterialAutoCompleteTextView
+        val deptCtl = DropdownController(deptAcv, deptNames)
+        val curIdx = departments.indexOfFirst { it.id == classroom.departmentId }
+        deptCtl.setSelection(if (curIdx >= 0) curIdx + 1 else 0)
 
         container.addView(etCode)
         container.addView(etCap)
-        container.addView(android.widget.TextView(requireContext()).apply { text = getString(R.string.classroom_edit_type_label) })
-        container.addView(typeSpinner)
-        container.addView(android.widget.TextView(requireContext()).apply { text = getString(R.string.classroom_edit_dept_label) })
-        container.addView(deptSpinner)
+        container.addView(typeTil)
+        container.addView(deptTil)
 
-        AlertDialog.Builder(requireContext())
+        AlertDialog.Builder(ctx)
             .setTitle(getString(R.string.classroom_edit_title))
             .setView(container)
             .setPositiveButton(getString(R.string.common_save)) { _, _ ->
-                val deptIdx = deptSpinner.selectedItemPosition
+                val deptIdx = deptCtl.selectedPosition()
                 val deptId  = if (deptIdx > 0) departments.getOrNull(deptIdx - 1)?.id else null
-                val type    = classroomTypes[typeSpinner.selectedItemPosition]
+                val type    = classroomTypes[typeCtl.selectedPosition()]
                 viewModel.updateClassroom(
                     id = classroom.id,
                     roomCode = etCode.text.toString(),
@@ -297,6 +300,33 @@ class ClassroomsFragment : Fragment() {
             }
             .setNegativeButton(getString(R.string.common_cancel), null)
             .show()
+    }
+
+    /**
+     * Programatik bir TextInputLayout (ExposedDropdownMenu stiliyle) + içinde
+     * boş bir MaterialAutoCompleteTextView üretir. DropdownController sonradan
+     * setItems ile doldurur.
+     */
+    private fun buildEdmTextInputLayout(
+        ctx: android.content.Context,
+        hint: String
+    ): com.google.android.material.textfield.TextInputLayout {
+        val til = com.google.android.material.textfield.TextInputLayout(
+            ctx,
+            null,
+            com.google.android.material.R.attr.textInputOutlinedExposedDropdownMenuStyle
+        ).apply {
+            this.hint = hint
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = 16 }
+        }
+        val acv = com.google.android.material.textfield.MaterialAutoCompleteTextView(ctx).apply {
+            inputType = android.text.InputType.TYPE_NULL
+        }
+        til.addView(acv)
+        return til
     }
 
     private fun showImportPreview(result: CsvImporter.ParseResult<CsvImporter.ClassroomRow>) {
