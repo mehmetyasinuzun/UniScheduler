@@ -1,0 +1,62 @@
+# ────────────────────────────────────────────────────────────────────────
+# Dependabot — haftalık bağımlılık taraması
+#
+# 3 ekosistem var: Gradle (Android), npm (panel), GitHub Actions (workflows).
+# Her biri için ayrı PR'lar açılır — major bump'lar etiketlenir + label'lı.
+#
+# `open-pull-requests-limit` koruyucu: bir defada çok PR açmaz, ekibi
+# bunaltmaz. Major güncellemeleri ayrı tutuyoruz çünkü breaking change
+# riski olabilir.
+# ────────────────────────────────────────────────────────────────────────
+version: 2
+updates:
+  # ── Android (Gradle) ──────────────────────────────────────────────
+  - package-ecosystem: gradle
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Istanbul
+    open-pull-requests-limit: 5
+    labels: ['dependencies', 'android']
+    commit-message:
+      prefix: 'gradle'
+    groups:
+      androidx-minor:
+        patterns: ['androidx.*']
+        update-types: ['minor', 'patch']
+      kotlin-minor:
+        patterns: ['org.jetbrains.kotlin*', 'org.jetbrains.kotlinx*']
+        update-types: ['minor', 'patch']
+
+  # ── Panel (npm) ────────────────────────────────────────────────────
+  - package-ecosystem: npm
+    directory: '/super-admin-paneli'
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Istanbul
+    open-pull-requests-limit: 5
+    labels: ['dependencies', 'panel']
+    commit-message:
+      prefix: 'npm'
+    groups:
+      supabase:
+        patterns: ['@supabase/*']
+      express-stack:
+        patterns: ['express', 'helmet', 'cors', 'multer', 'dotenv']
+
+  # ── GitHub Actions workflow'ları ─────────────────────────────────
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Istanbul
+    open-pull-requests-limit: 3
+    labels: ['dependencies', 'ci']
+    commit-message:
+      prefix: 'ci'

@@ -1,143 +1,232 @@
 # UniScheduler — Supabase Setup
 
-> **Single-file install.** Run [`schema.sql`](schema.sql) once and the entire
-> backend (tables, indexes, RLS policies, helper functions, realtime, overlap
-> trigger) is configured correctly. The files in [`migrations/legacy/`](migrations/legacy/)
-> are archived — **do not run them** on a fresh install.
+> İki kurulum yolu var:
+> 1. **Quick install** — sıfırdan yeni proje için, [`schema.sql`](schema.sql)'i tek seferde çalıştır
+> 2. **Production deploy** — canlı veri varken sürüm güncellemek için [dbmate](https://github.com/amacneil/dbmate) ile versiyonlu migration'lar
+>
+> Eski parçalı dosyalar [`migrations/legacy/`](migrations/legacy/) altında arşivde. **Çalıştırmayın.**
 
 ---
 
-## 1. Create the Supabase Project
+## 1. Yeni Proje Kurulumu (Quick Install)
 
-1. Sign in to [supabase.com](https://supabase.com) → **New Project**
-2. Set a project name (e.g. `unischeduler-prod`)
-3. Pick a strong database password and store it in your password manager
-4. Choose the region closest to your users (e.g. `eu-central-1`)
-5. Wait ~2 minutes for the project to provision
+### 1.1 Supabase Projesi Oluştur
+1. [supabase.com](https://supabase.com) → **New Project**
+2. Bir proje adı belirleyin (örn. `unischeduler-prod`)
+3. Güçlü bir DB parolası seçin, parola yöneticisine kaydedin
+4. Kullanıcılarınıza en yakın region (`eu-central-1` Türkiye için iyi)
+5. ~2 dakika provision bekleyin
 
-## 2. Run the Schema
+### 1.2 Şemayı Yükle
+1. Dashboard → **SQL Editor → New query**
+2. [`schema.sql`](schema.sql) dosyasının tamamını yapıştır
+3. **Run**
 
-1. Dashboard → **SQL Editor** → **New query**
-2. Open `schema.sql` from this repository, copy-paste the entire contents
-3. Click **Run**
+Bu komut şunları kurar:
+- 11 tablo (organizations, org_settings, users, departments, lecturers, courses, classrooms, offerings, schedule_entries, lecturer_availability, client_error_logs, audit_log, login_attempts, super_admins)
+- Org-scoped sorgular için tüm indeksler
+- 5 SECURITY DEFINER helper fonksiyon (`current_org_id`, `current_user_role`, `is_admin`, `is_lecturer`, `current_lecturer_id`)
+- Her tabloda Row-Level Security politikaları (multi-tenant izolasyonu)
+- Realtime publication (schedule_entries, courses, lecturer_availability, offerings)
+- `prevent_schedule_overlap` trigger (race-condition korumalı çakışma engeli)
+- `admin_reset_lecturer_password` RPC (mobile admin'in service_role gerektirmeden hoca şifresi sıfırlaması)
 
-This creates:
-- 11 tables (organizations, org_settings, users, departments, lecturers,
-  courses, classrooms, offerings, schedule_entries, lecturer_availability,
-  client_error_logs)
-- All indexes for org-scoped queries
-- 4 SECURITY DEFINER helper functions (`current_org_id`, `current_user_role`,
-  `is_admin`, `current_lecturer_id`) used by RLS
-- Row-Level Security policies on every table — multi-tenant safe
-- Realtime publication for schedule_entries / courses / lecturer_availability
-- A trigger that prevents schedule overlap at the database level (race-condition
-  proof, even when two admins click "Assign" at the exact same moment)
+> ⚠ Script `DROP TABLE IF EXISTS` ile başlar ve `auth.users` içindeki `*@unischeduler.app` satırları siler. **Mevcut tüm veri silinir.** Sadece yeni projede çalıştırın veya önce yedek alın.
 
-> ⚠ The script begins with `DROP TABLE IF EXISTS` and `DELETE FROM auth.users`
-> for `*@unischeduler.app` rows. **All current data is wiped.** Only run on a
-> fresh project, or take a database backup first.
-
-## 3. Create the First Organization
-
-After `schema.sql` finishes, you have an empty database. Insert at least one
-organization (the multi-tenant root) before creating any users:
-
+### 1.3 İlk Organizasyonu Ekle
 ```sql
-INSERT INTO organizations (name, code) VALUES
-    ('Default University', 'default')
-RETURNING id;  -- note the returned id; use it for all subsequent users
+INSERT INTO organizations (name, code) VALUES ('Default University', 'default') RETURNING id;
 ```
 
-## 4. Create the First Admin
+### 1.4 İlk Admin'i Oluştur
+**Dashboard → Authentication → Users → Add user**
+- Email: `admin@unischeduler.app` (synthetic — gerçek e-posta gerekmez)
+- Password: güçlü bir parola
+- **Auto-confirm user**: ✅
 
-UniScheduler uses **Supabase Auth** (email + password) for authentication.
-The mobile app converts usernames to synthetic emails (`username@unischeduler.app`)
-internally — **you do not need a real email**. Recommended steps:
-
-### 4a. Create the Auth user
-
-Dashboard → **Authentication → Users → Add user**
-- Email: `admin@unischeduler.app`
-- Password: a strong password (you will share this with the human admin)
-- **Auto-confirm user**: ✅ checked (so they can sign in immediately)
-
-Copy the user's UUID from the resulting row.
-
-### 4b. Create the matching profile row
-
+UUID'yi kopyalayın, sonra:
 ```sql
 INSERT INTO public.users (id, org_id, username, role, must_change_password)
-VALUES (
-    '<auth-user-uuid-from-step-4a>',
-    1,                  -- org id from step 3
-    'admin',            -- the username they will type in the mobile app
-    'admin',
-    true                -- forces password change on first login
-);
+VALUES ('<auth-user-uuid>', 1, 'admin', 'admin', true);
 ```
 
-You can now sign in to the mobile app with username `admin` and the password
-you set in step 4a.
-
-## 5. Get Your API Keys
-
-Dashboard → **Settings → API**:
-- **Project URL** → goes into `local.properties` as `SUPABASE_URL`
-- **anon / public key** → goes into `local.properties` as `SUPABASE_ANON_KEY`
-
-> The anon key is **safe** to embed in the mobile APK — RLS protects every
-> table and the helper functions enforce that each user only sees their own
-> organization. Never embed the **service_role** key in the app; that key is
-> only for the super-admin panel.
-
-## 6. Add Keys to the Mobile App
-
-Open `UniScheduler/local.properties` (gitignored — never commit) and add:
-
-```
-SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-Sync the Gradle project. Build → install → log in.
+### 1.5 API Anahtarları
+**Settings → API**:
+- **Project URL** → `local.properties` içinde `SUPABASE_URL`
+- **anon / public key** → mobile için `SUPABASE_ANON_KEY`
+- **service_role key** → sadece [super-admin paneli](../super-admin-paneli/) için, **mobile APK'ya asla koyma**
 
 ---
 
-## Table Summary
+## 2. Production Deploy — dbmate ile Versiyonlu Migration
 
-| Table | Purpose |
+> Quick install yeni projeye uygundur ama canlı veri varken `DROP TABLE` yapamayız. Şema değişiklikleri için **dbmate** kullanıyoruz — single Go binary, `DATABASE_URL` env'ine bağlanır, basit `up`/`down`/`new` komutları sunar.
+
+### 2.1 dbmate Kurulumu
+
+```bash
+# macOS
+brew install dbmate
+
+# Linux
+curl -fsSL -o /usr/local/bin/dbmate \
+    https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64
+chmod +x /usr/local/bin/dbmate
+
+# Windows (PowerShell)
+iwr https://github.com/amacneil/dbmate/releases/latest/download/dbmate-windows-amd64.exe `
+    -OutFile $env:USERPROFILE\bin\dbmate.exe
+```
+
+Doğrulama:
+```bash
+dbmate --version
+```
+
+### 2.2 Bağlantı Konfigürasyonu
+
+`supabase/migrations/.env` oluşturun (gitignored):
+```bash
+cp supabase/migrations/.dbmate.example.env supabase/migrations/.env
+```
+
+`DATABASE_URL`'i Supabase Settings → Database → **Connection string (URI)** kısmından kopyalayın. Production için **pooled connection** (port 6543) önerilir:
+
+```
+DATABASE_URL=postgresql://postgres.[REF]:[PASSWORD]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres
+```
+
+### 2.3 Baseline'ı İşaretle
+
+İlk dbmate kullanımında **schema.sql** ile zaten kurulmuş veritabanına dbmate'i tanıtmak gerekir. Bunu **bir defalık** yapın:
+
+```bash
+cd supabase
+dbmate --migrations-dir migrations status   # bakım için: 1 pending görmeli (baseline)
+dbmate --migrations-dir migrations up       # baseline migration uygulanır (no-op marker)
+```
+
+Veya manuel SQL ile (bağlantı yoksa):
+```sql
+CREATE TABLE IF NOT EXISTS schema_migrations (version VARCHAR(255) PRIMARY KEY);
+INSERT INTO schema_migrations (version) VALUES ('20260521000000') ON CONFLICT DO NOTHING;
+```
+
+Bu, dbmate'in "baseline applied, devam et" demesini sağlar.
+
+### 2.4 Yeni Migration Yazma
+
+```bash
+cd supabase
+dbmate new add_audit_request_id
+# → migrations/20260601120000_add_audit_request_id.sql oluşturuldu
+```
+
+Dosyayı açın, iki bölümü doldurun:
+```sql
+-- migrate:up
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS request_id TEXT;
+CREATE INDEX IF NOT EXISTS idx_audit_request_id ON audit_log(request_id);
+
+-- migrate:down
+DROP INDEX IF EXISTS idx_audit_request_id;
+ALTER TABLE audit_log DROP COLUMN IF EXISTS request_id;
+```
+
+### 2.5 Production'a Uygula
+
+```bash
+# Önce: backup al!  Dashboard → Database → Backups
+# veya: pg_dump $DATABASE_URL > backup-$(date +%F).sql
+
+# Dry-run — uygulanacak migration'ları listele
+dbmate --migrations-dir migrations status
+
+# Uygula
+dbmate --migrations-dir migrations up
+
+# Sorun varsa rollback
+dbmate --migrations-dir migrations rollback
+```
+
+### 2.6 Best Practice'ler
+
+**✅ Her migration'da:**
+- `IF NOT EXISTS` / `IF EXISTS` kullanın (idempotent olsun, yarıda kalırsa devam edebilesiniz)
+- `migrate:down` boş bırakmayın — geri alma yolu olmalı
+- Büyük tablo değişikliklerinde `ALTER TABLE ... ADD COLUMN ... DEFAULT NULL` (DEFAULT değer atamak prod'da full table rewrite tetikler)
+- INDEX'leri `CONCURRENTLY` ile ekleyin (production'da yazma kilitlemez):
+  ```sql
+  CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_xx ON foo(bar);
+  ```
+
+**❌ Asla:**
+- Mevcut migration dosyasının içeriğini DEĞİŞTİRMEYİN. Yeni migration yazın.
+  (dbmate hash'lere bakmaz ama takım üyelerinin DB'leri uyumsuz hale gelir.)
+- Production'da `dbmate drop` (TÜM veriyi siler) çalıştırmayın.
+- Migration'ı kontrol etmeden `dbmate up` yapmayın — `status` ile önce ne uygulanacağını görün.
+
+### 2.7 CI/CD Entegrasyonu
+
+`.github/workflows/deploy-migrations.yml` örneği (ileride):
+```yaml
+- name: Apply migrations
+  env:
+    DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+  run: dbmate --migrations-dir supabase/migrations up
+```
+
+GitHub Secrets'a `SUPABASE_DATABASE_URL` ekledikten sonra tag-based deploy mümkün.
+
+---
+
+## 3. Tablo Özeti
+
+| Tablo | Amaç |
 |---|---|
-| `organizations` | Multi-tenant root (one row per institution) |
-| `org_settings` | Per-org configuration (time step, day start/end, active days) |
-| `users` | Auth profile (FK to `auth.users`) — role + org membership |
-| `departments` | Department list (scoped to org) |
-| `lecturers` | Lecturer profiles (FK to `users` + `departments`) |
-| `courses` | Course catalogue (scoped to org) |
-| `classrooms` | Physical / lab rooms (scoped to org) |
-| `offerings` | Opened sections per academic year + term |
-| `schedule_entries` | Final timetable: offering × lecturer × classroom × day × time |
-| `lecturer_availability` | Lecturer's blocked / preferred hours |
-| `client_error_logs` | Mobile + panel error reports for triage |
+| `organizations` | Multi-tenant kök (her kurum bir satır) |
+| `org_settings` | Org-bazlı yapılandırma (zaman dilimi, mesai saatleri, aktif günler) |
+| `users` | Auth profili (`auth.users` ile 1:1) — rol + org bağı |
+| `departments` | Bölüm listesi (org'a scoped) |
+| `lecturers` | Hoca profilleri (`users` + `departments` FK) |
+| `courses` | Ders kataloğu (org'a scoped) |
+| `classrooms` | Fiziksel/lab sınıflar (org'a scoped) |
+| `offerings` | Açılan dersler (akademik yıl + dönem) |
+| `schedule_entries` | Nihai program: offering × hoca × derslik × gün × saat |
+| `lecturer_availability` | Hocaların müsait/meşgul saatleri |
+| `client_error_logs` | Mobile + panel hata raporları |
+| `audit_log` | Trigger ile her INSERT/UPDATE/DELETE jsonb diff'i |
+| `login_attempts` | CTI için tüm giriş denemeleri (başarılı + başarısız) |
+| `super_admins` | Panel sahibi listesi (sadece audit kaydı için) |
 
-## RLS Quick Reference
+## 4. RLS Hızlı Referans
 
-- **Everyone** sees only their own organization (`current_org_id()`).
-- **Admins** can write to every table within their org.
-- **Lecturers** can only write to their own `lecturer_availability` rows.
-- The **service_role** key (used only by the super-admin panel) bypasses
-  every policy — guard it like a database root password.
+- **Herkes** sadece kendi organizasyonunu görür (`current_org_id()`).
+- **Admin'ler** kendi org'larında her tabloya yazabilir.
+- **Hoca'lar** sadece kendi `lecturer_availability` satırlarını yazabilir.
+- **service_role** anahtarı (sadece süper-admin paneli kullanır) her politikayı bypass eder — DB root parolası gibi koruyun.
 
 ---
 
-## Upgrading From an Older Schema
+## 5. Yedekleme Stratejisi
 
-If your database was bootstrapped from `migrations/legacy/001_schema.sql`
-and you want to bring it up to current:
+**Supabase otomatik backup:**
+- Free tier: 7 günlük günlük backup
+- Pro tier: 7 gün + Point-in-Time Recovery (PITR)
 
-1. **Take a backup.** Dashboard → Database → Backups.
-2. Export your data (see SQL Editor → Export buttons).
-3. Run `schema.sql` (it drops every table — yes, that is intentional).
-4. Re-import data from your export.
+**Manuel yedek:**
+```bash
+pg_dump $DATABASE_URL > backup-$(date +%Y%m%d).sql
+```
 
-There is no in-place migration path because the legacy scripts predate
-Supabase Auth integration and `password_hash` was removed.
+**Geri yükleme:**
+```bash
+# Önce mevcut DB'yi temizle (DİKKAT)
+psql $DATABASE_URL -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+psql $DATABASE_URL < backup-2026-05-21.sql
+```
+
+**Migration sonrası verification:**
+```bash
+dbmate --migrations-dir migrations status  # tüm migration applied göstermeli
+```

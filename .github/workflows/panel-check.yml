@@ -1,0 +1,95 @@
+# ────────────────────────────────────────────────────────────────────────
+# Panel (Node.js) — syntax check + npm audit + i18n parite
+#
+# Tetikleyici:
+#   • super-admin-paneli/ altında değişen push veya PR
+#   • manuel
+#
+# Yaptıkları:
+#   1. npm ci    → lock'a göre temiz install
+#   2. node --check → tüm JS'lerde syntax doğrulaması (server + public/js)
+#   3. JSON.parse → tr.json + en.json yapı kontrolü + key parite
+#   4. npm audit (sadece prod) → yüksek + kritik açıkları rapor
+# ────────────────────────────────────────────────────────────────────────
+name: Panel — syntax & audit
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'super-admin-paneli/**'
+      - '.github/workflows/panel-check.yml'
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: panel-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Node syntax + npm audit + i18n parite
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    defaults:
+      run:
+        working-directory: super-admin-paneli
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: super-admin-paneli/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Server syntax
+        run: node --check server.js
+
+      - name: Frontend JS syntax
+        run: |
+          for f in public/js/*.js; do
+            echo "Checking $f"
+            node --check "$f"
+          done
+
+      # i18n parite — TR ve EN'de aynı sayıda key olduğunu garanti et,
+      # ileride yeni key eklenince tek dile eklemeyi unutmuş olmamak için.
+      - name: i18n key parity (TR vs EN)
+        run: |
+          node -e "
+            const tr = require('./public/i18n/tr.json');
+            const en = require('./public/i18n/en.json');
+            function flatten(o, prefix='') {
+              const r = [];
+              for (const k in o) {
+                const v = o[k];
+                const full = prefix ? prefix + '.' + k : k;
+                if (v && typeof v === 'object' && !Array.isArray(v)) r.push(...flatten(v, full));
+                else r.push(full);
+              }
+              return r;
+            }
+            const trKeys = new Set(flatten(tr));
+            const enKeys = new Set(flatten(en));
+            const missingInEn = [...trKeys].filter(k => !enKeys.has(k));
+            const missingInTr = [...enKeys].filter(k => !trKeys.has(k));
+            if (missingInEn.length || missingInTr.length) {
+              console.error('i18n parity FAILED');
+              if (missingInEn.length) console.error('  Missing in EN:', missingInEn);
+              if (missingInTr.length) console.error('  Missing in TR:', missingInTr);
+              process.exit(1);
+            }
+            console.log('i18n parity OK — ' + trKeys.size + ' keys in both TR and EN');
+          "
+
+      - name: npm audit (production only, high+critical)
+        run: npm audit --production --audit-level=high
+        continue-on-error: true     # report-only — bağımlılık bug'ı PR'ı bloklamasın
