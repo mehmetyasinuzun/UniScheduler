@@ -4,188 +4,301 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UniScheduler — Super Admin</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Erken tema init — body render edilmeden data-theme set edilir
+         (light/dark "flash" önlenir). theme.js global API'yi de açar. -->
+    <script src="js/theme.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" crossorigin="anonymous">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div id="loginOverlay" class="login-overlay">
         <div class="login-box">
-            <h2>UniScheduler</h2>
-            <p>Super Admin Panel</p>
+            <h2 data-i18n="auth.title">UniScheduler</h2>
+            <p data-i18n="auth.subtitle">Süper Admin Paneli</p>
             <div id="loginError" class="login-error"></div>
             <form id="loginForm">
-                <div class="mb-3"><label class="form-label">Kullanici Adi</label><input type="text" class="form-control" id="loginUser" placeholder="superadmin" autocomplete="username"></div>
-                <div class="mb-3"><label class="form-label">Sifre</label><input type="password" class="form-control" id="loginPass" placeholder="********" autocomplete="current-password"></div>
-                <button type="submit" class="btn btn-primary w-100">Giris Yap</button>
+                <div class="mb-3">
+                    <label class="form-label" data-i18n="auth.username_label">Kullanıcı Adı</label>
+                    <input type="text" class="form-control" id="loginUser"
+                           data-i18n-attr="placeholder|auth.username_placeholder"
+                           autocomplete="username">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" data-i18n="auth.password_label">Şifre</label>
+                    <input type="password" class="form-control" id="loginPass"
+                           data-i18n-attr="placeholder|auth.password_placeholder"
+                           autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn btn-primary w-100" data-i18n="auth.login">Giriş Yap</button>
             </form>
         </div>
     </div>
 
     <div class="sidebar" id="appSidebar">
-        <div class="sidebar-header"><h2>UniScheduler</h2><small>Super Admin Panel</small></div>
-        <div class="section-title">Yonetim</div>
-        <a href="#" data-page="organizations" class="active" id="nav-organizations"><i class="bi bi-building"></i> Organizasyonlar</a>
-        <a href="#" data-page="admins" id="nav-admins"><i class="bi bi-people"></i> Admin Kullanicilar</a>
-        <div class="section-title">Veri</div>
-        <a href="#" data-page="dashboard" id="nav-dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
-        <a href="#" data-page="offerings" id="nav-offerings"><i class="bi bi-journal-text"></i> Acilan Dersler</a>
-        <div class="section-title">Program</div>
-        <a href="#" data-page="schedule" id="nav-schedule"><i class="bi bi-calendar-week"></i> Haftalik Cizelge</a>
-        <a href="#" data-page="availability" id="nav-availability"><i class="bi bi-calendar-check"></i> Musaitlik</a>
-        <div class="section-title">Izleme</div>
-        <a href="#" data-page="logs" id="nav-logs"><i class="bi bi-exclamation-triangle"></i> Hata Loglari</a>
-        <a href="#" data-page="security" id="nav-security"><i class="bi bi-shield-lock"></i> Giris Denemeleri</a>
-        <div class="sidebar-footer"><button class="btn btn-outline-danger btn-sm w-100" id="btnLogout"><i class="bi bi-box-arrow-left"></i> Cikis Yap</button></div>
+        <div class="sidebar-header">
+            <h2 data-i18n="auth.title">UniScheduler</h2>
+            <small data-i18n="auth.subtitle">Süper Admin Paneli</small>
+        </div>
+
+        <!-- Dil + tema seçici -->
+        <div class="sidebar-controls">
+            <select id="langSelect" aria-label="Language">
+                <option value="tr">TR</option>
+                <option value="en">EN</option>
+            </select>
+            <button id="themeToggle" type="button" title="Theme">
+                <i class="bi bi-circle-half"></i>
+            </button>
+        </div>
+
+        <div class="section-title" data-i18n="nav.management">Yönetim</div>
+        <a href="#" data-page="organizations" class="active" id="nav-organizations">
+            <i class="bi bi-building"></i> <span data-i18n="nav.organizations">Organizasyonlar</span>
+        </a>
+        <a href="#" data-page="admins" id="nav-admins">
+            <i class="bi bi-people"></i> <span data-i18n="nav.admins">Admin Kullanıcılar</span>
+        </a>
+
+        <div class="section-title" data-i18n="nav.data">Veri</div>
+        <a href="#" data-page="dashboard" id="nav-dashboard">
+            <i class="bi bi-speedometer2"></i> <span data-i18n="nav.dashboard">Dashboard</span>
+        </a>
+        <a href="#" data-page="offerings" id="nav-offerings">
+            <i class="bi bi-journal-text"></i> <span data-i18n="nav.offerings">Açılan Dersler</span>
+        </a>
+
+        <div class="section-title" data-i18n="nav.schedule">Program</div>
+        <a href="#" data-page="schedule" id="nav-schedule">
+            <i class="bi bi-calendar-week"></i> <span data-i18n="nav.weekly_schedule">Haftalık Çizelge</span>
+        </a>
+        <a href="#" data-page="availability" id="nav-availability">
+            <i class="bi bi-calendar-check"></i> <span data-i18n="nav.availability">Müsaitlik</span>
+        </a>
+
+        <div class="section-title" data-i18n="nav.monitoring">İzleme</div>
+        <a href="#" data-page="logs" id="nav-logs">
+            <i class="bi bi-exclamation-triangle"></i> <span data-i18n="nav.error_logs">Hata Logları</span>
+        </a>
+        <a href="#" data-page="security" id="nav-security">
+            <i class="bi bi-shield-lock"></i> <span data-i18n="nav.security">Giriş Denemeleri</span>
+        </a>
+
+        <div class="sidebar-footer">
+            <button class="btn btn-outline-danger btn-sm w-100" id="btnLogout">
+                <i class="bi bi-box-arrow-left"></i> <span data-i18n="auth.logout">Çıkış Yap</span>
+            </button>
+        </div>
     </div>
 
     <!-- Global sticky org selector — tüm sayfalarda aktif org buradan izlenir -->
     <div id="globalOrgBar" class="global-org-bar" style="display:none;">
         <i class="bi bi-building"></i>
-        <label for="globalOrg">Organizasyon:</label>
+        <label for="globalOrg" data-i18n="org.selector_label">Organizasyon:</label>
         <select id="globalOrg" class="form-select form-select-sm"></select>
     </div>
 
     <div class="main" id="appMain">
         <!-- Organizations -->
         <div id="page-organizations" class="page-content">
-            <div class="page-header"><div><h1 class="page-title">Organizasyonlar</h1><p class="page-subtitle">Universiteleri yonetin</p></div></div>
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title" data-i18n="org.page_title">Organizasyonlar</h1>
+                    <p class="page-subtitle" data-i18n="org.page_subtitle">Üniversiteleri yönetin</p>
+                </div>
+            </div>
             <div class="card">
-                <h3>Yeni Organizasyon Ekle</h3>
-                <!-- align-items-start so each column's label sits at the
-                     same Y; the help text under the code input no longer
-                     pushes the name field's input out of horizontal
-                     alignment. The submit button gets a top margin equal
-                     to the label height so it lines up with the inputs. -->
+                <h3 data-i18n="org.add_section">Yeni Organizasyon Ekle</h3>
                 <div class="row g-2 align-items-start">
                     <div class="col-md-5">
-                        <label class="form-label">Ad</label>
-                        <input type="text" class="form-control" id="orgName" placeholder="Marmara Üniversitesi">
+                        <label class="form-label" data-i18n="org.name_label">Ad</label>
+                        <input type="text" class="form-control" id="orgName"
+                               data-i18n-attr="placeholder|org.name_placeholder">
                     </div>
                     <div class="col-md-5">
-                        <label class="form-label">Kısa Kod</label>
-                        <input type="text" class="form-control" id="orgCode" placeholder="MARMARA" maxlength="20">
-                        <small class="text-muted d-block mt-1">2-20 karakter • büyük harf, rakam, _ ve -</small>
+                        <label class="form-label" data-i18n="org.code_label">Kısa Kod</label>
+                        <input type="text" class="form-control" id="orgCode"
+                               data-i18n-attr="placeholder|org.code_placeholder" maxlength="20">
+                        <small class="text-muted d-block mt-1" data-i18n="org.code_hint">2-20 karakter • büyük harf, rakam, _ ve -</small>
                     </div>
                     <div class="col-md-2 d-flex align-items-end" style="padding-top: 30px;">
-                        <button class="btn btn-primary w-100" id="btnAddOrg">Ekle</button>
+                        <button class="btn btn-primary w-100" id="btnAddOrg" data-i18n="common.add">Ekle</button>
                     </div>
                 </div>
                 <div id="orgAlert" class="mt-2"></div>
             </div>
-            <div class="card"><h3>Mevcut Organizasyonlar</h3><div id="orgList"><div class="loading">Yukleniyor...</div></div></div>
+            <div class="card">
+                <h3 data-i18n="org.list_title">Mevcut Organizasyonlar</h3>
+                <div id="orgList"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
+            </div>
         </div>
 
         <!-- Admins -->
         <div id="page-admins" class="page-content d-none">
-            <div class="page-header"><div><h1 class="page-title">Admin Kullanicilar</h1><p class="page-subtitle">Her organizasyon icin admin hesabi olusturun</p></div></div>
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title" data-i18n="admin.page_title">Admin Kullanıcılar</h1>
+                    <p class="page-subtitle" data-i18n="admin.page_subtitle">Her organizasyon için admin hesabı oluşturun</p>
+                </div>
+            </div>
             <div class="card">
-                <h3>Yeni Admin Olustur</h3>
+                <h3 data-i18n="admin.add_section">Yeni Admin Oluştur</h3>
                 <div class="row g-2 align-items-end">
-                    <div class="col-md-3"><label class="form-label">Organizasyon</label><select class="form-select" id="adminOrg" onchange="onOrgSelectChanged()"></select></div>
-                    <div class="col-md-3"><label class="form-label">Kullanici Adi</label><input type="text" class="form-control" id="adminUsername" placeholder="admin"></div>
-                    <div class="col-md-3"><label class="form-label">Sifre (min 6)</label><input type="text" class="form-control" id="adminPassword" placeholder="Admin123"></div>
-                    <div class="col-auto"><button class="btn btn-primary" id="btnAddAdmin">Olustur</button></div>
+                    <div class="col-md-3">
+                        <label class="form-label" data-i18n="admin.org_label">Organizasyon</label>
+                        <select class="form-select" id="adminOrg" onchange="onOrgSelectChanged()"></select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" data-i18n="admin.username_label">Kullanıcı Adı</label>
+                        <input type="text" class="form-control" id="adminUsername" data-i18n-attr="placeholder|admin.username_placeholder">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" data-i18n="admin.password_label">Şifre (min 6)</label>
+                        <input type="text" class="form-control" id="adminPassword" data-i18n-attr="placeholder|admin.password_placeholder">
+                    </div>
+                    <div class="col-auto"><button class="btn btn-primary" id="btnAddAdmin" data-i18n="admin.create_btn">Oluştur</button></div>
                 </div>
                 <div id="adminAlert" class="mt-2"></div>
             </div>
-            <div class="card"><h3>Tum Adminler</h3><div id="adminList"><div class="loading">Yukleniyor...</div></div></div>
+            <div class="card">
+                <h3 data-i18n="admin.list_title">Tüm Adminler</h3>
+                <div id="adminList"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
+            </div>
         </div>
 
         <!-- Dashboard -->
         <div id="page-dashboard" class="page-content d-none">
-            <div class="page-header"><div><h1 class="page-title">Dashboard</h1><p class="page-subtitle">Organizasyon verileri</p></div></div>
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title" data-i18n="dashboard.page_title">Dashboard</h1>
+                    <p class="page-subtitle" data-i18n="dashboard.page_subtitle">Organizasyon verileri</p>
+                </div>
+            </div>
             <select id="dashOrg" style="display:none;"></select>
             <div id="dashStats" class="stats-grid"></div>
             <div id="credentialBanner" style="display:none;"></div>
             <div class="accordion" id="dashAccordion">
                 <div class="accordion-item">
-                    <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accSettings"><i class="bi bi-gear me-2"></i>Kurum Ayarlari</button></h2>
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accSettings">
+                            <i class="bi bi-gear me-2"></i><span data-i18n="dashboard.settings_section">Kurum Ayarları</span>
+                        </button>
+                    </h2>
                     <div id="accSettings" class="accordion-collapse collapse" data-bs-parent="#dashAccordion">
                         <div class="accordion-body">
                             <div class="row g-2 align-items-end mb-3">
-                                <div class="col-md-3"><label class="form-label">Dilim Suresi (dk)</label><input type="number" class="form-control" id="setTimeStep" value="10" min="5" step="5"></div>
-                                <div class="col-md-3"><label class="form-label">Mesai Baslangic</label><input type="time" class="form-control" id="setDayStart" value="08:00"></div>
-                                <div class="col-md-3"><label class="form-label">Mesai Bitis</label><input type="time" class="form-control" id="setDayEnd" value="18:00"></div>
-                                <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnSaveSettings">Kaydet</button></div>
+                                <div class="col-md-3">
+                                    <label class="form-label" data-i18n="dashboard.time_step">Dilim Süresi (dk)</label>
+                                    <input type="number" class="form-control" id="setTimeStep" value="10" min="5" step="5">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label" data-i18n="dashboard.day_start">Mesai Başlangıç</label>
+                                    <input type="time" class="form-control" id="setDayStart" value="08:00">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label" data-i18n="dashboard.day_end">Mesai Bitiş</label>
+                                    <input type="time" class="form-control" id="setDayEnd" value="18:00">
+                                </div>
+                                <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnSaveSettings" data-i18n="common.save">Kaydet</button></div>
                             </div>
                             <div id="settingsAlert"></div>
                         </div>
                     </div>
                 </div>
                 <div class="accordion-item">
-                    <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accDepts"><i class="bi bi-diagram-3 me-2"></i>Bolumler <span class="acc-count" id="countDepts"></span></button></h2>
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accDepts">
+                            <i class="bi bi-diagram-3 me-2"></i><span data-i18n="dashboard.departments">Bölümler</span> <span class="acc-count" id="countDepts"></span>
+                        </button>
+                    </h2>
                     <div id="accDepts" class="accordion-collapse collapse" data-bs-parent="#dashAccordion">
                         <div class="accordion-body">
-                            <div class="row g-2 align-items-end mb-3"><div class="col-md-4"><input type="text" class="form-control" id="newDeptName" placeholder="Yeni bolum adi..."></div><div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddDept">Ekle</button></div></div>
+                            <div class="row g-2 align-items-end mb-3">
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control" id="newDeptName" data-i18n-attr="placeholder|dashboard.dept_placeholder">
+                                </div>
+                                <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddDept" data-i18n="common.add">Ekle</button></div>
+                            </div>
                             <div id="deptList"></div>
                         </div>
                     </div>
                 </div>
                 <div class="accordion-item">
-                    <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accLecturers"><i class="bi bi-person-badge me-2"></i>Akademisyenler <span class="acc-count" id="countLecs"></span></button></h2>
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accLecturers">
+                            <i class="bi bi-person-badge me-2"></i><span data-i18n="dashboard.lecturers">Akademisyenler</span> <span class="acc-count" id="countLecs"></span>
+                        </button>
+                    </h2>
                     <div id="accLecturers" class="accordion-collapse collapse" data-bs-parent="#dashAccordion">
                         <div class="accordion-body">
                             <div class="row g-2 align-items-end mb-3">
-                                <div class="col-md-2"><label class="form-label">Unvan</label><input type="text" class="form-control" id="lecTitle" placeholder="Prof. Dr."></div>
-                                <div class="col-md-2"><label class="form-label">Ad</label><input type="text" class="form-control" id="lecFirst"></div>
-                                <div class="col-md-2"><label class="form-label">Soyad</label><input type="text" class="form-control" id="lecLast"></div>
-                                <div class="col-md-3"><label class="form-label">E-posta</label><input type="email" class="form-control" id="lecEmail"></div>
-                                <div class="col-md-2"><label class="form-label">Bolum</label><select class="form-select" id="lecDept"></select></div>
-                                <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddLec">Ekle</button></div>
+                                <div class="col-md-2"><label class="form-label" data-i18n="dashboard.lec_title">Unvan</label><input type="text" class="form-control" id="lecTitle" data-i18n-attr="placeholder|dashboard.lec_title_placeholder"></div>
+                                <div class="col-md-2"><label class="form-label" data-i18n="dashboard.lec_first">Ad</label><input type="text" class="form-control" id="lecFirst"></div>
+                                <div class="col-md-2"><label class="form-label" data-i18n="dashboard.lec_last">Soyad</label><input type="text" class="form-control" id="lecLast"></div>
+                                <div class="col-md-3"><label class="form-label" data-i18n="dashboard.lec_email">E-posta</label><input type="email" class="form-control" id="lecEmail"></div>
+                                <div class="col-md-2"><label class="form-label" data-i18n="dashboard.lec_dept">Bölüm</label><select class="form-select" id="lecDept"></select></div>
+                                <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddLec" data-i18n="common.add">Ekle</button></div>
                             </div>
                             <div id="lecAlert" class="mt-2"></div>
                             <div class="d-flex gap-2 mb-3 flex-wrap">
-                                <label class="btn btn-outline-success btn-sm mb-0"><i class="bi bi-upload"></i> Excel Iceri <input type="file" accept=".xlsx,.xls" id="importLecturers" hidden></label>
-                                <button class="btn btn-outline-primary btn-sm" id="btnExportLecturers"><i class="bi bi-download"></i> Excel Disari</button>
-                                <button class="btn btn-outline-warning btn-sm" id="btnBulkReset"><i class="bi bi-key"></i> Tum Sifreleri Sifirla</button>
+                                <label class="btn btn-outline-success btn-sm mb-0"><i class="bi bi-upload"></i> <span data-i18n="dashboard.btn_excel_import">Excel İçeri</span> <input type="file" accept=".xlsx,.xls" id="importLecturers" hidden></label>
+                                <button class="btn btn-outline-primary btn-sm" id="btnExportLecturers"><i class="bi bi-download"></i> <span data-i18n="dashboard.btn_excel_export">Excel Dışarı</span></button>
+                                <button class="btn btn-outline-warning btn-sm" id="btnBulkReset"><i class="bi bi-key"></i> <span data-i18n="dashboard.btn_bulk_reset">Tüm Şifreleri Sıfırla</span></button>
                             </div>
                             <div id="importLecAlert"></div>
-                            <div id="lecturerList"><div class="loading">Yukleniyor...</div></div>
+                            <div id="lecturerList"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
                         </div>
                     </div>
                 </div>
                 <div class="accordion-item">
-                    <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accCourses"><i class="bi bi-book me-2"></i>Dersler <span class="acc-count" id="countCourses"></span></button></h2>
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accCourses">
+                            <i class="bi bi-book me-2"></i><span data-i18n="dashboard.courses">Dersler</span> <span class="acc-count" id="countCourses"></span>
+                        </button>
+                    </h2>
                     <div id="accCourses" class="accordion-collapse collapse" data-bs-parent="#dashAccordion">
                         <div class="accordion-body">
                             <div class="row g-2 align-items-end mb-3">
-                                <div class="col-md-2"><label class="form-label">Kod</label><input type="text" class="form-control" id="courseCode" placeholder="CS101"></div>
-                                <div class="col-md-3"><label class="form-label">Ad</label><input type="text" class="form-control" id="courseName"></div>
-                                <div class="col-md-2"><label class="form-label">Bolum</label><select class="form-select" id="courseDept"></select></div>
-                                <div class="col-md-1"><label class="form-label">Teori</label><input type="number" class="form-control" id="courseTheory" min="0" value="0"></div>
-                                <div class="col-md-1"><label class="form-label">Lab</label><input type="number" class="form-control" id="courseLab" min="0" value="0"></div>
-                                <div class="col-md-1"><label class="form-label">Kredi</label><input type="number" class="form-control" id="courseCredits" min="0" value="0"></div>
-                                <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddCourse">Ekle</button></div>
+                                <div class="col-md-2"><label class="form-label" data-i18n="dashboard.course_code">Kod</label><input type="text" class="form-control" id="courseCode" placeholder="CS101"></div>
+                                <div class="col-md-3"><label class="form-label" data-i18n="dashboard.course_name">Ad</label><input type="text" class="form-control" id="courseName"></div>
+                                <div class="col-md-2"><label class="form-label" data-i18n="dashboard.lec_dept">Bölüm</label><select class="form-select" id="courseDept"></select></div>
+                                <div class="col-md-1"><label class="form-label" data-i18n="dashboard.course_theory">Teori</label><input type="number" class="form-control" id="courseTheory" min="0" value="0"></div>
+                                <div class="col-md-1"><label class="form-label" data-i18n="dashboard.course_lab">Lab</label><input type="number" class="form-control" id="courseLab" min="0" value="0"></div>
+                                <div class="col-md-1"><label class="form-label" data-i18n="dashboard.course_credits">Kredi</label><input type="number" class="form-control" id="courseCredits" min="0" value="0"></div>
+                                <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddCourse" data-i18n="common.add">Ekle</button></div>
                             </div>
                             <div id="courseAlert" class="mt-2"></div>
                             <div class="d-flex gap-2 mb-3">
-                                <label class="btn btn-outline-success btn-sm mb-0"><i class="bi bi-upload"></i> Excel Iceri <input type="file" accept=".xlsx,.xls" id="importCourses" hidden></label>
-                                <button class="btn btn-outline-primary btn-sm" id="btnExportCourses"><i class="bi bi-download"></i> Excel Disari</button>
+                                <label class="btn btn-outline-success btn-sm mb-0"><i class="bi bi-upload"></i> <span data-i18n="dashboard.btn_excel_import">Excel İçeri</span> <input type="file" accept=".xlsx,.xls" id="importCourses" hidden></label>
+                                <button class="btn btn-outline-primary btn-sm" id="btnExportCourses"><i class="bi bi-download"></i> <span data-i18n="dashboard.btn_excel_export">Excel Dışarı</span></button>
                             </div>
                             <div id="importCourseAlert"></div>
-                            <div id="courseList"><div class="loading">Yukleniyor...</div></div>
+                            <div id="courseList"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
                         </div>
                     </div>
                 </div>
                 <div class="accordion-item">
-                    <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accClassrooms"><i class="bi bi-door-open me-2"></i>Siniflar <span class="acc-count" id="countClassrooms"></span></button></h2>
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accClassrooms">
+                            <i class="bi bi-door-open me-2"></i><span data-i18n="dashboard.classrooms">Sınıflar</span> <span class="acc-count" id="countClassrooms"></span>
+                        </button>
+                    </h2>
                     <div id="accClassrooms" class="accordion-collapse collapse" data-bs-parent="#dashAccordion">
                         <div class="accordion-body">
                             <div class="row g-2 align-items-end mb-3">
-                                <div class="col-md-2"><label class="form-label">Oda Kodu</label><input type="text" class="form-control" id="classroomCode" placeholder="A-101"></div>
-                                <div class="col-md-2"><label class="form-label">Kapasite</label><input type="number" class="form-control" id="classroomCapacity" min="1" value="30"></div>
-                                <div class="col-md-2"><label class="form-label">Tur</label><select class="form-select" id="classroomType"><option value="theory">Teori</option><option value="lab">Lab</option></select></div>
-                                <div class="col-md-2"><label class="form-label">Bolum</label><select class="form-select" id="classroomDept"></select></div>
-                                <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddClassroom">Ekle</button></div>
+                                <div class="col-md-2"><label class="form-label" data-i18n="dashboard.classroom_code">Oda Kodu</label><input type="text" class="form-control" id="classroomCode" placeholder="A-101"></div>
+                                <div class="col-md-2"><label class="form-label" data-i18n="dashboard.classroom_capacity">Kapasite</label><input type="number" class="form-control" id="classroomCapacity" min="1" value="30"></div>
+                                <div class="col-md-2"><label class="form-label" data-i18n="dashboard.classroom_type">Tür</label><select class="form-select" id="classroomType"><option value="theory" data-i18n="dashboard.type_theory">Teori</option><option value="lab" data-i18n="dashboard.type_lab">Lab</option></select></div>
+                                <div class="col-md-2"><label class="form-label" data-i18n="dashboard.lec_dept">Bölüm</label><select class="form-select" id="classroomDept"></select></div>
+                                <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddClassroom" data-i18n="common.add">Ekle</button></div>
                             </div>
                             <div id="classroomAlert" class="mt-2"></div>
                             <div class="d-flex gap-2 mb-3">
-                                <label class="btn btn-outline-success btn-sm mb-0"><i class="bi bi-upload"></i> Excel Iceri <input type="file" accept=".xlsx,.xls" id="importClassrooms" hidden></label>
-                                <button class="btn btn-outline-primary btn-sm" id="btnExportClassrooms"><i class="bi bi-download"></i> Excel Disari</button>
+                                <label class="btn btn-outline-success btn-sm mb-0"><i class="bi bi-upload"></i> <span data-i18n="dashboard.btn_excel_import">Excel İçeri</span> <input type="file" accept=".xlsx,.xls" id="importClassrooms" hidden></label>
+                                <button class="btn btn-outline-primary btn-sm" id="btnExportClassrooms"><i class="bi bi-download"></i> <span data-i18n="dashboard.btn_excel_export">Excel Dışarı</span></button>
                             </div>
                             <div id="importClassroomAlert"></div>
-                            <div id="classroomList"><div class="loading">Yukleniyor...</div></div>
+                            <div id="classroomList"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
                         </div>
                     </div>
                 </div>
@@ -194,43 +307,60 @@
 
         <!-- Offerings -->
         <div id="page-offerings" class="page-content d-none">
-            <div class="page-header"><div><h1 class="page-title">Acilan Dersler</h1><p class="page-subtitle">Donem icin acilan ders sube kayitlari</p></div></div>
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title" data-i18n="offering.page_title">Açılan Dersler</h1>
+                    <p class="page-subtitle" data-i18n="offering.page_subtitle">Dönem için açılan ders şube kayıtları</p>
+                </div>
+            </div>
             <select id="offOrg" style="display:none;"></select>
             <div class="card">
-                <h3>Yeni Ders Ac</h3>
+                <h3 data-i18n="offering.add_section">Yeni Ders Aç</h3>
                 <div class="row g-2 align-items-end">
-                    <div class="col-md-3"><label class="form-label">Ders</label><select class="form-select" id="offCourse"></select></div>
-                    <div class="col-md-2"><label class="form-label">Akademisyen</label><select class="form-select" id="offLecturer"><option value="">- Yok -</option></select></div>
-                    <div class="col-md-1"><label class="form-label">Sinif</label><input type="number" class="form-control" id="offYear" value="1" min="1" max="6"></div>
-                    <div class="col-md-1"><label class="form-label">Sube</label><input type="text" class="form-control" id="offSection" value="A"></div>
-                    <div class="col-md-1"><label class="form-label">Kont.</label><input type="number" class="form-control" id="offCapacity" value="40" min="1"></div>
-                    <div class="col-md-2"><label class="form-label">Donem</label><select class="form-select" id="offTerm"><option value="Fall">Guz</option><option value="Spring">Bahar</option><option value="Summer">Yaz</option></select></div>
-                    <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddOffering">Ac</button></div>
+                    <div class="col-md-3"><label class="form-label" data-i18n="offering.course">Ders</label><select class="form-select" id="offCourse"></select></div>
+                    <div class="col-md-2"><label class="form-label" data-i18n="offering.lecturer">Akademisyen</label><select class="form-select" id="offLecturer"><option value="">— —</option></select></div>
+                    <div class="col-md-1"><label class="form-label" data-i18n="offering.class_year">Sınıf</label><input type="number" class="form-control" id="offYear" value="1" min="1" max="6"></div>
+                    <div class="col-md-1"><label class="form-label" data-i18n="offering.section">Şube</label><input type="text" class="form-control" id="offSection" value="A"></div>
+                    <div class="col-md-1"><label class="form-label" data-i18n="offering.capacity">Kont.</label><input type="number" class="form-control" id="offCapacity" value="40" min="1"></div>
+                    <div class="col-md-2"><label class="form-label" data-i18n="offering.term">Dönem</label>
+                        <select class="form-select" id="offTerm">
+                            <option value="Fall" data-i18n="offering.term_fall">Güz</option>
+                            <option value="Spring" data-i18n="offering.term_spring">Bahar</option>
+                            <option value="Summer" data-i18n="offering.term_summer">Yaz</option>
+                        </select>
+                    </div>
+                    <div class="col-auto"><button class="btn btn-primary btn-sm" id="btnAddOffering" data-i18n="offering.open_btn">Aç</button></div>
                 </div>
                 <div id="offAlert" class="mt-2"></div>
             </div>
-            <div class="card"><h3>Acilan Dersler</h3><div id="offeringList"><div class="loading">Yukleniyor...</div></div></div>
+            <div class="card">
+                <h3 data-i18n="offering.list_title">Açılan Dersler</h3>
+                <div id="offeringList"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
+            </div>
         </div>
 
         <!-- Schedule - Weekly Grid -->
         <div id="page-schedule" class="page-content d-none">
             <div class="page-header">
-                <div><h1 class="page-title">Haftalik Cizelge</h1><p class="page-subtitle">Ders programi goruntule ve duzenle</p></div>
+                <div>
+                    <h1 class="page-title" data-i18n="schedule.page_title">Haftalık Çizelge</h1>
+                    <p class="page-subtitle" data-i18n="schedule.page_subtitle">Ders programı görüntüle ve düzenle</p>
+                </div>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-success btn-sm" id="btnAutoSchedule"><i class="bi bi-lightning"></i> Otomatik Olustur</button>
-                    <button class="btn btn-primary btn-sm" id="btnAddEntry"><i class="bi bi-plus-lg"></i> Manuel Ekle</button>
+                    <button class="btn btn-success btn-sm" id="btnAutoSchedule"><i class="bi bi-lightning"></i> <span data-i18n="schedule.btn_auto">Otomatik Oluştur</span></button>
+                    <button class="btn btn-primary btn-sm" id="btnAddEntry"><i class="bi bi-plus-lg"></i> <span data-i18n="schedule.btn_manual">Manuel Ekle</span></button>
                 </div>
             </div>
             <select id="schedOrg" style="display:none;"></select>
             <div class="org-selector">
-                <label class="ms-0">Hoca:</label>
-                <select class="form-select" id="filterLecturer" style="max-width:200px;"><option value="">Tumu</option></select>
-                <label class="ms-2">Bolum:</label>
-                <select class="form-select" id="filterDept" style="max-width:180px;"><option value="">Tumu</option></select>
-                <label class="ms-2">Derslik:</label>
-                <select class="form-select" id="filterClassroom" style="max-width:150px;"><option value="">Tumu</option></select>
-                <label class="ms-2">Yil:</label>
-                <select class="form-select" id="filterYear" style="max-width:100px;"><option value="">Tumu</option></select>
+                <label class="ms-0" data-i18n="schedule.filter_lecturer">Hoca:</label>
+                <select class="form-select" id="filterLecturer" style="max-width:200px;"><option value="" data-i18n="common.all">Tümü</option></select>
+                <label class="ms-2" data-i18n="schedule.filter_dept">Bölüm:</label>
+                <select class="form-select" id="filterDept" style="max-width:180px;"><option value="" data-i18n="common.all">Tümü</option></select>
+                <label class="ms-2" data-i18n="schedule.filter_room">Derslik:</label>
+                <select class="form-select" id="filterClassroom" style="max-width:150px;"><option value="" data-i18n="common.all">Tümü</option></select>
+                <label class="ms-2" data-i18n="schedule.filter_year">Yıl:</label>
+                <select class="form-select" id="filterYear" style="max-width:100px;"><option value="" data-i18n="common.all">Tümü</option></select>
             </div>
             <div id="schedStats" class="stats-grid"></div>
             <div class="weekly-grid-wrapper">
@@ -241,19 +371,25 @@
 
         <!-- Availability -->
         <div id="page-availability" class="page-content d-none">
-            <div class="page-header"><div><h1 class="page-title">Musaitlik Yonetimi</h1><p class="page-subtitle">Akademisyen mesgul saatlerini goruntule ve duzenle</p></div></div>
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title" data-i18n="avail.page_title">Müsaitlik Yönetimi</h1>
+                    <p class="page-subtitle" data-i18n="avail.page_subtitle">Akademisyen meşgul saatlerini görüntüle ve düzenle</p>
+                </div>
+            </div>
             <select id="availOrg" style="display:none;"></select>
             <div class="org-selector">
-                <label>Akademisyen:</label><select class="form-select" id="availLecturer" style="max-width:300px;"><option value="">- Secin -</option></select>
+                <label data-i18n="avail.lecturer_label">Akademisyen:</label>
+                <select class="form-select" id="availLecturer" style="max-width:300px;"><option value="" data-i18n="avail.select_lecturer">— Seçin —</option></select>
             </div>
             <div id="availabilityContent" style="display:none;">
                 <div class="card">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h3 class="mb-0">Haftalik Musaitlik</h3>
+                        <h3 class="mb-0" data-i18n="avail.weekly_title">Haftalık Müsaitlik</h3>
                         <div class="d-flex gap-3 align-items-center" style="font-size:12px;">
-                            <span><span class="legend-dot" style="background:#e8f5e9;border:1px solid #a5d6a7;"></span> Musait</span>
-                            <span><span class="legend-dot" style="background:#ffcdd2;border:1px solid #ef9a9a;"></span> Mesgul</span>
-                            <span><span class="legend-dot" style="background:#bbdefb;border:1px solid #90caf9;"></span> Dersi Var</span>
+                            <span><span class="legend-dot" style="background:#e8f5e9;border:1px solid #a5d6a7;"></span> <span data-i18n="avail.legend_free">Müsait</span></span>
+                            <span><span class="legend-dot" style="background:#ffcdd2;border:1px solid #ef9a9a;"></span> <span data-i18n="avail.legend_busy">Meşgul</span></span>
+                            <span><span class="legend-dot" style="background:#bbdefb;border:1px solid #90caf9;"></span> <span data-i18n="avail.legend_class">Dersi Var</span></span>
                         </div>
                     </div>
                     <div class="avail-grid-wrapper">
@@ -261,12 +397,20 @@
                     </div>
                 </div>
                 <div class="card">
-                    <h3>Manuel Mesgul Blok Ekle</h3>
+                    <h3 data-i18n="avail.add_block_title">Manuel Meşgul Blok Ekle</h3>
                     <div class="row g-2 align-items-end">
-                        <div class="col-md-3"><label class="form-label">Gun</label><select class="form-select" id="availDay"><option value="Monday">Pazartesi</option><option value="Tuesday">Sali</option><option value="Wednesday">Carsamba</option><option value="Thursday">Persembe</option><option value="Friday">Cuma</option></select></div>
-                        <div class="col-md-2"><label class="form-label">Baslangic</label><input type="time" class="form-control" id="availStart" value="09:00"></div>
-                        <div class="col-md-2"><label class="form-label">Bitis</label><input type="time" class="form-control" id="availEnd" value="17:00"></div>
-                        <div class="col-auto"><button class="btn btn-danger btn-sm" id="btnAddAvail"><i class="bi bi-plus"></i> Mesgul Isaretle</button></div>
+                        <div class="col-md-3"><label class="form-label" data-i18n="schedule.day">Gün</label>
+                            <select class="form-select" id="availDay">
+                                <option value="Monday" data-i18n="schedule.day_monday">Pazartesi</option>
+                                <option value="Tuesday" data-i18n="schedule.day_tuesday">Salı</option>
+                                <option value="Wednesday" data-i18n="schedule.day_wednesday">Çarşamba</option>
+                                <option value="Thursday" data-i18n="schedule.day_thursday">Perşembe</option>
+                                <option value="Friday" data-i18n="schedule.day_friday">Cuma</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2"><label class="form-label" data-i18n="schedule.start_time">Başlangıç</label><input type="time" class="form-control" id="availStart" value="09:00"></div>
+                        <div class="col-md-2"><label class="form-label" data-i18n="schedule.end_time">Bitiş</label><input type="time" class="form-control" id="availEnd" value="17:00"></div>
+                        <div class="col-auto"><button class="btn btn-danger btn-sm" id="btnAddAvail"><i class="bi bi-plus"></i> <span data-i18n="avail.mark_busy">Meşgul İşaretle</span></button></div>
                     </div>
                     <div id="availAlert" class="mt-2"></div>
                 </div>
@@ -275,139 +419,145 @@
 
         <!-- Error Logs -->
         <div id="page-logs" class="page-content d-none">
-            <div class="page-header"><div><h1 class="page-title">Hata Loglari</h1><p class="page-subtitle">Uygulama hata kayitlari — cihaz, kullanici ve detayli hata bilgisi</p></div></div>
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title" data-i18n="logs.page_title">Hata Logları</h1>
+                    <p class="page-subtitle" data-i18n="logs.page_subtitle">Uygulama hata kayıtları — cihaz, kullanıcı ve detaylı hata bilgisi</p>
+                </div>
+            </div>
             <select id="logOrg" style="display:none;"></select>
             <div class="org-selector">
-                <label>Org filtresi:</label>
-                <select class="form-select" id="logOrgFilter" style="max-width:260px;" onchange="document.getElementById('logOrg').value=this.value;loadErrorLogs()"><option value="">Tum Organizasyonlar</option></select>
-                <label class="ms-3">Kaynak:</label>
-                <select class="form-select" id="logSourceFilter" style="max-width:160px;" onchange="filterLogsBySource()"><option value="">Tumu</option><option value="WEB">Web Panel</option><option value="MOBILE">Mobil</option></select>
+                <label data-i18n="logs.org_filter">Org filtresi:</label>
+                <select class="form-select" id="logOrgFilter" style="max-width:260px;" onchange="document.getElementById('logOrg').value=this.value;loadErrorLogs()">
+                    <option value="" data-i18n="logs.all_orgs">Tüm Organizasyonlar</option>
+                </select>
+                <label class="ms-3" data-i18n="logs.source_filter">Kaynak:</label>
+                <select class="form-select" id="logSourceFilter" style="max-width:160px;" onchange="filterLogsBySource()">
+                    <option value="" data-i18n="common.all">Tümü</option>
+                    <option value="WEB" data-i18n="logs.source_web">Web Panel</option>
+                    <option value="MOBILE" data-i18n="logs.source_mobile">Mobil</option>
+                </select>
             </div>
             <div id="logStats" class="stats-grid mb-3"></div>
-            <div class="card"><h3>Son 200 Log</h3><div id="logList"><div class="loading">Yukleniyor...</div></div></div>
+            <div class="card">
+                <h3 data-i18n="logs.list_title">Son 200 Log</h3>
+                <div id="logList"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
+            </div>
         </div>
 
-        <!-- Security / threat-intel page (P3) -->
+        <!-- Security / threat-intel page -->
         <div id="page-security" class="page-content d-none">
             <div class="page-header">
                 <div>
-                    <h1 class="page-title">Giris Denemeleri (CTI)</h1>
-                    <p class="page-subtitle">Tum giris hareketleri — cihaz parmak izi, IP, kullanici, basari/basarisizlik</p>
+                    <h1 class="page-title" data-i18n="sec.page_title">Giriş Denemeleri (CTI)</h1>
+                    <p class="page-subtitle" data-i18n="sec.page_subtitle">Tüm giriş hareketleri — cihaz parmak izi, IP, kullanıcı, başarı/başarısızlık</p>
                 </div>
             </div>
 
             <div class="org-selector">
-                <label>Pencere:</label>
+                <label data-i18n="sec.window">Pencere:</label>
                 <select class="form-select" id="secWindow" style="max-width:160px;">
-                    <option value="1h">Son 1 saat</option>
-                    <option value="24h">Son 24 saat</option>
-                    <option value="7d" selected>Son 7 gun</option>
-                    <option value="30d">Son 30 gun</option>
+                    <option value="1h" data-i18n="sec.win_1h">Son 1 saat</option>
+                    <option value="24h" data-i18n="sec.win_24h">Son 24 saat</option>
+                    <option value="7d" selected data-i18n="sec.win_7d">Son 7 gün</option>
+                    <option value="30d" data-i18n="sec.win_30d">Son 30 gün</option>
                 </select>
-                <label class="ms-3">Kullanici:</label>
-                <input type="text" class="form-control" id="secUser" style="max-width:200px;" placeholder="(filtre - tum)">
+                <label class="ms-3" data-i18n="sec.user">Kullanıcı:</label>
+                <input type="text" class="form-control" id="secUser" style="max-width:200px;" data-i18n-attr="placeholder|sec.user_placeholder">
                 <label class="ms-3">
-                    <input type="checkbox" id="secOnlyFailed"> Sadece basarisiz
+                    <input type="checkbox" id="secOnlyFailed"> <span data-i18n="sec.only_failed">Sadece başarısız</span>
                 </label>
                 <button class="btn btn-sm btn-primary ms-3" id="btnSecRefresh">
-                    <i class="bi bi-arrow-clockwise"></i> Yenile
+                    <i class="bi bi-arrow-clockwise"></i> <span data-i18n="common.refresh">Yenile</span>
                 </button>
             </div>
 
-            <!-- Risk threshold tuning (analyst can adjust without redeploy) -->
             <div class="card">
                 <h3>
-                    <i class="bi bi-sliders"></i> Risk Eşikleri
-                    <small class="text-muted ms-2" style="font-size:0.8rem;font-weight:normal">
-                        Sadece izleme/skorlama icin — bloklama yok, sadece işaretleme
+                    <i class="bi bi-sliders"></i> <span data-i18n="sec.thresholds_title">Risk Eşikleri</span>
+                    <small class="text-muted ms-2" style="font-size:0.8rem;font-weight:normal" data-i18n="sec.thresholds_subtitle">
+                        Sadece izleme/skorlama için — bloklama yok, sadece işaretleme
                     </small>
                 </h3>
                 <div class="row g-2 align-items-end">
                     <div class="col-md-2">
-                        <label class="form-label" title="Risk skoru +20 (sari) eşiği">Sari (orta) — Basarisiz Sayisi</label>
+                        <label class="form-label" data-i18n="sec.yellow_fails">Sarı (orta) — Başarısız Sayısı</label>
                         <input type="number" class="form-control form-control-sm" id="thFailMid" value="5" min="1" max="50">
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label" title="Risk skoru +40 (kirmizi) eşiği">Kirmizi (yuksek) — Basarisiz Sayisi</label>
+                        <label class="form-label" data-i18n="sec.red_fails">Kırmızı (yüksek) — Başarısız Sayısı</label>
                         <input type="number" class="form-control form-control-sm" id="thFailHigh" value="10" min="1" max="100">
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label">Cihaz Basina Kullanici (sari)</label>
+                        <label class="form-label" data-i18n="sec.yellow_churn">Cihaz Başına Kullanıcı (sarı)</label>
                         <input type="number" class="form-control form-control-sm" id="thChurnMid" value="3" min="1" max="50">
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label">Cihaz Basina Kullanici (kirmizi)</label>
+                        <label class="form-label" data-i18n="sec.red_churn">Cihaz Başına Kullanıcı (kırmızı)</label>
                         <input type="number" class="form-control form-control-sm" id="thChurnHigh" value="5" min="1" max="100">
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label">Pencere (dakika)</label>
+                        <label class="form-label" data-i18n="sec.window_min">Pencere (dakika)</label>
                         <input type="number" class="form-control form-control-sm" id="thWindowMin" value="15" min="5" max="1440">
                     </div>
                     <div class="col-md-2 d-flex">
                         <button class="btn btn-sm btn-outline-secondary w-100" id="btnSecResetThresholds">
-                            <i class="bi bi-arrow-counterclockwise"></i> Varsayilana Don
+                            <i class="bi bi-arrow-counterclockwise"></i> <span data-i18n="sec.reset_defaults">Varsayılana Dön</span>
                         </button>
                     </div>
                 </div>
-                <small class="text-muted d-block mt-2">
-                    Değişiklikler "Yenile" tuşuna basildiğinda uygulanir. <strong>Bu sayfa sadece super admin tarafindan görulur</strong> — admin'lere acik değildir.
+                <small class="text-muted d-block mt-2" data-i18n-html="1" data-i18n="sec.changes_apply">
+                    Değişiklikler "Yenile" tuşuna basıldığında uygulanır. <strong>Bu sayfa sadece süper admin tarafından görülür</strong> — admin'lere açık değildir.
                 </small>
             </div>
 
-            <!-- Stats grid -->
             <div id="secStats" class="stats-grid mb-3"></div>
 
-            <!-- Hourly heatmap (Chart.js) -->
             <div class="card">
-                <h3><i class="bi bi-clock-history"></i> Saatlik Dağılım</h3>
-                <small class="text-muted d-block mb-2">
-                    Pencerede saat başına deneme sayısı (yeşil = başarılı, kırmızı = başarısız).
-                    Gece 02:00 — 05:00 zirvesi bot olasılığını yükseltir.
+                <h3><i class="bi bi-clock-history"></i> <span data-i18n="sec.hourly_dist">Saatlik Dağılım</span></h3>
+                <small class="text-muted d-block mb-2" data-i18n="sec.hourly_subtitle">
+                    Pencerede saat başına deneme sayısı (yeşil = başarılı, kırmızı = başarısız). Gece 02:00–05:00 zirvesi bot olasılığını yükseltir.
                 </small>
                 <canvas id="secHourlyChart" height="80"></canvas>
             </div>
 
-            <!-- Top threats -->
             <div class="row g-2">
                 <div class="col-md-4">
                     <div class="card">
-                        <h3>Saldiriya Ugrayan Kullanicilar</h3>
-                        <div id="secTopUsers"><div class="loading">Yukleniyor...</div></div>
+                        <h3 data-i18n="sec.top_users">Saldırıya Uğrayan Kullanıcılar</h3>
+                        <div id="secTopUsers"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="card">
-                        <h3>Supheli Cihazlar</h3>
-                        <small class="text-muted d-block mb-2">3+ farkli kullanici denemis ya da 3+ basarisiz giris</small>
-                        <div id="secSusDevices"><div class="loading">Yukleniyor...</div></div>
+                        <h3 data-i18n="sec.sus_devices">Şüpheli Cihazlar</h3>
+                        <small class="text-muted d-block mb-2" data-i18n="sec.sus_devices_hint">3+ farklı kullanıcı denemiş ya da 3+ başarısız giriş</small>
+                        <div id="secSusDevices"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="card">
-                        <h3>IP Yogunlugu</h3>
-                        <div id="secTopIps"><div class="loading">Yukleniyor...</div></div>
+                        <h3 data-i18n="sec.top_ips">IP Yoğunluğu</h3>
+                        <div id="secTopIps"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Detailed log -->
             <div class="card">
-                <h3>Tum Denemeler</h3>
-                <div id="secAttempts"><div class="loading">Yukleniyor...</div></div>
+                <h3 data-i18n="sec.all_attempts">Tüm Denemeler</h3>
+                <div id="secAttempts"><div class="loading" data-i18n="common.loading">Yükleniyor…</div></div>
             </div>
 
-            <!-- Bakım — eski log temizliği -->
             <div class="card">
-                <h3><i class="bi bi-trash3"></i> Veri Saklama</h3>
-                <small class="text-muted d-block mb-2">
-                    Eski giriş denemeleri otomatik olarak 24 saatte bir 90 günden eski kayıtları siler.
-                    Aşağıda manuel temizlik butonu — disk basıncı varsa kullanılabilir.
+                <h3><i class="bi bi-trash3"></i> <span data-i18n="sec.retention_title">Veri Saklama</span></h3>
+                <small class="text-muted d-block mb-2" data-i18n="sec.retention_hint">
+                    Eski giriş denemeleri otomatik olarak 24 saatte bir 90 günden eski kayıtları siler. Aşağıda manuel temizlik butonu — disk basıncı varsa kullanılabilir.
                 </small>
                 <div class="d-flex align-items-center gap-2">
-                    <label>Şu kadar günden eskileri sil:</label>
+                    <label data-i18n="sec.cleanup_days">Şu kadar günden eskileri sil:</label>
                     <input type="number" id="cleanupDays" class="form-control form-control-sm" style="max-width:100px" value="90" min="7" max="3650">
                     <button class="btn btn-sm btn-outline-danger" id="btnCleanupOld">
-                        <i class="bi bi-trash3"></i> Şimdi Temizle
+                        <i class="bi bi-trash3"></i> <span data-i18n="sec.cleanup_now">Şimdi Temizle</span>
                     </button>
                     <span id="cleanupResult" class="text-muted small"></span>
                 </div>
@@ -419,23 +569,31 @@
     <div class="modal fade" id="scheduleModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header"><h5 class="modal-title" id="schedModalTitle">Ders Ekle</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-header"><h5 class="modal-title" id="schedModalTitle" data-i18n="modal.schedule_add_title">Ders Ekle</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body">
-                    <div class="mb-2"><label class="form-label">Ders (Offering)</label><select class="form-select" id="seOffering"></select></div>
+                    <div class="mb-2"><label class="form-label" data-i18n="schedule.course_offering">Ders (Offering)</label><select class="form-select" id="seOffering"></select></div>
                     <div id="seOfferingInfo" class="mb-2" style="display:none;"></div>
-                    <div class="mb-2"><label class="form-label">Akademisyen</label><select class="form-select" id="seLecturer"><option value="">- Atanmamis -</option></select></div>
-                    <div class="mb-2"><label class="form-label">Derslik</label><select class="form-select" id="seClassroom"></select></div>
+                    <div class="mb-2"><label class="form-label" data-i18n="modal.lecturer_label">Akademisyen</label><select class="form-select" id="seLecturer"><option value="" data-i18n="offering.unassigned">— Atanmamış —</option></select></div>
+                    <div class="mb-2"><label class="form-label" data-i18n="schedule.classroom">Derslik</label><select class="form-select" id="seClassroom"></select></div>
                     <div class="row g-2 mb-2">
-                        <div class="col"><label class="form-label">Gun</label><select class="form-select" id="seDay"><option value="Monday">Pazartesi</option><option value="Tuesday">Sali</option><option value="Wednesday">Carsamba</option><option value="Thursday">Persembe</option><option value="Friday">Cuma</option></select></div>
-                        <div class="col"><label class="form-label">Baslangic</label><input type="time" class="form-control" id="seStart" value="09:00"></div>
-                        <div class="col"><label class="form-label">Bitis</label><input type="time" class="form-control" id="seEnd" value="12:00"></div>
+                        <div class="col"><label class="form-label" data-i18n="schedule.day">Gün</label>
+                            <select class="form-select" id="seDay">
+                                <option value="Monday" data-i18n="schedule.day_monday">Pazartesi</option>
+                                <option value="Tuesday" data-i18n="schedule.day_tuesday">Salı</option>
+                                <option value="Wednesday" data-i18n="schedule.day_wednesday">Çarşamba</option>
+                                <option value="Thursday" data-i18n="schedule.day_thursday">Perşembe</option>
+                                <option value="Friday" data-i18n="schedule.day_friday">Cuma</option>
+                            </select>
+                        </div>
+                        <div class="col"><label class="form-label" data-i18n="schedule.start_time">Başlangıç</label><input type="time" class="form-control" id="seStart" value="09:00"></div>
+                        <div class="col"><label class="form-label" data-i18n="schedule.end_time">Bitiş</label><input type="time" class="form-control" id="seEnd" value="12:00"></div>
                     </div>
                     <div id="seConflictWarning" style="display:none;"></div>
                     <div id="seAlert"></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Iptal</button>
-                    <button type="button" class="btn btn-primary" id="btnSaveEntry">Kaydet</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">İptal</button>
+                    <button type="button" class="btn btn-primary" id="btnSaveEntry" data-i18n="common.save">Kaydet</button>
                 </div>
             </div>
         </div>
@@ -445,39 +603,39 @@
     <div class="modal fade" id="autoScheduleModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header"><h5 class="modal-title"><i class="bi bi-lightning"></i> Otomatik Program Olustur</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-header"><h5 class="modal-title"><i class="bi bi-lightning"></i> <span data-i18n="auto.title">Otomatik Program Oluştur</span></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <div class="card mb-0">
-                                <h3>Ogrenci Yogunlugu</h3>
-                                <div class="form-check"><input class="form-check-input" type="radio" name="asCompact" id="asCompact" value="COMPACT" checked><label class="form-check-label" for="asCompact">Birlestir (arasiz/az aralikli)</label></div>
-                                <div class="form-check"><input class="form-check-input" type="radio" name="asCompact" id="asSpread" value="SPREAD"><label class="form-check-label" for="asSpread">Yay (gune dagit)</label></div>
-                                <div class="form-check"><input class="form-check-input" type="radio" name="asCompact" id="asNone" value="NONE"><label class="form-check-label" for="asNone">Tercih yok</label></div>
+                                <h3 data-i18n="auto.density_title">Öğrenci Yoğunluğu</h3>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="asCompact" id="asCompact" value="COMPACT" checked><label class="form-check-label" for="asCompact" data-i18n="auto.density_compact">Birleştir (arasız/az aralıklı)</label></div>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="asCompact" id="asSpread" value="SPREAD"><label class="form-check-label" for="asSpread" data-i18n="auto.density_spread">Yay (güne dağıt)</label></div>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="asCompact" id="asNone" value="NONE"><label class="form-check-label" for="asNone" data-i18n="auto.density_none">Tercih yok</label></div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="card mb-0">
-                                <h3>Tercihler</h3>
-                                <div class="mb-2"><label class="form-label" style="font-size:12px">Hoca Gunluk Max Ders</label><input type="number" class="form-control form-control-sm" id="asMaxDaily" value="0" min="0" max="10"><small class="text-muted">0 = sinirsiz</small></div>
-                                <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="asDayBalance" checked><label class="form-check-label" for="asDayBalance">Gun dengeleme</label></div>
+                                <h3 data-i18n="auto.prefs_title">Tercihler</h3>
+                                <div class="mb-2"><label class="form-label" style="font-size:12px" data-i18n="auto.max_daily">Hoca Günlük Max Ders</label><input type="number" class="form-control form-control-sm" id="asMaxDaily" value="0" min="0" max="10"><small class="text-muted" data-i18n="auto.max_daily_hint">0 = sınırsız</small></div>
+                                <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="asDayBalance" checked><label class="form-check-label" for="asDayBalance" data-i18n="auto.day_balance">Gün dengeleme</label></div>
                                 <div class="row g-2">
-                                    <div class="col"><label class="form-label" style="font-size:12px">Tercih Baslangic</label><input type="time" class="form-control form-control-sm" id="asPrefStart"></div>
-                                    <div class="col"><label class="form-label" style="font-size:12px">Tercih Bitis</label><input type="time" class="form-control form-control-sm" id="asPrefEnd"></div>
+                                    <div class="col"><label class="form-label" style="font-size:12px" data-i18n="auto.pref_start">Tercih Başlangıç</label><input type="time" class="form-control form-control-sm" id="asPrefStart"></div>
+                                    <div class="col"><label class="form-label" style="font-size:12px" data-i18n="auto.pref_end">Tercih Bitiş</label><input type="time" class="form-control form-control-sm" id="asPrefEnd"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="mt-3 mb-2">
-                        <label class="form-label" style="font-size:12px">Alternatif Sayisi: <strong id="asAltLabel">3</strong></label>
+                        <label class="form-label" style="font-size:12px"><span data-i18n="auto.alt_count">Alternatif Sayısı</span>: <strong id="asAltLabel">3</strong></label>
                         <input type="range" class="form-range" id="asAltCount" min="1" max="10" value="3">
                     </div>
                     <div id="asAlert"></div>
                     <div id="asResults" style="display:none;"></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-                    <button type="button" class="btn btn-success" id="btnRunAutoSchedule"><i class="bi bi-lightning"></i> Calistir</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.close">Kapat</button>
+                    <button type="button" class="btn btn-success" id="btnRunAutoSchedule"><i class="bi bi-lightning"></i> <span data-i18n="auto.run">Çalıştır</span></button>
                 </div>
             </div>
         </div>
@@ -487,12 +645,12 @@
     <div class="modal fade" id="entryDetailModal" tabindex="-1">
         <div class="modal-dialog modal-sm">
             <div class="modal-content">
-                <div class="modal-header"><h5 class="modal-title" id="entryDetailTitle">Ders Detayi</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-header"><h5 class="modal-title" id="entryDetailTitle" data-i18n="modal.entry_detail_title">Ders Detayı</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body" id="entryDetailBody"></div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-warning btn-sm" id="btnEditEntry"><i class="bi bi-pencil"></i> Duzenle</button>
-                    <button type="button" class="btn btn-danger btn-sm" id="btnDeleteEntry"><i class="bi bi-trash"></i> Sil</button>
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Kapat</button>
+                    <button type="button" class="btn btn-warning btn-sm" id="btnEditEntry"><i class="bi bi-pencil"></i> <span data-i18n="common.edit">Düzenle</span></button>
+                    <button type="button" class="btn btn-danger btn-sm" id="btnDeleteEntry"><i class="bi bi-trash"></i> <span data-i18n="common.delete">Sil</span></button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" data-i18n="common.close">Kapat</button>
                 </div>
             </div>
         </div>
@@ -502,15 +660,19 @@
     <div class="modal fade" id="editModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header"><h5 class="modal-title">Duzenle</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-header"><h5 class="modal-title" data-i18n="modal.edit_title">Düzenle</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body" id="editModalBody"></div>
-                <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Iptal</button><button type="button" class="btn btn-primary" id="btnSaveEdit">Kaydet</button></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">İptal</button>
+                    <button type="button" class="btn btn-primary" id="btnSaveEdit" data-i18n="common.save">Kaydet</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+    <script src="js/i18n.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

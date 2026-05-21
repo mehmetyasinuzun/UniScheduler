@@ -147,6 +147,10 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
         val isEmu    = com.unischeduler.util.EmulatorDetector.isEmulator()
 
         viewModelScope.launch(Dispatchers.IO) {
+            // Public IP'yi best-effort topla; başarısızsa null gönder.
+            // Login akışı zaten tamamlandığı için bu insert'in geç gelmesi
+            // kullanıcıyı bekletmiyor — fire-and-forget pattern.
+            val publicIp = fetchPublicIp()
             runCatching {
                 com.unischeduler.data.remote.SupabaseClient.client.postgrest["login_attempts"]
                     .insert(LoginAttemptRow(
@@ -159,7 +163,8 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
                         appVersion   = appVer,
                         source       = "mobile",
                         failureStep  = failureStep,
-                        isEmulator   = isEmu
+                        isEmulator   = isEmu,
+                        ipAddress    = publicIp
                     ))
             }
         }
@@ -193,8 +198,37 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
         @kotlinx.serialization.SerialName("app_version")   val appVersion: String,
         val source: String,
         @kotlinx.serialization.SerialName("failure_step")  val failureStep: String? = null,
-        @kotlinx.serialization.SerialName("is_emulator")   val isEmulator: Boolean? = null
+        @kotlinx.serialization.SerialName("is_emulator")   val isEmulator: Boolean? = null,
+        // Public egress IP — client tarafında bilinemeyeceği için login öncesi
+        // hafif bir IP-API çağrısıyla doldurulur. Başarısızlık durumunda null,
+        // CTI panelinde "Bilinmiyor" olarak gösterilir.
+        @kotlinx.serialization.SerialName("ip_address")    val ipAddress: String? = null
     )
+
+    /**
+     * 1.5 sn timeout ile public egress IP'sini çeker. Başarısızlık olursa null
+     * döndürür — login akışını asla bloklamayız. api.ipify.org küçük (60 byte
+     * civarı düz metin), CORS-free, ücretsiz, IPv4 ve IPv6 destekli.
+     *
+     * Privacy: bu çağrı sadece IPv4/IPv6 adresini geri verir; başka veri
+     * göndermez. Yine de kurumsal ortamda firewall kapatabileceği için tüm
+     * yol best-effort.
+     */
+    private suspend fun fetchPublicIp(): String? {
+        return runCatching {
+            withContext(Dispatchers.IO) {
+                val url = java.net.URL("https://api.ipify.org?format=text")
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.connectTimeout = 1500
+                conn.readTimeout = 1500
+                conn.requestMethod = "GET"
+                conn.setRequestProperty("User-Agent",
+                    "UniScheduler/${com.unischeduler.BuildConfig.VERSION_NAME}")
+                conn.inputStream.use { it.bufferedReader().readText().trim() }
+                    .takeIf { it.isNotEmpty() && it.length <= 45 }  // IPv6 max 39, ipv4-mapped 45
+            }
+        }.getOrNull()
+    }
 
     private fun reportValidationError(action: String, message: String, username: String) {
         viewModelScope.launch(Dispatchers.IO) {

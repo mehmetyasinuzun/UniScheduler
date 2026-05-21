@@ -387,7 +387,41 @@ setInterval(()=>{const grid=document.getElementById('weeklyGrid');if(!grid||!gri
 window.addEventListener('error',e=>{sendPanelLog('window','error',e.message||(e.error&&e.error.message)||'Unknown error',e.error&&e.error.stack)});
 window.addEventListener('unhandledrejection',e=>{const r=e.reason;const msg=r instanceof Error?r.message:String(r);const stk=r instanceof Error?r.stack:null;sendPanelLog('window','unhandledrejection',msg,stk)});
 
+// i18n + theme helper'ları erken erişim için window'a expose edildi (theme.js + i18n.js).
+// `tt(key, vars)` — t() yüklenmediyse fallback olarak key'i döndürür; yeniden-render
+// gerektirmeyen runtime mesajlarda kullanılır.
+function tt(key, vars){ try { return (window.t ? window.t(key, vars) : key); } catch(_) { return key; } }
+
 document.addEventListener('DOMContentLoaded',()=>{
+// Dil seçici — kayıtlı tercihe göre dropdown ayarla, değişince i18n.setLang çağır.
+(function wireLangSelector(){
+    const sel = document.getElementById('langSelect');
+    if (!sel) return;
+    const current = (localStorage.getItem('panelLang') ||
+                     (navigator.language||'').toLowerCase().startsWith('tr') ? 'tr' : 'en');
+    sel.value = current;
+    sel.addEventListener('change', () => { if (window.setLang) window.setLang(sel.value); });
+})();
+// Tema toggle — 3 modlu: light → dark → system → light ...
+(function wireThemeToggle(){
+    const btn = document.getElementById('themeToggle');
+    if (!btn) return;
+    const icons = { light: 'bi-sun', dark: 'bi-moon-stars', system: 'bi-circle-half' };
+    function refresh() {
+        const pref = (window.getThemePreference && window.getThemePreference()) || 'system';
+        btn.innerHTML = `<i class="bi ${icons[pref]||icons.system}"></i>`;
+        btn.title = (pref === 'light' ? 'Light' : pref === 'dark' ? 'Dark' : 'System');
+    }
+    refresh();
+    btn.addEventListener('click', () => {
+        const order = ['light','dark','system'];
+        const cur = (window.getThemePreference && window.getThemePreference()) || 'system';
+        const next = order[(order.indexOf(cur) + 1) % order.length];
+        if (window.setTheme) window.setTheme(next);
+        refresh();
+    });
+})();
+
 document.getElementById('loginForm').addEventListener('submit',e=>{e.preventDefault();doLogin()});
 document.getElementById('btnLogout').addEventListener('click',doLogout);
 document.querySelectorAll('.sidebar a[data-page]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();showPage(a.getAttribute('data-page'))}));
@@ -437,14 +471,14 @@ document.getElementById('btnBulkReset').addEventListener('click',bulkResetPasswo
 document.getElementById('importLecturers').addEventListener('change',e=>{if(e.target.files[0])importExcel('lecturers',e.target.files[0],'importLecAlert');e.target.value=''});
 document.getElementById('importCourses').addEventListener('change',e=>{if(e.target.files[0])importExcel('courses',e.target.files[0],'importCourseAlert');e.target.value=''});
 document.getElementById('importClassrooms').addEventListener('change',e=>{if(e.target.files[0])importExcel('classrooms',e.target.files[0],'importClassroomAlert');e.target.value=''});
-document.getElementById('btnAddEntry').addEventListener('click',()=>{editingEntryId=null;document.getElementById('schedModalTitle').textContent='Ders Ekle';document.getElementById('seAlert').innerHTML='';document.getElementById('seConflictWarning').style.display='none';new bootstrap.Modal(document.getElementById('scheduleModal')).show()});
+document.getElementById('btnAddEntry').addEventListener('click',()=>{editingEntryId=null;document.getElementById('schedModalTitle').textContent=tt('modal.schedule_add_title');document.getElementById('seAlert').innerHTML='';document.getElementById('seConflictWarning').style.display='none';new bootstrap.Modal(document.getElementById('scheduleModal')).show()});
 document.getElementById('btnSaveEntry').addEventListener('click',saveScheduleEntry);
 document.getElementById('seOffering').addEventListener('change',onOfferingChange);
 document.getElementById('btnAutoSchedule').addEventListener('click',()=>{document.getElementById('asAlert').innerHTML='';document.getElementById('asResults').style.display='none';new bootstrap.Modal(document.getElementById('autoScheduleModal')).show()});
 document.getElementById('btnRunAutoSchedule').addEventListener('click',runAutoSchedule);
 document.getElementById('asAltCount').addEventListener('input',()=>{document.getElementById('asAltLabel').textContent=document.getElementById('asAltCount').value});
-document.getElementById('btnEditEntry').addEventListener('click',()=>{if(!currentDetailEntry)return;bootstrap.Modal.getInstance(document.getElementById('entryDetailModal')).hide();editingEntryId=currentDetailEntry.id;document.getElementById('schedModalTitle').textContent='Ders Duzenle';document.getElementById('seOffering').value=currentDetailEntry.offering_id;onOfferingChange();if(currentDetailEntry.lecturer_id)document.getElementById('seLecturer').value=currentDetailEntry.lecturer_id;if(currentDetailEntry.classroom_id)document.getElementById('seClassroom').value=currentDetailEntry.classroom_id;document.getElementById('seDay').value=currentDetailEntry.day;document.getElementById('seStart').value=currentDetailEntry.start_time;document.getElementById('seEnd').value=currentDetailEntry.end_time;new bootstrap.Modal(document.getElementById('scheduleModal')).show()});
-document.getElementById('btnDeleteEntry').addEventListener('click',()=>{if(!currentDetailEntry)return;if(!confirm('Bu kaydi silmek istediginize emin misiniz?'))return;bootstrap.Modal.getInstance(document.getElementById('entryDetailModal')).hide();deleteScheduleEntry(currentDetailEntry.id)});
+document.getElementById('btnEditEntry').addEventListener('click',()=>{if(!currentDetailEntry)return;bootstrap.Modal.getInstance(document.getElementById('entryDetailModal')).hide();editingEntryId=currentDetailEntry.id;document.getElementById('schedModalTitle').textContent=tt('modal.schedule_edit_title');document.getElementById('seOffering').value=currentDetailEntry.offering_id;onOfferingChange();if(currentDetailEntry.lecturer_id)document.getElementById('seLecturer').value=currentDetailEntry.lecturer_id;if(currentDetailEntry.classroom_id)document.getElementById('seClassroom').value=currentDetailEntry.classroom_id;document.getElementById('seDay').value=currentDetailEntry.day;document.getElementById('seStart').value=currentDetailEntry.start_time;document.getElementById('seEnd').value=currentDetailEntry.end_time;new bootstrap.Modal(document.getElementById('scheduleModal')).show()});
+document.getElementById('btnDeleteEntry').addEventListener('click',()=>{if(!currentDetailEntry)return;if(!confirm(tt('schedule.delete_confirm')))return;bootstrap.Modal.getInstance(document.getElementById('entryDetailModal')).hide();deleteScheduleEntry(currentDetailEntry.id)});
 
 document.addEventListener('click',e=>{let btn;
 if((btn=e.target.closest('.btn-del-org')))deleteOrg(btn.dataset.id);

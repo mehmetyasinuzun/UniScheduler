@@ -43,7 +43,42 @@ function normalizeIp(raw) {
     return ip || null;
 }
 
-app.use(helmet({ contentSecurityPolicy: false }));
+// Helmet — production-grade güvenlik header'ları.
+//   - HSTS açık (1 yıl + includeSubDomains): HTTPS'i zorla
+//   - frameguard deny: iframe içine gömülmeyi engelle (clickjacking)
+//   - noSniff: Content-Type override'larını engelle
+//   - referrerPolicy: cross-site request'lerde URL detay sızdırma
+//   - CSP: CDN bağımlılığı + inline event handler'lar nedeniyle gevşek tutuldu;
+//     production'a self-host'lu Bootstrap/Chart.js ile geçince nonce-based CSP
+//     ekleneb ilir. Şimdi default-src 'self' + cdn.jsdelivr.net allowlist.
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "'unsafe-inline'"],
+            styleSrc:  ["'self'", "https://cdn.jsdelivr.net", "'unsafe-inline'"],
+            fontSrc:   ["'self'", "https://cdn.jsdelivr.net", "data:"],
+            imgSrc:    ["'self'", "data:", "blob:"],
+            connectSrc:["'self'"],
+            objectSrc: ["'none'"],
+            frameAncestors: ["'none'"],
+            baseUri: ["'self'"],
+            formAction: ["'self'"]
+        }
+    },
+    hsts: { maxAge: 31536000, includeSubDomains: true, preload: false },
+    frameguard: { action: 'deny' },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    crossOriginEmbedderPolicy: false,    // Chart.js canvas için
+    crossOriginResourcePolicy: { policy: 'same-site' }
+}));
+
+// Explicit ek header'lar — Helmet default'larını destekler.
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+    next();
+});
 
 // CORS: in production, only allow explicit origins (ALLOWED_ORIGINS env).
 // In dev, allow everything for convenience.
