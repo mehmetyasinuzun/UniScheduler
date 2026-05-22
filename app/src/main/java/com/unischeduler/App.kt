@@ -7,6 +7,9 @@ import androidx.core.os.LocaleListCompat
 import com.unischeduler.notif.NotificationHelper
 import com.unischeduler.notif.ReminderScheduler
 import com.unischeduler.util.CrashHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 class App : Application() {
 
@@ -85,5 +88,19 @@ class App : Application() {
         const val KEY_THEME_MODE = "theme_mode"
         const val KEY_LANGUAGE = "language_pref"
         const val KEY_SCHEMA_VERSION = "schema_version"
+
+        // Process-wide scope that OUTLIVES Activity/Fragment/ViewModel lifecycles.
+        // Use ONLY for fire-and-forget side effects whose completion the user
+        // must not wait for AND that must not be killed if the screen that
+        // triggered them gets destroyed.
+        //
+        // Concrete case: CTI login_attempts insert. We trigger it from
+        // LoginViewModel.onSuccess, but the very next line Fragment navigates
+        // away → viewModelScope cancels → the IO call is killed before reaching
+        // the network. An app-scoped supervisor survives that navigation.
+        //
+        // SupervisorJob: a failure in one child does NOT cancel siblings.
+        // Dispatchers.IO: network/disk friendly, doesn't block the main thread.
+        val applicationScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     }
 }

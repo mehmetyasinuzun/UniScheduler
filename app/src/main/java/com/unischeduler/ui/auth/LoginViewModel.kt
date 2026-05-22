@@ -168,12 +168,17 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
         val ua       = "UniScheduler/$appVer (Android ${android.os.Build.VERSION.RELEASE})"
         val isEmu    = com.unischeduler.util.EmulatorDetector.isEmulator()
 
-        viewModelScope.launch(Dispatchers.IO) {
+        // CRITICAL: use applicationScope, NOT viewModelScope.
+        // LoginFragment is fragment-scoped and navigates away the instant
+        // UiState.Success is emitted; viewModelScope gets cancelled and the
+        // insert dies before reaching the network. applicationScope survives
+        // navigation and process-binds the work to the Application lifecycle.
+        com.unischeduler.App.applicationScope.launch {
             // Public IP'yi best-effort topla; başarısızsa null gönder.
             // Login akışı zaten tamamlandığı için bu insert'in geç gelmesi
             // kullanıcıyı bekletmiyor — fire-and-forget pattern.
             val publicIp = fetchPublicIp()
-            runCatching {
+            try {
                 com.unischeduler.data.remote.SupabaseClient.client.postgrest["login_attempts"]
                     .insert(LoginAttemptRow(
                         username     = username,
@@ -188,6 +193,33 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
                         isEmulator   = isEmu,
                         ipAddress    = publicIp
                     ))
+                android.util.Log.d(
+                    "LoginVM",
+                    "login_attempt logged — username=$username, succeeded=$succeeded, " +
+                    "ip=${publicIp ?: "(null)"}"
+                )
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                throw ce
+            } catch (e: Throwable) {
+                // We used to silently swallow this with runCatching {} which
+                // is exactly what kept the CTI dashboard empty for weeks:
+                // any RLS denial / network blip / serialization mismatch was
+                // invisible. Now Logcat sees it AND ErrorReporter persists it
+                // so the admin can see auth-audit failures alongside other
+                // client errors.
+                android.util.Log.e(
+                    "LoginVM",
+                    "login_attempt insert failed (succeeded=$succeeded): ${e.javaClass.simpleName}: ${e.message}",
+                    e
+                )
+                runCatching {
+                    errorReporter.reportException(
+                        "LoginViewModel",
+                        "recordLoginAttempt.insert(succeeded=$succeeded)",
+                        e,
+                        usernameOverride = username
+                    )
+                }
             }
         }
     }
