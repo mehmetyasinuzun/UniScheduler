@@ -115,15 +115,65 @@ erDiagram
     lecturers ||--o{ schedule_entries : "teaches in"
     lecturers ||--o{ lecturer_availability : "blocks time"
 
-    organizations { int id PK; text name; text code }
-    users { uuid id PK; int org_id FK; text username; text role; bool must_change_password }
-    departments { int id PK; int org_id FK; text name }
-    lecturers { int id PK; uuid user_id FK; text first_name; text last_name; int department_id FK }
-    courses { int id PK; text code; text name; int theory_hours; int lab_hours; int credits }
-    classrooms { int id PK; text room_code; int capacity; text type }
-    offerings { int id PK; int course_id FK; int lecturer_id FK; text academic_year; text term }
-    schedule_entries { int id PK; int offering_id FK; int classroom_id FK; text day; text start_time }
-    lecturer_availability { int id PK; int lecturer_id FK; text day; text start_time; text end_time }
+    organizations {
+        int id PK
+        text name
+        text code
+    }
+    users {
+        uuid id PK
+        int org_id FK
+        text username
+        text role
+        bool must_change_password
+    }
+    departments {
+        int id PK
+        int org_id FK
+        text name
+    }
+    lecturers {
+        int id PK
+        uuid user_id FK
+        text first_name
+        text last_name
+        int department_id FK
+    }
+    courses {
+        int id PK
+        text code
+        text name
+        int theory_hours
+        int lab_hours
+        int credits
+    }
+    classrooms {
+        int id PK
+        text room_code
+        int capacity
+        text type
+    }
+    offerings {
+        int id PK
+        int course_id FK
+        int lecturer_id FK
+        text academic_year
+        text term
+    }
+    schedule_entries {
+        int id PK
+        int offering_id FK
+        int classroom_id FK
+        text day
+        text start_time
+    }
+    lecturer_availability {
+        int id PK
+        int lecturer_id FK
+        text day
+        text start_time
+        text end_time
+    }
 ```
 
 **Diğer 4 tablo** (gözlemlenebilirlik): `audit_log`, `login_attempts`, `client_error_logs`, `super_admins`.
@@ -199,7 +249,7 @@ flowchart LR
     I --> J[5 alternatif sonuç<br/>seed-based varyasyon]
 
     J --> K{"Admin onaylar mı?"}
-    K -->|"Evet"| L[INSERT schedule_entries<br/>(toplu)]
+    K -->|"Evet"| L["INSERT schedule_entries — toplu"]
     K -->|"Hayır, alternatif seç"| J
 ```
 
