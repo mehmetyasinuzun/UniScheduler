@@ -57,6 +57,21 @@ class MainActivity : AppCompatActivity() {
             session.clear()
         }
 
+        // Session sağlık kontrolü — eski APK'dan kalan yarı yazılı session
+        // (userId var ama orgId yok / role boş / lecturerId eksik) varsa
+        // temizle ve kullanıcıyı login'e yönlendir. Yoksa LecturerHome'da
+        // "Bu hesap bir kuruma bağlı değil", PDF export'ta "Aktif oturum
+        // bulunamadı" gibi hayalet hatalar yaşanıyordu.
+        if (session.isLoggedIn && !session.isHealthy()) {
+            android.util.Log.w(
+                "MainActivity",
+                "Unhealthy session detected — clearing. " +
+                "userId='${session.userId.take(8)}…' orgId=${session.orgId} " +
+                "role='${session.role}' lecturerId=${session.lecturerId}"
+            )
+            session.clear()
+        }
+
         val navHost = supportFragmentManager
             .findFragmentById(R.id.navHostFragment) as NavHostFragment
         navController = navHost.navController

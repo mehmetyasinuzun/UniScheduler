@@ -278,7 +278,16 @@ class LecturerHomeFragment : Fragment() {
         val session = SessionManager(ctx)
         val orgId = session.orgId
         val lecturerId = session.lecturerId
-        if (orgId <= 0 || lecturerId <= 0) error("Aktif oturum bulunamadı")
+        if (orgId <= 0 || lecturerId <= 0) {
+            // Bozuk session — health check de fail eder. Kullanıcıya
+            // net mesaj ver, "çıkış yapıp tekrar gir" diye yönlendir.
+            // MainActivity.onCreate sonraki açılışta otomatik temizleyecek
+            // ama burada anında bilgilendirme.
+            error(
+                "Oturum bilgileri eksik veya bozuk (orgId=$orgId, lecturerId=$lecturerId). " +
+                "Lütfen sağ alttan Çıkış Yap ve tekrar giriş yapın."
+            )
+        }
 
         val scheduleRepo  = ScheduleRepository()
         val settingsRepo  = OrgSettingsRepository()

@@ -74,6 +74,29 @@ class SessionManager(context: Context) {
     val isLecturer: Boolean get() = role == "lecturer"
 
     /**
+     * Session'ın **tutarlı** durumda olup olmadığını kontrol eder.
+     *
+     * Geçmişte 5 ayrı `apply()` çağrısı kullanılıyordu; bir tanesi fail olursa
+     * "userId var ama role boş" gibi yarı yazılı state kalıyordu. Bu hâl:
+     *   • Bottom nav görünmüyor (isLecturer/isAdmin false döner)
+     *   • LecturerHome "Bu hesap bir kuruma bağlı değil" hatası verir
+     *   • Export butonları "Aktif oturum bulunamadı" der
+     *
+     * MainActivity bunu açılışta kontrol edip, sağlıksızsa otomatik logout
+     * yapar — kullanıcı temiz login akışına döner.
+     *
+     * Atomic `saveSession()` yarı yazımı engelliyor; bu fonksiyon eski APK
+     * sürümünden migrate olan cihazlar için defansif katman.
+     */
+    fun isHealthy(): Boolean {
+        if (!isLoggedIn) return false                          // userId boş → "logged out" sayılır
+        if (orgId <= 0) return false                           // org bağı yok
+        if (role != "admin" && role != "lecturer") return false  // rol tanınmıyor
+        if (isLecturer && lecturerId <= 0) return false        // lecturer ama profil ID yok
+        return true
+    }
+
+    /**
      * Tüm session alanlarını TEK transaction içinde + synchronous (`commit`)
      * yazar. Önceki implementasyon her alan için ayrı `apply()` çağırıyordu;
      * 5 ayrı asenkron transaction'dan biri fail olursa session "yarı yazılı"
