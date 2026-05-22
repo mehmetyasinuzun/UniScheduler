@@ -73,6 +73,31 @@ class SessionManager(context: Context) {
     val isAdmin: Boolean    get() = role == "admin"
     val isLecturer: Boolean get() = role == "lecturer"
 
+    /**
+     * Tüm session alanlarını TEK transaction içinde + synchronous (`commit`)
+     * yazar. Önceki implementasyon her alan için ayrı `apply()` çağırıyordu;
+     * 5 ayrı asenkron transaction'dan biri fail olursa session "yarı yazılı"
+     * kalıyor (örn. orgId yazılmış ama role boş — bottom nav görünmez).
+     *
+     * @return commit başarılı mı? false ise pref write fail (disk dolu,
+     *         keystore hatası vb.) — caller'ın login'i abort etmesi gerekir.
+     */
+    fun saveSession(
+        userId: String,
+        orgId: Int,
+        username: String,
+        role: String,
+        lecturerId: Int
+    ): Boolean {
+        return prefs.edit()
+            .putString(KEY_USER_ID, userId)
+            .putInt(KEY_ORG_ID, orgId)
+            .putString(KEY_USERNAME, username)
+            .putString(KEY_ROLE, role)
+            .putInt(KEY_LECTURER_ID, lecturerId)
+            .commit()  // synchronous + atomic
+    }
+
     fun clear() = prefs.edit().clear().apply()
 
     companion object {

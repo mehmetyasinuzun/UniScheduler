@@ -86,12 +86,34 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
                     } else null
 
                     attemptStep = "persistSession"
-                    // 4. Save session
-                    session.userId     = user.id
-                    session.orgId      = orgId
-                    session.username   = user.username
-                    session.role       = user.role
-                    session.lecturerId = lecturer?.id ?: -1
+                    // 4. Save session — TEK atomic commit içinde.
+                    //    Önceki implementasyon her alan için ayrı apply()
+                    //    çağırıyordu; biri fail olursa session yarı yazılı
+                    //    kalıyordu (orgId yazılmış, role boş gibi → bottom
+                    //    nav görünmez + sonraki load'da "Bu hesap bir
+                    //    kuruma bağlı değil" hatası). saveSession() atomic.
+                    val saved = session.saveSession(
+                        userId = user.id,
+                        orgId = orgId,
+                        username = user.username,
+                        role = user.role,
+                        lecturerId = lecturer?.id ?: -1
+                    )
+                    if (!saved) {
+                        throw IllegalStateException(
+                            "Oturum bilgileri cihaza yazılamadı. " +
+                            "Cihaz depolaması dolu olabilir veya güvenli " +
+                            "anahtar deposu erişilemez durumda — uygulamayı " +
+                            "yeniden başlatın ya da cache temizleyin."
+                        )
+                    }
+
+                    // Diagnostic — Logcat: adb logcat | grep "LoginVM"
+                    android.util.Log.d(
+                        "LoginVM",
+                        "Session persisted — orgId=$orgId, role='${user.role}', " +
+                        "lecturerId=${lecturer?.id ?: -1}, userId=${user.id.take(8)}…"
+                    )
 
                     LoginResult(role = user.role, mustChangePassword = user.mustChangePassword)
                 }

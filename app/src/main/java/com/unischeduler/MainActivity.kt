@@ -104,6 +104,15 @@ class MainActivity : AppCompatActivity() {
     /** Called on every destination change and after login/logout.
      *  Wires setupWithNavController exactly once per role per lifecycle. */
     private fun ensureNavSetup() {
+        // Diagnostic — session.role bazen tema/dil değişimi sonrası boş kalıyor
+        // gibi davranıyordu; Logcat'te bunu doğrulamak için. Filter:
+        // adb logcat | grep "MainActivity.nav"
+        android.util.Log.d(
+            "MainActivity.nav",
+            "ensureNavSetup — loggedIn=${session.isLoggedIn} role='${session.role}' " +
+            "isAdmin=${session.isAdmin} isLecturer=${session.isLecturer} " +
+            "adminReady=$adminNavReady lecturerReady=$lecturerNavReady"
+        )
         if (session.isAdmin && !adminNavReady) {
             binding.bottomNavAdmin.setupWithNavController(navController)
             adminNavReady = true
@@ -115,6 +124,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateNavVisibility(isAuthScreen: Boolean) {
+        // Defensive: visibility hesaplamadan önce nav setup'ı bir kez daha
+        // garantile. session.role login akışında apply() ile yazılıyor; nadir
+        // bir senaryoda destination listener buradan ÖNCE tetiklenirse role
+        // henüz okunmamış olabilir. ensureNavSetup idempotent — zaten ready
+        // olanları atlar.
+        ensureNavSetup()
         binding.bottomNavAdmin.visibility    = if (!isAuthScreen && session.isAdmin)    View.VISIBLE else View.GONE
         binding.bottomNavLecturer.visibility = if (!isAuthScreen && session.isLecturer) View.VISIBLE else View.GONE
     }

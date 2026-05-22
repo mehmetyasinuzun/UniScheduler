@@ -75,6 +75,10 @@ class AdminHomeFragment : Fragment() {
                 is UiState.Error   -> {
                     binding.swipeRefresh.isRefreshing = false
                     showError(state.message, state.retryable)
+                    // Stale data ile hata mesajının birlikte görünmesini engelle
+                    lecturersAdapter.submitList(emptyList())
+                    coursesAdapter.submitList(emptyList())
+                    classroomsAdapter.submitList(emptyList())
                 }
                 is UiState.Success -> {
                     binding.swipeRefresh.isRefreshing = false

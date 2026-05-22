@@ -163,6 +163,12 @@ class LecturerHomeFragment : Fragment() {
                 is UiState.Error   -> {
                     binding.swipeRefresh.isRefreshing = false
                     showError(state.message, state.retryable)
+                    // KRITIK: Error state'inde önceki Success view'larını gizle.
+                    // Yoksa kullanıcı "Hoş geldiniz" mesajını ve "Bu hesap bir
+                    // kuruma bağlı değil" hatasını AYNI ANDA görüyor — kafa
+                    // karıştırıcı. Her state geçişi tüm view'ları tutarlı
+                    // hâle getirir.
+                    hideContentCards()
                 }
                 is UiState.Success -> {
                     binding.swipeRefresh.isRefreshing = false
@@ -241,6 +247,16 @@ class LecturerHomeFragment : Fragment() {
         binding.tvError.text           = msg
         binding.tvError.visibility     = View.VISIBLE
         binding.btnRetry.visibility    = if (retryable) View.VISIBLE else View.GONE
+    }
+
+    /** Success state için doldurulan kartları gizler. Error / Loading state'inde
+     *  çağrılır — stale veri ile hata mesajının birlikte görünmesi önlenir. */
+    private fun hideContentCards() {
+        binding.tvWelcome.visibility    = View.GONE
+        binding.tvDepartment.visibility = View.GONE
+        binding.cardWeekly.visibility   = View.GONE
+        binding.cardExport.visibility   = View.GONE
+        binding.cardNotifications.root.visibility = View.GONE
     }
 
     override fun onResume() {
