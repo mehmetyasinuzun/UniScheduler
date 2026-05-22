@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.unischeduler.R
 import com.unischeduler.databinding.FragmentAdminHomeBinding
 import com.unischeduler.util.UiState
 import com.unischeduler.util.collectFlow
@@ -79,12 +80,33 @@ class AdminHomeFragment : Fragment() {
                     binding.swipeRefresh.isRefreshing = false
                     showLoading(false)
                     val d = state.data
-                    binding.tvLecturerPanelTitle.text = "Atanmamış Hocalar (${d.unassignedLecturers.size})"
-                    lecturersAdapter.submitList(d.unassignedLecturers.map { "${it.fullName} • ${it.departmentName}" })
-                    binding.tvCoursePanelTitle.text = "Ders Açılmamış Dersler (${d.unassignedCourses.size})"
-                    coursesAdapter.submitList(d.unassignedCourses.map { "${it.code} — ${it.name}" })
-                    binding.tvClassroomPanelTitle.text = "Mevcut Derslikler (${d.classrooms.size})"
-                    classroomsAdapter.submitList(d.classrooms.map { "${it.roomCode} (kap. ${it.capacity})" })
+
+                    binding.tvLecturerPanelTitle.text = getString(
+                        R.string.admin_home_panel_title_with_count,
+                        getString(R.string.admin_home_unassigned_lecturers),
+                        d.unassignedLecturers.size
+                    )
+                    lecturersAdapter.submitList(d.unassignedLecturers.map {
+                        getString(R.string.admin_home_lecturer_item, it.fullName, it.departmentName)
+                    })
+
+                    binding.tvCoursePanelTitle.text = getString(
+                        R.string.admin_home_panel_title_with_count,
+                        getString(R.string.admin_home_unassigned_courses),
+                        d.unassignedCourses.size
+                    )
+                    coursesAdapter.submitList(d.unassignedCourses.map {
+                        getString(R.string.admin_home_course_item, it.code, it.name)
+                    })
+
+                    binding.tvClassroomPanelTitle.text = getString(
+                        R.string.admin_home_panel_title_with_count,
+                        getString(R.string.admin_home_available_classrooms),
+                        d.classrooms.size
+                    )
+                    classroomsAdapter.submitList(d.classrooms.map {
+                        getString(R.string.admin_home_classroom_item, it.roomCode, it.capacity)
+                    })
                 }
             }
         }
