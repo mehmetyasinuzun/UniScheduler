@@ -145,7 +145,7 @@ object ReminderScheduler {
             val pi = pendingIntent(
                 context = context,
                 requestCode = a.entry.id,
-                courseLabel = courseLabelFor(a.entry),
+                courseLabel = courseLabelFor(a.entry, context),
                 startTime = a.entry.startTime,
                 classroom = a.entry.classroomCode.takeIf { it.isNotBlank() },
                 build = true
@@ -170,13 +170,15 @@ object ReminderScheduler {
         }
     }
 
-    private fun courseLabelFor(entry: ScheduleEntry): String {
+    private fun courseLabelFor(entry: ScheduleEntry, context: Context): String {
         val code = entry.courseCode
         val name = entry.courseName
         return when {
             code.isNotBlank() && name.isNotBlank() -> "$code — $name"
             code.isNotBlank() -> code
-            else -> name.ifBlank { "Ders" }
+            // Fallback bildirim başlığı dil değiştirildiğinde otomatik
+            // güncellenir — eski "Ders" hardcoded'du.
+            else -> name.ifBlank { context.getString(com.unischeduler.R.string.default_lesson) }
         }
     }
 

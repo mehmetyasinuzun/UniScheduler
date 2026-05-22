@@ -22,7 +22,7 @@ data class ScheduleEntry(
 ) {
     val courseName: String     get() = offerings?.courses?.name ?: ""
     val courseCode: String     get() = offerings?.courses?.code ?: ""
-    val lecturerName: String   get() = lecturers?.fullName ?: "Atanmadı"
+    val lecturerName: String   get() = lecturers?.fullName.orEmpty()
     val classroomCode: String  get() = classrooms?.roomCode ?: ""
     val timeRange: String      get() = if (startTime.isNotBlank() && endTime.isNotBlank()) "$startTime-$endTime" else ""
 }

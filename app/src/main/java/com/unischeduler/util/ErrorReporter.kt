@@ -69,6 +69,20 @@ class ErrorReporter(app: Application) {
             deviceModel = Build.MODEL,
             osVersion = Build.VERSION.RELEASE
         )
-        runCatching { repo.insert(fallback) }
+        // Fallback insert'in kendisi de fail olabilir (kalıcı network kesintisi,
+        // RLS değişimi, tablo schema mismatch). Önceden runCatching {} silent
+        // yutuyordu → audit zinciri sessizce kopuyordu. Şimdi Logcat'a en son
+        // çare olarak yaz; adb logcat -s ErrorReporter ile yakalanabilir.
+        try {
+            repo.insert(fallback)
+        } catch (e: Throwable) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Log.e(
+                "ErrorReporter",
+                "Fallback log da basarisiz. Screen=$screen action=$action " +
+                "msg=$message. Fallback err: ${e.javaClass.simpleName}: ${e.message}",
+                e
+            )
+        }
     }
 }

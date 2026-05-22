@@ -101,7 +101,7 @@ class ClassroomsViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun importClassrooms(rows: List<CsvImporter.ClassroomRow>, fallbackDepartmentId: Int?) {
         if (rows.isEmpty()) {
-            _importState.value = UiState.Error("İçe aktarılacak geçerli satır yok.", retryable = false)
+            _importState.value = UiState.Error(getApplication<android.app.Application>().getString(com.unischeduler.R.string.err_import_no_valid_rows), retryable = false)
             reportValidationError("importClassrooms", "İçe aktarılacak geçerli satır yok.")
             return
         }
@@ -113,13 +113,28 @@ class ClassroomsViewModel(app: Application) : AndroidViewModel(app) {
                     val depts    = departmentRepo.getAllDepartments(orgId)
                     val byName   = depts.associateBy { it.name.lowercase().trim() }
                     var imported = 0
+                    val errors = mutableListOf<String>()
                     for (row in rows) {
                         val deptId = row.departmentName?.lowercase()?.trim()
                             ?.let { byName[it]?.id } ?: fallbackDepartmentId
                         runCatching {
                             classroomRepo.insertClassroom(row.roomCode, row.capacity, deptId, orgId, type = row.type)
                             imported++
+                        }.onFailure { e ->
+                            // Önceki sürüm hatalari sessizce yutuyordu (runCatching {})
+                            // → 30 dersliklik bir Excel'den 5'i fail olsa bile
+                            // "30 derslik eklendi" diyordu. Şimdi her satır audit'e.
+                            if (e is kotlinx.coroutines.CancellationException) throw e
+                            errors.add("${row.roomCode}: ${e.message}")
+                            reportError("importClassrooms.row[${row.roomCode}]", e)
                         }
+                    }
+                    if (errors.isNotEmpty()) {
+                        android.util.Log.w(
+                            "ClassroomsVM",
+                            "importClassrooms: ${rows.size} satirdan ${errors.size} basarisiz. " +
+                            "Detay: ${errors.take(5)}"
+                        )
                     }
                     imported
                 }
@@ -137,7 +152,7 @@ class ClassroomsViewModel(app: Application) : AndroidViewModel(app) {
     fun updateClassroom(id: Int, roomCode: String, capacity: String, departmentId: Int?, type: String) {
         val cap = capacity.toIntOrNull()
         if (roomCode.isBlank() || cap == null || cap <= 0) {
-            _editState.value = UiState.Error("Geçerli bir derslik kodu ve kapasite girin.", retryable = false)
+            _editState.value = UiState.Error(getApplication<android.app.Application>().getString(com.unischeduler.R.string.err_classroom_invalid_input), retryable = false)
             reportValidationError("updateClassroom", "Geçersiz girdi.")
             return
         }

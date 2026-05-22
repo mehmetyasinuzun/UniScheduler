@@ -15,6 +15,11 @@ class App : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // ErrorMessages.map() ve diğer non-AndroidViewModel kullanıcıların
+        // (Repository, util) Context'e ulaşabilmesi için süreç-bazlı tekil
+        // referans. Application instance Android tarafından zaten singleton;
+        // bu sadece statik bir handle. UI/Activity ile karıştırılmaz.
+        instance = this
         // Native/uncaught crash'leri yakala — coroutine içindeki
         // exception'lar runCatching ile yakalanıyor, ama UI thread'de
         // veya callback'lerde yakalanmamış bir hata varsa proses
@@ -102,5 +107,11 @@ class App : Application() {
         // SupervisorJob: a failure in one child does NOT cancel siblings.
         // Dispatchers.IO: network/disk friendly, doesn't block the main thread.
         val applicationScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+        // Static handle to the Application — set in onCreate(). lateinit ensures
+        // crashes early if anyone tries to read it before App.onCreate ran
+        // (e.g. some library's static initializer); silent null would mask the bug.
+        lateinit var instance: App
+            private set
     }
 }

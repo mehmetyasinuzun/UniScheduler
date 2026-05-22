@@ -210,7 +210,7 @@ class DataViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun importLecturers(rows: List<CsvImporter.LecturerRow>, fallbackDepartmentId: Int) {
         if (rows.isEmpty()) {
-            _lecturerImportState.value = UiState.Error("İçe aktarılacak geçerli satır yok.", retryable = false)
+            _lecturerImportState.value = UiState.Error(getApplication<android.app.Application>().getString(com.unischeduler.R.string.err_import_no_valid_rows), retryable = false)
             return
         }
         viewModelScope.launch {
@@ -232,7 +232,18 @@ class DataViewModel(app: Application) : AndroidViewModel(app) {
                                 orgId = orgId, email = row.email
                             )
                             credentials.add(u to p)
-                        }.onFailure { e -> errors.add("${row.firstName} ${row.lastName}: ${e.message}") }
+                        }.onFailure { e ->
+                            if (e is kotlinx.coroutines.CancellationException) throw e
+                            errors.add("${row.firstName} ${row.lastName}: ${e.message}")
+                            // Per-row failure'ı audit log'una yaz — eskiden sadece UI
+                            // mesajına ekleniyordu, admin paneli sessiz kalıyordu.
+                            // Action alanında satır id'sini de tutuyoruz ki "10 hocadan
+                            // 3'ü neden eklenmedi" sorgusu kolay olsun.
+                            reportError(
+                                "importLecturers.row[${row.firstName} ${row.lastName}]",
+                                e
+                            )
+                        }
                     }
                     LecturerImportResult(imported = credentials.size, credentials = credentials, errors = errors)
                 }
@@ -319,7 +330,7 @@ class DataViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun importCourses(rows: List<CsvImporter.CourseRow>, fallbackDepartmentId: Int) {
         if (rows.isEmpty()) {
-            _courseImportState.value = UiState.Error("İçe aktarılacak geçerli satır yok.", retryable = false)
+            _courseImportState.value = UiState.Error(getApplication<android.app.Application>().getString(com.unischeduler.R.string.err_import_no_valid_rows), retryable = false)
             return
         }
         viewModelScope.launch {
@@ -330,6 +341,7 @@ class DataViewModel(app: Application) : AndroidViewModel(app) {
                     val depts = deptRepo.getAllDepartments(orgId)
                     val deptByName = depts.associateBy { it.name.lowercase().trim() }
                     var imported = 0
+                    val errors = mutableListOf<String>()
                     for (row in rows) {
                         val deptId = row.departmentName?.lowercase()?.trim()
                             ?.let { deptByName[it]?.id } ?: fallbackDepartmentId
@@ -337,7 +349,26 @@ class DataViewModel(app: Application) : AndroidViewModel(app) {
                             courseRepo.insertCourse(row.code, row.name, deptId, orgId,
                                 theoryHours = row.theoryHours, labHours = row.labHours, credits = row.credits)
                             imported++
+                        }.onFailure { e ->
+                            // Önceki sürüm runCatching {}'i sessizce yutuyordu — 10
+                            // ders import etsen 7'si fail olsa bile UiState.Success(3)
+                            // dönüyor, sebep hiçbir yere düşmüyordu. Şimdi her satır
+                            // için errors listesi + ErrorReporter çağrısı.
+                            if (e is kotlinx.coroutines.CancellationException) throw e
+                            errors.add("${row.code} - ${row.name}: ${e.message}")
+                            reportError("importCourses.row[${row.code}]", e)
                         }
+                    }
+                    // imported sayısı + errors UI'a dönsün ki kullanıcı net görebilsin.
+                    // Çağıran taraf eski signature'a göre Int bekliyorsa Pair'in first'i
+                    // ile aynı semantik korunur; ama burada Triple/result class daha
+                    // temiz olurdu — şimdilik backward-compat Int.
+                    if (errors.isNotEmpty()) {
+                        android.util.Log.w(
+                            "DataViewModel",
+                            "importCourses: ${rows.size} satirdan ${errors.size} basarisiz. " +
+                            "Detay: ${errors.take(5)}"
+                        )
                     }
                     imported
                 }
@@ -356,11 +387,11 @@ class DataViewModel(app: Application) : AndroidViewModel(app) {
     fun addOffering(courseId: Int, lecturerId: Int?, academicYear: String, term: String, classYear: Int, section: String, capacity: String) {
         val cap = capacity.toIntOrNull() ?: 0
         if (academicYear.isBlank() || term.isBlank() || section.isBlank()) {
-            _offeringAddState.value = UiState.Error("Akademik yıl, dönem ve şube gerekli.", retryable = false)
+            _offeringAddState.value = UiState.Error(getApplication<android.app.Application>().getString(com.unischeduler.R.string.err_offering_year_term_section_required), retryable = false)
             return
         }
         if (classYear !in 1..4) {
-            _offeringAddState.value = UiState.Error("Sınıf yılı 1-4 arasında olmalı.", retryable = false)
+            _offeringAddState.value = UiState.Error(getApplication<android.app.Application>().getString(com.unischeduler.R.string.err_offering_class_year_range), retryable = false)
             return
         }
         viewModelScope.launch {

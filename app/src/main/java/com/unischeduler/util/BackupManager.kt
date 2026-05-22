@@ -136,16 +136,19 @@ object BackupManager {
         json.encodeToString(Backup.serializer(), backup)
     }
 
-    /** Quick statistics for the success dialog. */
-    fun summarise(backup: Backup): String = buildString {
+    /** Quick statistics for the success dialog. Aktif locale'e göre format. */
+    fun summarise(backup: Backup): String {
+        val ctx = com.unischeduler.App.instance
         val d = backup.data
-        appendLine("• Bölüm: ${d.departments.size}")
-        appendLine("• Hoca: ${d.lecturers.size}")
-        appendLine("• Ders: ${d.courses.size}")
-        appendLine("• Derslik: ${d.classrooms.size}")
-        appendLine("• Açılan ders: ${d.offerings.size}")
-        appendLine("• Program kaydı: ${d.schedule.size}")
-        append("• Müsaitlik kaydı: ${d.availability.size}")
+        return buildString {
+            appendLine(ctx.getString(com.unischeduler.R.string.backup_dept_count, d.departments.size))
+            appendLine(ctx.getString(com.unischeduler.R.string.backup_lecturer_count, d.lecturers.size))
+            appendLine(ctx.getString(com.unischeduler.R.string.backup_course_count, d.courses.size))
+            appendLine(ctx.getString(com.unischeduler.R.string.backup_classroom_count, d.classrooms.size))
+            appendLine(ctx.getString(com.unischeduler.R.string.backup_offering_count, d.offerings.size))
+            appendLine(ctx.getString(com.unischeduler.R.string.backup_schedule_count, d.schedule.size))
+            append(ctx.getString(com.unischeduler.R.string.backup_availability_count, d.availability.size))
+        }
     }
 
     /**
@@ -299,20 +302,23 @@ object BackupManager {
         val skippedSchedule: Int,
         val skippedAvailability: Int
     ) {
-        fun summary(): String = buildString {
-            appendLine("Geri yüklendi:")
-            appendLine("• Bölüm: $departments")
-            appendLine("• Ders: $courses")
-            appendLine("• Derslik: $classrooms")
-            if (settingsRestored) appendLine("• Org ayarları: ✓")
-            val skipTotal = skippedLecturers + skippedOfferings + skippedSchedule + skippedAvailability
-            if (skipTotal > 0) {
-                appendLine()
-                appendLine("Geri yüklenmeyen (mobil yetkisi yetmiyor — panelden ekleyin):")
-                if (skippedLecturers > 0)    appendLine("• Hoca: $skippedLecturers")
-                if (skippedOfferings > 0)    appendLine("• Açılan ders: $skippedOfferings")
-                if (skippedSchedule > 0)     appendLine("• Program kaydı: $skippedSchedule")
-                if (skippedAvailability > 0) appendLine("• Müsaitlik: $skippedAvailability")
+        fun summary(): String {
+            val ctx = com.unischeduler.App.instance
+            return buildString {
+                appendLine(ctx.getString(com.unischeduler.R.string.restore_summary_title))
+                appendLine(ctx.getString(com.unischeduler.R.string.backup_dept_count, departments))
+                appendLine(ctx.getString(com.unischeduler.R.string.backup_course_count, courses))
+                appendLine(ctx.getString(com.unischeduler.R.string.backup_classroom_count, classrooms))
+                if (settingsRestored) appendLine(ctx.getString(com.unischeduler.R.string.restore_org_settings_ok))
+                val skipTotal = skippedLecturers + skippedOfferings + skippedSchedule + skippedAvailability
+                if (skipTotal > 0) {
+                    appendLine()
+                    appendLine(ctx.getString(com.unischeduler.R.string.restore_not_restored_label))
+                    if (skippedLecturers > 0)    appendLine(ctx.getString(com.unischeduler.R.string.backup_lecturer_count, skippedLecturers))
+                    if (skippedOfferings > 0)    appendLine(ctx.getString(com.unischeduler.R.string.backup_offering_count, skippedOfferings))
+                    if (skippedSchedule > 0)     appendLine(ctx.getString(com.unischeduler.R.string.backup_schedule_count, skippedSchedule))
+                    if (skippedAvailability > 0) appendLine(ctx.getString(com.unischeduler.R.string.backup_availability_count, skippedAvailability))
+                }
             }
         }
     }

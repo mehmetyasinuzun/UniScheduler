@@ -48,11 +48,33 @@ class PasswordChangeViewModel(app: Application) : AndroidViewModel(app) {
             _state.value = UiState.Loading
             runCatching {
                 withContext(Dispatchers.IO) {
-                    // Verify current password by attempting re-login
+                    // Verify current password by attempting re-login.
+                    //
+                    // Bu try/catch eskiden TÜM exception'ı "Current password is
+                    // incorrect" mesajıyla maskeliyordu. Sorun: Supabase pause,
+                    // network kesintisi, DNS hatası gibi durumlarda da kullanıcıya
+                    // "şifren yanlış" mesajı gidiyor — debug imkansız hale geliyor.
+                    //
+                    // Şimdi sadece GERÇEK "invalid credentials" hatası bu mesaja
+                    // dönüşür; diğer her şey (network, server, JWT) olduğu gibi
+                    // propagate olur ki ErrorMessages.map() doğru Türkçe çeviriyi
+                    // yapabilsin.
                     try {
                         repo.signIn(session.username, current)
                     } catch (e: Exception) {
-                        throw IllegalArgumentException("Current password is incorrect.")
+                        val msg = (e.message ?: "").lowercase()
+                        val isInvalidCreds = msg.contains("invalid login credentials") ||
+                                msg.contains("invalid_credentials") ||
+                                msg.contains("invalid email or password") ||
+                                msg.contains("wrong password") ||
+                                msg.contains("400")  // GoTrue 400 generic auth fail
+                        if (isInvalidCreds) {
+                            throw IllegalArgumentException("Current password is incorrect.")
+                        } else {
+                            // Re-throw — gerçek hatayı ErrorMessages.map() çevirsin,
+                            // ErrorReporter audit log'una düşsün.
+                            throw e
+                        }
                     }
 
                     // Update password via Supabase Auth

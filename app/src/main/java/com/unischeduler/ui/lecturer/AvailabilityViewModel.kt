@@ -81,11 +81,11 @@ class AvailabilityViewModel(app: Application) : AndroidViewModel(app) {
 
     fun addSlot(day: String, startTime: String, endTime: String) {
         if (startTime.isBlank() || endTime.isBlank()) {
-            _saveState.value = UiState.Error("Başlangıç ve bitiş saati gerekli.", retryable = false)
+            _saveState.value = UiState.Error(getApplication<android.app.Application>().getString(com.unischeduler.R.string.err_availability_times_required), retryable = false)
             return
         }
         if (toMinutes(startTime) >= toMinutes(endTime)) {
-            _saveState.value = UiState.Error("Bitiş saati başlangıçtan sonra olmalı.", retryable = false)
+            _saveState.value = UiState.Error(getApplication<android.app.Application>().getString(com.unischeduler.R.string.err_availability_end_after_start), retryable = false)
             return
         }
         val lecturerId = session.lecturerId

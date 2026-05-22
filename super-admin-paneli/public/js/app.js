@@ -100,7 +100,21 @@ function setCurrentOrgId(id){if(!id)return;localStorage.setItem('currentOrgId',S
 async function doLogin(){const errEl=document.getElementById('loginError');errEl.textContent='';try{const u=document.getElementById('loginUser').value.trim(),p=document.getElementById('loginPass').value;if(!u||!p){errEl.textContent='Giris bilgilerini doldurun.';return}const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});const d=await r.json();if(d.token){authToken=d.token;localStorage.setItem('adminToken',authToken);hideLoginScreen();loadOrganizations()}else errEl.textContent=d.error||'Giris basarisiz.'}catch(e){errEl.textContent='Baglanti hatasi.'}}
 function resetClientCaches(){orgs=[];allSchedule=[];allOfferings=[];allLecturers=[];allClassrooms=[];allDepts=[];currentAvailability=[];allAvailability=[];currentEditType=null;currentEditId=null;editingEntryId=null;currentDetailEntry=null;}
 function doLogout(){resetClientCaches();authToken='';localStorage.removeItem('adminToken');showLoginScreen()}
-function onOrgSelectChanged(){const id=getCurrentOrgId();setCurrentOrgId(id);resetClientCaches();const active=document.querySelector('.sidebar a.active');if(active&&active.id&&active.id.startsWith('nav-')){showPage(active.id.substring(4));}}
+// Org seçici değişim handler — DOĞRU yeni değer event.target'tan gelir.
+// Önceki sürüm getCurrentOrgId() (globalOrg.value) okuyordu, ama bu fonksiyon
+// hem #globalOrg hem mirror selector'lar (#adminOrg vb.) için tetikleniyor.
+// Sonuç: kullanıcı #adminOrg'da Org 2 seçince fonksiyon globalOrg.value'yu
+// (hâlâ Org 1) okuyup tüm selector'ları geri Org 1'e zorluyordu — seçim
+// sessizce iptal oluyordu. Event-driven okuma bu hatayı önler.
+function onOrgSelectChanged(ev){
+    const src = ev && ev.target ? ev.target : null;
+    const newId = (src && src.value) ? src.value : getCurrentOrgId();
+    if(!newId) return;
+    setCurrentOrgId(newId);    // globalOrg + tüm mirror'lar + localStorage
+    resetClientCaches();
+    const active=document.querySelector('.sidebar a.active');
+    if(active&&active.id&&active.id.startsWith('nav-')){showPage(active.id.substring(4));}
+}
 function showLoginScreen(){document.getElementById('loginOverlay').style.display='flex';document.getElementById('appSidebar').style.display='none';document.getElementById('appMain').style.display='none';document.getElementById('globalOrgBar').style.display='none'}
 function hideLoginScreen(){document.getElementById('loginOverlay').style.display='none';document.getElementById('appSidebar').style.display='flex';document.getElementById('appMain').style.display='block';document.getElementById('globalOrgBar').style.display='flex'}
 async function checkAuth(){if(!authToken){showLoginScreen();return}try{const r=await fetch('/api/auth/check',{headers:{'Authorization':'Bearer '+authToken}});if(r.ok){hideLoginScreen();loadOrganizations()}else showLoginScreen()}catch(e){showLoginScreen()}}
@@ -184,7 +198,99 @@ async function addCourse(){const orgId=getCurrentOrgId();const r=await apiFetch(
 function showCredentialBanner(username,password,displayName){const t=document.getElementById('lecAlert');if(!t)return;t.innerHTML='<div class="credential-banner"><span class="cred-dismiss" onclick="this.parentElement.remove()">&times;</span><div class="cred-title">'+escapeHtml(displayName)+'</div><div class="cred-row"><span class="cred-label">Kullanici:</span><span class="cred-value">'+escapeHtml(username)+'</span><span style="margin:0 6px;color:#999;">|</span><span class="cred-label">Sifre:</span><span class="cred-value">'+escapeHtml(password)+'</span><button class="btn-copy" onclick="navigator.clipboard.writeText(\''+username+' / '+password+'\');this.textContent=\'Kopyalandi!\';setTimeout(()=>this.textContent=\'Kopyala\',2000)">Kopyala</button></div><div class="cred-note">Ilk giriste sifre degisimi istenecektir.</div></div>';const acc=document.getElementById('accLecturers');if(acc&&!acc.classList.contains('show'))new bootstrap.Collapse(acc,{toggle:true})}
 
 // ── Excel
-async function importExcel(type,file,alertId){const orgId=getCurrentOrgId();if(!orgId){showAlert(alertId,'Org secin.','error');return}const fd=new FormData();fd.append('file',file);try{const r=await fetch('/api/import/'+type+'/'+orgId,{method:'POST',headers:{'Authorization':'Bearer '+authToken},body:fd});const d=await r.json();if(d.error){showAlert(alertId,d.error,'error');return}showAlert(alertId,(d.message||d.inserted+' kayit eklendi.'),'success');loadDashboard()}catch(e){showAlert(alertId,e.message,'error')}}
+//
+// Önceden bu fonksiyon response body'sindeki d.credentials ve d.errors
+// array'lerini görmezden geliyordu — kullanıcı bir Excel yüklüyor, 32 hocadan
+// 0'ı eklense bile "X kayit eklendi" mesajı çıkıyordu (X = 0 olabiliyordu)
+// ve oluşturulan şifreler ekrana hiç gelmiyordu. Şimdi bulk-reset pattern'ı
+// gibi davranır: başarılı kayıtların şifrelerini CSV indir, başarısızları
+// banner'da göster, atlananları (idempotent skip) bilgi mesajı olarak söyle.
+async function importExcel(type, file, alertId) {
+    const orgId = getCurrentOrgId();
+    if (!orgId) { showAlert(alertId, 'Org secin.', 'error'); return; }
+
+    const fd = new FormData();
+    fd.append('file', file);
+
+    try {
+        const r = await fetch('/api/import/' + type + '/' + orgId, {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + authToken },
+            body: fd
+        });
+        const d = await r.json();
+
+        // Top-level error: 4xx/5xx kategorisi — request bile parse edilemedi
+        if (d.error) {
+            showAlert(alertId, d.error, 'error');
+            sendPanelLog('importExcel', type, 'Top-level error: ' + d.error);
+            return;
+        }
+
+        // ── Başarılı kayıtların şifrelerini CSV olarak indir ─────────────
+        // (sadece lecturer import'ta credentials döner — courses/classrooms'ta
+        //  şifre üretilmediği için bu blok pas geçer.)
+        if (d.credentials && d.credentials.length) {
+            const csv = '﻿' + 'Ad,Soyad,Kullanici,Sifre\n'
+                + d.credentials.map(c =>
+                    '"' + c.ad + '","' + c.soyad + '","' + c.kullanici_adi + '","' + c.gecici_sifre + '"'
+                ).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'yeni_sifreler_' + new Date().toISOString().slice(0, 10) + '.csv';
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+
+        // ── Sonuç özeti — kategorilere göre ──────────────────────────────
+        // Server { inserted, skipped, skippedNames, errors, credentials, message }
+        // döndürüyor. message zaten human-readable, onu temel al.
+        const inserted = Number(d.inserted) || 0;
+        const skipped  = Number(d.skipped)  || 0;
+        const errCount = Array.isArray(d.errors) ? d.errors.length : 0;
+
+        // Tür: hepsi başarılıysa success, hata varsa warning, hiç bir şey
+        // olmadıysa error.
+        let alertType = 'success';
+        if (errCount > 0 && inserted === 0) alertType = 'error';
+        else if (errCount > 0 || skipped > 0) alertType = 'warning';
+
+        let summary = d.message || (inserted + ' kayit eklendi.');
+        if (d.credentials && d.credentials.length) {
+            summary += ' Sifreler "yeni_sifreler_*.csv" olarak indirildi.';
+        }
+        showAlert(alertId, summary, alertType);
+
+        // ── Hata detaylarını ayrı banner'da göster ───────────────────────
+        // showAlert tek satırlık, errors array'i 30 element olabilir.
+        // Hataları console'a + panel_logs'a kayıt et, kullanıcıya ilk 5
+        // mesajı detail'de göster.
+        if (errCount > 0) {
+            const preview = d.errors.slice(0, 5).map(e => '• ' + e).join('\n');
+            const more = errCount > 5 ? '\n…ve ' + (errCount - 5) + ' satir daha.' : '';
+            console.error('[importExcel:' + type + '] ' + errCount + ' hata:', d.errors);
+            sendPanelLog('importExcel', type,
+                'Per-row errors (' + errCount + '): ' + d.errors.slice(0, 10).join(' | '));
+            // setTimeout — showAlert 5sn auto-clear yapıyor, hata listesini ondan
+            // sonra göster ki kaybolmasın.
+            setTimeout(() => {
+                const el = document.getElementById(alertId);
+                if (el) {
+                    el.innerHTML = '<div class="alert-box warning" style="white-space:pre-line;">'
+                        + escapeHtml(errCount + ' satir eklenemedi:\n' + preview + more)
+                        + '</div>';
+                }
+            }, 5500);
+        }
+
+        loadDashboard();
+    } catch (e) {
+        // Network / JSON parse / unexpected — kullanıcı + panel log
+        showAlert(alertId, 'Yukleme basarisiz: ' + e.message, 'error');
+        sendPanelLog('importExcel', type, 'Exception: ' + e.message, e.stack);
+    }
+}
 function exportExcel(type){const orgId=getCurrentOrgId();if(!orgId){alert('Org secin.');return}window.open('/api/export/'+type+'/'+orgId+'?token='+authToken,'_blank')}
 async function bulkResetPasswords(){const orgId=getCurrentOrgId();if(!orgId)return;if(!confirm('TUM akademisyenlerin sifreleri sifirlanacak!'))return;try{const r=await apiFetch('/api/lecturers/bulk-reset/'+orgId,{method:'POST'});const d=await r.json();if(d.error){alert(d.error);return}if(d.credentials&&d.credentials.length){const csv='﻿'+'Ad,Soyad,Kullanici,Sifre\n'+d.credentials.map(c=>'"'+c.ad+'","'+c.soyad+'","'+c.kullanici_adi+'","'+c.yeni_sifre+'"').join('\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sifreler.csv';a.click();alert(d.reset+' sifre sifirlandi.')}loadDashboard()}catch(e){alert(e.message)}}
 

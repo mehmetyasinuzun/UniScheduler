@@ -102,12 +102,12 @@ class AssignmentViewModel(app: Application) : AndroidViewModel(app) {
         force: Boolean = false
     ) {
         if (startTime.isBlank() || endTime.isBlank()) {
-            _saveState.value = UiState.Error("Başlangıç ve bitiş saati gerekli.", retryable = false)
+            _saveState.value = UiState.Error(getApplication<android.app.Application>().getString(com.unischeduler.R.string.err_assignment_times_required), retryable = false)
             reportValidationError("assign", "Start and end time are required.")
             return
         }
         if (toMinutes(startTime) >= toMinutes(endTime)) {
-            _saveState.value = UiState.Error("Bitiş saati başlangıçtan sonra olmalı.", retryable = false)
+            _saveState.value = UiState.Error(getApplication<android.app.Application>().getString(com.unischeduler.R.string.err_assignment_end_after_start), retryable = false)
             reportValidationError("assign", "End time must be after start time.")
             return
         }
@@ -184,11 +184,11 @@ class AssignmentViewModel(app: Application) : AndroidViewModel(app) {
         force: Boolean = false
     ) {
         if (startTime.isBlank() || endTime.isBlank()) {
-            _saveState.value = UiState.Error("Başlangıç ve bitiş saati gerekli.", retryable = false)
+            _saveState.value = UiState.Error(getApplication<android.app.Application>().getString(com.unischeduler.R.string.err_assignment_times_required), retryable = false)
             return
         }
         if (toMinutes(startTime) >= toMinutes(endTime)) {
-            _saveState.value = UiState.Error("Bitiş saati başlangıçtan sonra olmalı.", retryable = false)
+            _saveState.value = UiState.Error(getApplication<android.app.Application>().getString(com.unischeduler.R.string.err_assignment_end_after_start), retryable = false)
             return
         }
         viewModelScope.launch {

@@ -59,7 +59,7 @@ class LecturerRepository {
         val syntheticEmail = AuthRepository.usernameToEmail(username)
 
         val adminSession = client.auth.currentSessionOrNull()
-            ?: throw IllegalStateException("Admin oturumu bulunamadı. Lütfen tekrar giriş yapın.")
+            ?: throw com.unischeduler.util.UniSchedulerException(com.unischeduler.R.string.err_auth_no_admin_session)
 
         // ── Step 1: Create the Auth user (Supabase will switch our
         //           current session to the new user as a side-effect). ──
@@ -80,7 +80,12 @@ class LecturerRepository {
             // app is usable afterward.
             runCatching { client.auth.importSession(adminSession) }
             if (e is IllegalStateException) throw e
-            throw IllegalStateException("Auth kullanıcı oluşturma hatası: ${e.message}", e)
+            if (e is com.unischeduler.util.UniSchedulerException) throw e
+            throw com.unischeduler.util.UniSchedulerException(
+                com.unischeduler.R.string.err_auth_create_user,
+                arrayOf(e.message ?: e::class.java.simpleName),
+                e
+            )
         }
 
         // ── Step 2: IMMEDIATELY restore the admin session BEFORE any
@@ -110,7 +115,11 @@ class LecturerRepository {
             android.util.Log.e("LecturerRepo",
                 "users insert failed (auth orphan: $syntheticEmail). " +
                 "Use the panel to delete this user.", e)
-            throw IllegalStateException("Kullanıcı profili oluşturma hatası: ${e.message}", e)
+            throw com.unischeduler.util.UniSchedulerException(
+                com.unischeduler.R.string.err_user_profile_create,
+                arrayOf(e.message ?: e::class.java.simpleName),
+                e
+            )
         }
 
         // ── Step 4: Insert lecturers profile (still admin session). ──
@@ -134,7 +143,11 @@ class LecturerRepository {
             runCatching {
                 client.postgrest["users"].delete { filter { eq("id", authUserId) } }
             }
-            throw IllegalStateException("Öğretim üyesi kaydı oluşturma hatası: ${e.message}", e)
+            throw com.unischeduler.util.UniSchedulerException(
+                com.unischeduler.R.string.err_lecturer_create,
+                arrayOf(e.message ?: e::class.java.simpleName),
+                e
+            )
         }
 
         return username to plainPassword

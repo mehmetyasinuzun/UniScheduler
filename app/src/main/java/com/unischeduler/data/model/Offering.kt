@@ -19,7 +19,10 @@ data class Offering(
     val lecturers: Lecturer? = null
 ) {
     val courseName: String get() = courses?.let { "${it.code} — ${it.name}" } ?: "Unknown"
-    val lecturerName: String get() = lecturers?.fullName ?: "Atanmadı"
+    // Model layer dilden bağımsız — UI'da gösterilirken çağıran taraf
+    // boş ise getString(R.string.default_unassigned) ile değiştirir.
+    // Hardcoded "Atanmadı" eski sürümlerde İngilizce moda da kalıyordu.
+    val lecturerName: String get() = lecturers?.fullName.orEmpty()
     val displayName: String get() {
         val code = courses?.code ?: ""
         val name = courses?.name ?: ""

@@ -118,11 +118,11 @@ class AutoScheduleViewModel(app: Application) : AndroidViewModel(app) {
                 _alternatives.value = results
                 _selectedIndex.value = 0
                 lastResult = results.firstOrNull()
-                _state.value = if (lastResult != null) UiState.Success(lastResult!!) else UiState.Error("Hiç program oluşturulamadı", retryable = true)
+                _state.value = if (lastResult != null) UiState.Success(lastResult!!) else UiState.Error(getApplication<android.app.Application>().getString(com.unischeduler.R.string.err_auto_schedule_none_created), retryable = true)
             }.onFailure { e ->
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 errorReporter.reportException("AutoSchedule", "generate", e)
-                _state.value = UiState.Error("Program oluşturma hatası: ${e.message}", retryable = true)
+                _state.value = UiState.Error(getApplication<android.app.Application>().getString(com.unischeduler.R.string.err_auto_schedule_failed, e.message ?: e::class.java.simpleName), retryable = true)
             }
         }
     }

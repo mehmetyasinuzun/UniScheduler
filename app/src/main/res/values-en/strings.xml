@@ -469,4 +469,62 @@
     <string name="cd_manage_departments">Manage departments</string>
     <string name="cd_run_auto_schedule">Run auto schedule</string>
     <string name="cd_restore_defaults">Restore defaults</string>
+
+    <!-- ════════════════════════════════════════════════════════════════ -->
+    <!-- ERROR MESSAGES (i18n) -->
+    <!-- ════════════════════════════════════════════════════════════════ -->
+    <string name="err_auth_no_admin_session">Admin session not found. Please log in again.</string>
+    <string name="err_auth_create_user">Auth user creation failed: %1$s</string>
+    <string name="err_user_profile_create">User profile creation failed: %1$s</string>
+    <string name="err_lecturer_create">Lecturer record creation failed: %1$s</string>
+    <string name="err_lecturer_home_no_org">This account is not linked to any organization. Contact your administrator.</string>
+    <string name="err_login_fields_required">Please fill in all fields.</string>
+    <string name="err_password_all_required">All fields are required.</string>
+    <string name="err_password_no_match">Passwords do not match.</string>
+    <string name="err_password_min_length">Password must be at least 6 characters.</string>
+    <string name="err_password_incorrect_current">Current password is incorrect.</string>
+
+    <string name="err_import_no_valid_rows">No valid rows to import.</string>
+    <string name="err_classroom_invalid_input">Please enter a valid classroom code and capacity.</string>
+    <string name="err_course_code_name_required">Course code and name are required.</string>
+    <string name="err_offering_year_term_section_required">Academic year, term and section are required.</string>
+    <string name="err_offering_class_year_range">Class year must be between 1 and 4.</string>
+
+    <string name="err_assignment_times_required">Start and end time are required.</string>
+    <string name="err_assignment_end_after_start">End time must be after start time.</string>
+    <string name="err_availability_times_required">Start and end time are required.</string>
+    <string name="err_availability_end_after_start">End time must be after start time.</string>
+    <string name="err_auto_schedule_none_created">No schedule could be generated.</string>
+    <string name="err_auto_schedule_failed">Schedule generation failed: %1$s</string>
+
+    <string name="label_course_value">Course: %1$s</string>
+    <string name="label_lecturer_value">Lecturer: %1$s</string>
+    <string name="label_classroom_value">Classroom: %1$s</string>
+    <string name="label_class_year_value">Class Year: %1$s</string>
+    <string name="label_department_value">Department: %1$s</string>
+    <string name="filter_by_lecturer">By Lecturer</string>
+    <string name="filter_by_classroom">By Classroom</string>
+    <string name="filter_by_department">By Department</string>
+    <string name="filter_chip_lecturer">Lecturer: %1$s ✕</string>
+    <string name="filter_chip_classroom">Classroom: %1$s ✕</string>
+    <string name="filter_chip_department">Department: %1$s ✕</string>
+    <string name="lecturer_share_credentials_hint">Share these credentials with the lecturer: %1$s / %2$s</string>
+
+    <string name="default_unassigned">Unassigned</string>
+    <string name="default_lesson">Lesson</string>
+
+    <string name="pref_compact">Pack lessons (back-to-back / few gaps)</string>
+    <string name="pref_spread">Spread lessons throughout the day</string>
+    <string name="pref_none">No preference (free placement)</string>
+
+    <string name="backup_dept_count">• Department: %1$d</string>
+    <string name="backup_lecturer_count">• Lecturer: %1$d</string>
+    <string name="backup_course_count">• Course: %1$d</string>
+    <string name="backup_offering_count">• Offering: %1$d</string>
+    <string name="backup_schedule_count">• Schedule entry: %1$d</string>
+    <string name="backup_classroom_count">• Classroom: %1$d</string>
+    <string name="backup_availability_count">• Availability entry: %1$d</string>
+    <string name="restore_summary_title">Restored:</string>
+    <string name="restore_org_settings_ok">• Org settings: ✓</string>
+    <string name="restore_not_restored_label">Not restored (mobile lacks permission — add via panel):</string>
 </resources>

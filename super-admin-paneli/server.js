@@ -894,25 +894,50 @@ app.post('/api/import/:type/:orgId', upload.single('file'), async (req, res) => 
 
         if (type === 'lecturers') {
             const credentials = [];
+            let skipped = 0;            // org içinde aynı ad+soyad varsa atlanan
+            const skippedNames = [];    // panel UI'da göstermek için
+            const orgIdInt = parseInt(orgId);
+
+            // Aynı org içindeki mevcut hocaları tek seferde çek → her satır için
+            // ayrı SELECT atmaktan daha hızlı. case-insensitive eşleme yapacağız.
+            const { data: existing } = await supabase.from('lecturers')
+                .select('first_name,last_name')
+                .eq('org_id', orgIdInt);
+            const existingKey = new Set(
+                (existing || []).map(l =>
+                    `${(l.first_name || '').trim().toLowerCase()}|${(l.last_name || '').trim().toLowerCase()}`
+                )
+            );
+
             for (const r of rows) {
                 try {
                     const firstName = (r.first_name || r.ad || r.firstname || r.name || '').toString().trim();
                     const lastName = (r.last_name || r.soyad || r.lastname || r.surname || '').toString().trim();
                     if (!firstName || !lastName) { errors.push('Ad veya soyad boş — satır atlandı.'); continue; }
-                    
-                    // Always generate a unique username — Excel may contain usernames
-                    // from another org that already exist in Supabase Auth
+
+                    // IDEMPOTENT SKIP — aynı org'da aynı ad+soyad zaten varsa atla.
+                    // Excel'i yanlışlıkla 2 kez yüklerse mevcut hocaların şifresi
+                    // RESETLENMEZ, sadece "atlandı" sayacına eklenir. Eski davranış
+                    // sessizce duplicate-or-fail yapıyordu.
+                    const key = `${firstName.toLowerCase()}|${lastName.toLowerCase()}`;
+                    if (existingKey.has(key)) {
+                        skipped++;
+                        skippedNames.push(`${firstName} ${lastName}`);
+                        continue;
+                    }
+                    existingKey.add(key);  // aynı dosyada iki satır aynı kişiyse ikinciyi de atla
+
                     const uname = await generateUniqueUsername(firstName, lastName);
-                    
+
                     let pwd = (r.password || r.sifre || '').toString();
                     if (!pwd) pwd = generatePassword();
-                    
+
                     const emailAddr = usernameToEmail(uname);
 
                     const { data: authUser, error: authErr } = await supabase.auth.admin.createUser({ email: emailAddr, password: pwd, email_confirm: true });
                     if (authErr) { errors.push(`${firstName} ${lastName}: ${authErr.message}`); continue; }
 
-                    const { error: userErr } = await supabase.from('users').insert({ id: authUser.user.id, org_id: parseInt(orgId), username: uname, role: 'lecturer', must_change_password: true });
+                    const { error: userErr } = await supabase.from('users').insert({ id: authUser.user.id, org_id: orgIdInt, username: uname, role: 'lecturer', must_change_password: true });
                     if (userErr) {
                         await supabase.auth.admin.deleteUser(authUser.user.id).catch(() => {});
                         errors.push(`${firstName} ${lastName}: ${userErr.message}`);
@@ -920,7 +945,7 @@ app.post('/api/import/:type/:orgId', upload.single('file'), async (req, res) => 
                     }
 
                     const { error: lecErr } = await supabase.from('lecturers').insert({
-                        org_id: parseInt(orgId), user_id: authUser.user.id,
+                        org_id: orgIdInt, user_id: authUser.user.id,
                         title: (r.title || r.unvan || '').toString(),
                         first_name: firstName,
                         last_name: lastName,
@@ -928,15 +953,33 @@ app.post('/api/import/:type/:orgId', upload.single('file'), async (req, res) => 
                     });
                     if (lecErr) {
                         await supabase.auth.admin.deleteUser(authUser.user.id).catch(() => {});
+                        // users.insert başarılı ama lecturers.insert fail olduysa
+                        // users satırını da temizle — yetim public.users kalmasın.
+                        await supabase.from('users').delete().eq('id', authUser.user.id).catch(() => {});
                         errors.push(`${firstName} ${lastName}: ${lecErr.message}`);
                         continue;
                     }
 
                     credentials.push({ ad: firstName, soyad: lastName, kullanici_adi: uname, gecici_sifre: pwd });
                     inserted++;
+
+                    // RATE-LIMIT SAFE — Supabase Auth GoTrue default'u 30 req/dakika.
+                    // 32+ ardışık createUser çağrısı eski davranışta sessizce 429'a
+                    // takılabiliyordu. 250ms gap = en kötü 4 req/sn → dakikada 240
+                    // teorik, ama burst koruması için yine de güvenli. Toplam: 30
+                    // hoca = ~7.5 sn fark eder; UX'i bozmaz.
+                    await new Promise(resolve => setTimeout(resolve, 250));
                 } catch (e) { errors.push(`Satır hatası: ${e.message}`); }
             }
-            return res.json({ inserted, errors, credentials, message: `${inserted} akademisyen başarıyla eklendi.` });
+
+            // Frontend'in net karar verebilmesi için kategori bazlı sayım dön.
+            const parts = [];
+            if (inserted > 0) parts.push(`${inserted} yeni hoca eklendi`);
+            if (skipped > 0)  parts.push(`${skipped} mevcut hoca atlandı`);
+            if (errors.length > 0) parts.push(`${errors.length} satır hatalı`);
+            const message = parts.length > 0 ? parts.join(', ') + '.' : 'Hiçbir hoca işlenmedi.';
+
+            return res.json({ inserted, skipped, skippedNames, errors, credentials, message });
         } else if (type === 'courses') {
             const records = rows.map(r => ({
                 org_id: parseInt(orgId),

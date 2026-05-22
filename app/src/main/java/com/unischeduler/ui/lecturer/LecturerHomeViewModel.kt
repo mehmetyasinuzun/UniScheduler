@@ -39,7 +39,9 @@ class LecturerHomeViewModel(app: Application) : AndroidViewModel(app) {
                     coroutineScope {
                         val orgId = session.orgId
                         if (orgId <= 0) {
-                            throw IllegalStateException("Bu hesap bir kuruma bağlı değil. Yöneticiyle iletişime geçin.")
+                            throw com.unischeduler.util.UniSchedulerException(
+                                com.unischeduler.R.string.err_lecturer_home_no_org
+                            )
                         }
                         val lecturerId = session.lecturerId
                         if (lecturerId <= 0) {

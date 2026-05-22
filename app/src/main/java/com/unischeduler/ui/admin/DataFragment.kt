@@ -751,7 +751,7 @@ class DataFragment : Fragment() {
         ImportPreviewDialog.show(
             context = requireContext(),
             title = getString(R.string.import_preview_title_courses),
-            targetDescription = "Bölüm: $deptName",
+            targetDescription = getString(R.string.label_department_value, deptName),
             rows = result.valid,
             errors = result.errors,
             titleProvider = { "${it.code} — ${it.name}" },

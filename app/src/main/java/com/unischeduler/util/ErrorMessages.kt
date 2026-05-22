@@ -1,18 +1,47 @@
-// Centralized error message mapper — converts raw exceptions into user-friendly Turkish messages.
+// Centralized error message mapper — converts raw exceptions into user-friendly messages.
 // Use ErrorMessages.map(e) in all ViewModel catch blocks instead of e.message.
+//
+// LOCALIZATION
+// ────────────
+// Repository / non-UI katmanları Context tutmadığı için throw mesajını
+// hardcoded yapmak yerine UniSchedulerException(R.string.X) fırlatır.
+// map() bunu yakalayıp App.instance.getString ile aktif locale'de çözer.
+// Bu sayede aynı kod hem TR hem EN için doğru mesajı döner.
 package com.unischeduler.util
 
+import androidx.annotation.StringRes
+import com.unischeduler.App
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 
+/**
+ * Localized exception — Repository/util katmanlarından fırlatıldığında
+ * ErrorMessages.map() çağrıldığında aktif locale'e göre strings.xml'den
+ * çözülür. Format args opsiyonel.
+ */
+class UniSchedulerException(
+    @StringRes val resId: Int,
+    val args: Array<out Any> = emptyArray(),
+    cause: Throwable? = null
+) : Exception(cause)
+
 object ErrorMessages {
 
     /**
-     * Maps a raw exception to a user-friendly Turkish message.
+     * Maps a raw exception to a user-friendly localized message.
      * Falls back to the exception message if no specific mapping is found.
      */
     fun map(e: Throwable): String {
+        // i18n-aware exception — direkt strings.xml'den lookup. App.instance
+        // henüz başlamadıysa (Robolectric/test) cause.message'a düş.
+        if (e is UniSchedulerException) {
+            return runCatching {
+                if (e.args.isEmpty()) App.instance.getString(e.resId)
+                else App.instance.getString(e.resId, *e.args)
+            }.getOrElse { e.cause?.message ?: e.message ?: "Bir hata oluştu." }
+        }
+
         if (e is IllegalArgumentException) return e.message ?: "Geçersiz giriş."
         if (e is IllegalStateException) return e.message ?: "Beklenmeyen bir hata oluştu."
 

@@ -486,4 +486,69 @@
     <string name="cd_manage_departments">Bölümleri yönet</string>
     <string name="cd_run_auto_schedule">Otomatik programı çalıştır</string>
     <string name="cd_restore_defaults">Varsayılanlara dön</string>
+
+    <!-- ════════════════════════════════════════════════════════════════ -->
+    <!-- ERROR MESSAGES (i18n — UniSchedulerException / ViewModel.UiState.Error) -->
+    <!-- ════════════════════════════════════════════════════════════════ -->
+    <!-- Auth / session -->
+    <string name="err_auth_no_admin_session">Admin oturumu bulunamadı. Lütfen tekrar giriş yapın.</string>
+    <string name="err_auth_create_user">Auth kullanıcı oluşturma hatası: %1$s</string>
+    <string name="err_user_profile_create">Kullanıcı profili oluşturma hatası: %1$s</string>
+    <string name="err_lecturer_create">Öğretim üyesi kaydı oluşturma hatası: %1$s</string>
+    <string name="err_lecturer_home_no_org">Bu hesap bir kuruma bağlı değil. Yöneticiyle iletişime geçin.</string>
+    <string name="err_login_fields_required">Lütfen tüm alanları doldurun.</string>
+    <string name="err_password_all_required">Tüm alanlar zorunludur.</string>
+    <string name="err_password_no_match">Şifreler eşleşmiyor.</string>
+    <string name="err_password_min_length">Şifre en az 6 karakter olmalı.</string>
+    <string name="err_password_incorrect_current">Mevcut şifre hatalı.</string>
+
+    <!-- Import / data -->
+    <string name="err_import_no_valid_rows">İçe aktarılacak geçerli satır yok.</string>
+    <string name="err_classroom_invalid_input">Geçerli bir derslik kodu ve kapasite girin.</string>
+    <string name="err_course_code_name_required">Ders kodu ve adı gerekli.</string>
+    <string name="err_offering_year_term_section_required">Akademik yıl, dönem ve şube gerekli.</string>
+    <string name="err_offering_class_year_range">Sınıf yılı 1-4 arasında olmalı.</string>
+
+    <!-- Assignment / scheduling -->
+    <string name="err_assignment_times_required">Başlangıç ve bitiş saati gerekli.</string>
+    <string name="err_assignment_end_after_start">Bitiş saati başlangıçtan sonra olmalı.</string>
+    <string name="err_availability_times_required">Başlangıç ve bitiş saati gerekli.</string>
+    <string name="err_availability_end_after_start">Bitiş saati başlangıçtan sonra olmalı.</string>
+    <string name="err_auto_schedule_none_created">Hiç program oluşturulamadı.</string>
+    <string name="err_auto_schedule_failed">Program oluşturma hatası: %1$s</string>
+
+    <!-- Calendar / Detail labels (format) -->
+    <string name="label_course_value">Ders: %1$s</string>
+    <string name="label_lecturer_value">Hoca: %1$s</string>
+    <string name="label_classroom_value">Sınıf: %1$s</string>
+    <string name="label_class_year_value">Sınıf Yılı: %1$s</string>
+    <string name="label_department_value">Bölüm: %1$s</string>
+    <string name="filter_by_lecturer">Hocaya Göre</string>
+    <string name="filter_by_classroom">Dersliğe Göre</string>
+    <string name="filter_by_department">Bölüme Göre</string>
+    <string name="filter_chip_lecturer">Hoca: %1$s ✕</string>
+    <string name="filter_chip_classroom">Derslik: %1$s ✕</string>
+    <string name="filter_chip_department">Bölüm: %1$s ✕</string>
+    <string name="lecturer_share_credentials_hint">Hocaya paylaşmak için bu bilgileri kullanın: %1$s / %2$s</string>
+
+    <!-- Common defaults (model fallback strings) -->
+    <string name="default_unassigned">Atanmadı</string>
+    <string name="default_lesson">Ders</string>
+
+    <!-- Schedule preferences enum labels -->
+    <string name="pref_compact">Dersleri birleştir (aralıksız/az aralıklı)</string>
+    <string name="pref_spread">Dersleri güne yay (aralar bırak)</string>
+    <string name="pref_none">Tercih yok (serbest yerleştir)</string>
+
+    <!-- Backup / restore summary lines -->
+    <string name="backup_dept_count">• Bölüm: %1$d</string>
+    <string name="backup_lecturer_count">• Hoca: %1$d</string>
+    <string name="backup_course_count">• Ders: %1$d</string>
+    <string name="backup_offering_count">• Açılan ders: %1$d</string>
+    <string name="backup_schedule_count">• Program kaydı: %1$d</string>
+    <string name="backup_classroom_count">• Derslik: %1$d</string>
+    <string name="backup_availability_count">• Müsaitlik kaydı: %1$d</string>
+    <string name="restore_summary_title">Geri yüklendi:</string>
+    <string name="restore_org_settings_ok">• Org ayarları: ✓</string>
+    <string name="restore_not_restored_label">Geri yüklenmeyen (mobil yetkisi yetmiyor — panelden ekleyin):</string>
 </resources>

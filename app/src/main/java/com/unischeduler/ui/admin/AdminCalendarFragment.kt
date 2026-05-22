@@ -97,10 +97,10 @@ class AdminCalendarFragment : Fragment() {
     private fun buildTitle(): String {
         if (criteria.isEmpty) return getString(R.string.export_pdf_admin_title)
         val parts = mutableListOf<String>()
-        criteria.departmentName?.let { parts += "Bölüm: $it" }
-        criteria.classYear?.let { parts += "${it}. Sınıf" }
-        criteria.lecturerName?.let { parts += "Hoca: $it" }
-        criteria.classroomCode?.let { parts += "Derslik: $it" }
+        criteria.departmentName?.let { parts += getString(R.string.label_department_value, it) }
+        criteria.classYear?.let { parts += getString(R.string.label_class_year_value, "${it}.") }
+        criteria.lecturerName?.let { parts += getString(R.string.label_lecturer_value, it) }
+        criteria.classroomCode?.let { parts += getString(R.string.label_classroom_value, it) }
         return parts.joinToString(" • ")
     }
 
@@ -218,7 +218,7 @@ class AdminCalendarFragment : Fragment() {
 
         val lecturers = allEntries.map { it.lecturerName }.filter { it.isNotBlank() }.distinct().sorted()
         if (lecturers.isNotEmpty()) {
-            val label = criteria.lecturerName?.let { "Hoca: $it ✕" } ?: "Hocaya Göre"
+            val label = criteria.lecturerName?.let { getString(R.string.filter_chip_lecturer, it) } ?: getString(R.string.filter_by_lecturer)
             val chipLecturer = createChip(label)
             chipLecturer.setOnClickListener {
                 if (criteria.lecturerName != null) {
@@ -236,7 +236,7 @@ class AdminCalendarFragment : Fragment() {
 
         val classrooms = allEntries.map { it.classroomCode }.filter { it.isNotBlank() }.distinct().sorted()
         if (classrooms.isNotEmpty()) {
-            val label = criteria.classroomCode?.let { "Derslik: $it ✕" } ?: "Dersliğe Göre"
+            val label = criteria.classroomCode?.let { getString(R.string.filter_chip_classroom, it) } ?: getString(R.string.filter_by_classroom)
             val chipClassroom = createChip(label)
             chipClassroom.setOnClickListener {
                 if (criteria.classroomCode != null) {
@@ -255,7 +255,7 @@ class AdminCalendarFragment : Fragment() {
         val departments = allEntries.mapNotNull { it.offerings?.courses?.departments?.name }
             .filter { it.isNotBlank() }.distinct().sorted()
         if (departments.isNotEmpty()) {
-            val label = criteria.departmentName?.let { "Bölüm: $it ✕" } ?: "Bölüme Göre"
+            val label = criteria.departmentName?.let { getString(R.string.filter_chip_department, it) } ?: getString(R.string.filter_by_department)
             val chipDept = createChip(label)
             chipDept.setOnClickListener {
                 if (criteria.departmentName != null) {
@@ -324,13 +324,19 @@ class AdminCalendarFragment : Fragment() {
 
     private fun showEntryDetail(entry: ScheduleEntry) {
         val msg = buildString {
-            append("Ders: ${entry.courseCode} — ${entry.courseName}\n")
-            append("Hoca: ${entry.lecturerName}\n")
-            append("Sınıf: ${entry.classroomCode}\n")
-            append("Saat: ${entry.timeRange}\n")
-            entry.offerings?.classYear?.let { append("Sınıf Yılı: ${it}. Sınıf\n") }
+            append(getString(R.string.label_course_value, "${entry.courseCode} — ${entry.courseName}"))
+            append('\n')
+            append(getString(R.string.label_lecturer_value, entry.lecturerName))
+            append('\n')
+            append(getString(R.string.label_classroom_value, entry.classroomCode))
+            append('\n')
+            append("${entry.timeRange}\n")
+            entry.offerings?.classYear?.let {
+                append(getString(R.string.label_class_year_value, "${it}."))
+                append('\n')
+            }
             val deptName = entry.offerings?.courses?.departments?.name
-            if (!deptName.isNullOrBlank()) append("Bölüm: $deptName")
+            if (!deptName.isNullOrBlank()) append(getString(R.string.label_department_value, deptName))
         }
         AlertDialog.Builder(requireContext())
             .setTitle("${entry.day} — ${entry.courseCode}")
