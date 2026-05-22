@@ -16,9 +16,16 @@
 //   • Klavye/IME açılmaz (setShowSoftInputOnFocus=false) — bazı cihazlarda
 //     keyListener=null yetmiyor, soft keyboard yine pop-up oluyordu
 //   • setItems çağrılınca yeni listte eski pozisyon clamp edilir (out-of-range crash yok)
+//   • NoFilterAdapter — MaterialAutoCompleteTextView'ın standart ArrayAdapter
+//     kullandığında setText("Year 1", false) sonrası dropdown TEKRAR açılınca
+//     içerideki filter "Year 1" metniyle eşleşip sadece o item'ı gösteriyordu
+//     ("Year 2/3/4" görünmüyordu). NoFilterAdapter constraint'i göz ardı eder,
+//     dropdown HER açılışta tüm item'ları gösterir.
 package com.unischeduler.util
 
+import android.content.Context
 import android.widget.ArrayAdapter
+import android.widget.Filter
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 
 class DropdownController<T>(
@@ -55,7 +62,8 @@ class DropdownController<T>(
         currentItems = items
         val labels = items.map(labelOf)
         // simple_list_item_1 dropdown için Material list satırı standardı.
-        val adapter = ArrayAdapter(
+        // NoFilterAdapter — bkz. dosya başındaki açıklama; filter'sız.
+        val adapter = NoFilterArrayAdapter(
             view.context,
             android.R.layout.simple_list_item_1,
             labels
@@ -100,4 +108,33 @@ class DropdownController<T>(
     }
 
     fun items(): List<T> = currentItems
+}
+
+/**
+ * Standart ArrayAdapter'ın `getFilter()`'ı `MaterialAutoCompleteTextView`
+ * tarafından her dropdown açılışında çalıştırılır ve mevcut text'i constraint
+ * olarak verir. Sonuç: setText("Year 1") sonrası dropdown sadece "Year 1"
+ * eşleşmesini gösterir.
+ *
+ * Bu sınıf filter'ı no-op yapar — constraint ne olursa olsun TÜM item'lar
+ * her zaman görünür. Spinner davranışına eşdeğer.
+ */
+private class NoFilterArrayAdapter<T>(
+    context: Context,
+    @androidx.annotation.LayoutRes resource: Int,
+    private val data: List<T>
+) : ArrayAdapter<T>(context, resource, data) {
+
+    override fun getFilter(): Filter = NO_FILTER
+
+    private val NO_FILTER = object : Filter() {
+        override fun performFiltering(constraint: CharSequence?): FilterResults =
+            FilterResults().apply {
+                values = data
+                count = data.size
+            }
+        override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
+            notifyDataSetChanged()
+        }
+    }
 }

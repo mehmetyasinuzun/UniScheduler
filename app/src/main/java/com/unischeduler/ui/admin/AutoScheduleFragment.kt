@@ -187,7 +187,7 @@ class AutoScheduleFragment : Fragment() {
         if (alts.size > 1) {
             binding.cardAlternatives.visibility = View.VISIBLE
             val idx = viewModel.selectedIndex.value
-            binding.tvAlternativeInfo.text = "Alternatif ${idx + 1} / ${alts.size}"
+            binding.tvAlternativeInfo.text = getString(R.string.auto_schedule_alternative_label, idx + 1, alts.size)
             binding.btnPrevAlt.isEnabled = idx > 0
             binding.btnNextAlt.isEnabled = idx < alts.size - 1
         } else {

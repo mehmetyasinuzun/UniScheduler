@@ -1287,7 +1287,10 @@ class CourseAdapter(
         val c = getItem(position)
         holder.binding.tvCourseCode.text    = c.code
         holder.binding.tvCourseName.text    = c.name
-        holder.binding.tvCourseDetails.text = "T:${c.theoryHours} L:${c.labHours} C:${c.credits} • ${c.departmentName}"
+        holder.binding.tvCourseDetails.text = holder.binding.root.context.getString(
+            R.string.data_course_details_format,
+            c.theoryHours, c.labHours, c.credits, c.departmentName
+        )
         holder.binding.btnEditCourse.visibility   = View.VISIBLE
         holder.binding.btnDeleteCourse.visibility = View.VISIBLE
         holder.binding.btnEditCourse.setOnClickListener   { onEdit(c) }

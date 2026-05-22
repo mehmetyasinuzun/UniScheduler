@@ -219,6 +219,9 @@
     <string name="admin_home_course_item">%1$s — %2$s</string>
     <string name="admin_home_classroom_item">%1$s (cap. %2$d)</string>
 
+    <string name="auto_schedule_alternative_label">Alternative %1$d of %2$d</string>
+    <string name="data_course_details_format">Th:%1$d L:%2$d Cr:%3$d • %4$s</string>
+
     <!-- SETTINGS / DEPARTMENTS -->
     <string name="settings_title">Departments</string>
     <string name="settings_add_dept">Add New Department</string>
