@@ -387,15 +387,34 @@ app.post('/api/organizations', async (req, res) => {
         return res.status(400).json({ error: error.message });
     }
 
-    // Auto-create default org_settings for the new organization. We don't
-    // block on the result — settings can always be re-added later, and we
-    // don't want a partial failure here to hide the org creation success.
-    await supabase.from('org_settings').insert({
+    // Auto-create default org_settings + seed department. Bunlar olmadan
+    // mobile dashboard ilk açılışta "settings yüklenemedi" hatası verir,
+    // lecturer/course form'ları "Bölüm seç" listesi boş gelir ve admin
+    // hiçbir kayıt ekleyemez.
+    //
+    // Eski sürüm org_settings insert'ini await ediyordu AMA sonucu kontrol
+    // etmiyordu — başarısız olursa client "org yaratıldı" diyordu ama mobil
+    // dashboard boş gelirken kullanıcının haberi olmuyordu. Şimdi her iki
+    // insert de check edilir; biri başarısız olursa org rollback yapılır.
+    const { error: settingsErr } = await supabase.from('org_settings').insert({
         org_id: data.id,
         time_step_minutes: 10,
         day_start: '08:00',
         day_end: '18:00'
     });
+    if (settingsErr) {
+        await supabase.from('organizations').delete().eq('id', data.id).catch(() => {});
+        return res.status(500).json({
+            error: 'Org ayarları oluşturulamadı, kurum kaydı geri alındı: ' + settingsErr.message
+        });
+    }
+
+    // Default department — yeni org'a admin lecturer eklemek isteyince
+    // "Bölüm seç" listesi boş olmasın diye. İstenirse silinebilir.
+    await supabase.from('departments').insert({
+        org_id: data.id,
+        name: 'Genel'
+    }).catch(() => { /* opsiyonel, panelden ekleyebilir */ });
 
     res.json(data);
 });
@@ -437,19 +456,33 @@ app.post('/api/admins', async (req, res) => {
 
     try {
         // Normalize + deduplicate username to avoid UNIQUE(username) constraint failures
-        const finalUsername = await generateUniqueAdminUsername(username);
-        const email = usernameToEmail(finalUsername);
+        let finalUsername = await generateUniqueAdminUsername(username);
+        let email = usernameToEmail(finalUsername);
 
-        // 1. Create Supabase Auth user via Admin API
-        const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-            email: email,
-            password: password,
-            email_confirm: true // auto-confirm
-        });
-        if (authError) {
-            if (authError.message && authError.message.toLowerCase().includes('already registered')) {
-                return res.status(400).json({ error: `Bu kullanıcı adı (${finalUsername}) zaten alınmış. Farklı bir kullanıcı adı deneyin.` });
+        // 1. Create Supabase Auth user via Admin API — with collision retry.
+        //    Auth global; admin oluştururken aynı email başka bir org admin
+        //    veya silinmiş orphan tarafından alınmış olabilir. 5 retry sonra
+        //    pes et ve net mesaj dön.
+        let authUser = null;
+        let authError = null;
+        for (let attempt = 0; attempt <= 5; attempt++) {
+            const res2 = await supabase.auth.admin.createUser({
+                email: email, password: password, email_confirm: true
+            });
+            if (!res2.error) { authUser = res2.data; authError = null; break; }
+            const m = (res2.error.message || '').toLowerCase();
+            const collision = m.includes('already registered') ||
+                              (m.includes('duplicate key') && m.includes('email'));
+            if (collision && attempt < 5) {
+                const ts = String(Date.now() % 10000).padStart(4, '0');
+                finalUsername = `${finalUsername}_${ts}_${attempt + 1}`;
+                email = usernameToEmail(finalUsername);
+                continue;
             }
+            authError = res2.error;
+            break;
+        }
+        if (authError) {
             return res.status(400).json({ error: authError.message });
         }
 
@@ -760,13 +793,34 @@ app.post('/api/lecturers', async (req, res) => {
         return res.status(400).json({ error: 'orgId, firstName and lastName required.' });
 
     try {
-        const username = await generateUniqueUsername(firstName, lastName);
+        let username = await generateUniqueUsername(firstName, lastName);
         const password = generatePassword();
-        const emailAddr = usernameToEmail(username);
-        
-        const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-            email: emailAddr, password, email_confirm: true
-        });
+        let emailAddr = usernameToEmail(username);
+
+        // Auth global namespace — bkz. bulk import içindeki yorum.
+        // Burst kullanım veya orphan auth user'lar nedeniyle collision
+        // olabilir; retry-with-suffix ile sessiz fail engellenir.
+        let authUser = null;
+        let authError = null;
+        for (let attempt = 0; attempt <= 5; attempt++) {
+            const res2 = await supabase.auth.admin.createUser({
+                email: emailAddr, password, email_confirm: true
+            });
+            if (!res2.error) { authUser = res2.data; authError = null; break; }
+            const m = (res2.error.message || '').toLowerCase();
+            const collision = m.includes('user already registered')
+                || m.includes('already been registered')
+                || m.includes('email already registered')
+                || (m.includes('duplicate key') && m.includes('email'));
+            if (collision && attempt < 5) {
+                const ts = String(Date.now() % 10000).padStart(4, '0');
+                username = `${username}_${ts}_${attempt + 1}`;
+                emailAddr = usernameToEmail(username);
+                continue;
+            }
+            authError = res2.error;
+            break;
+        }
         if (authError) return res.status(400).json({ error: authError.message });
 
         const { data: userRow, error: userErr } = await supabase.from('users').insert({
@@ -780,7 +834,12 @@ app.post('/api/lecturers', async (req, res) => {
             title: title || '', first_name: firstName, last_name: lastName,
             email: email || null, department_id: departmentId || null
         }).select().single();
-        if (error) { await supabase.auth.admin.deleteUser(authUser.user.id); return res.status(400).json({ error: error.message }); }
+        if (error) {
+            // lecturers fail → users + auth user her ikisini de temizle
+            await supabase.from('users').delete().eq('id', authUser.user.id).catch(() => {});
+            await supabase.auth.admin.deleteUser(authUser.user.id).catch(() => {});
+            return res.status(400).json({ error: error.message });
+        }
 
         res.json({ ...data, generatedCredentials: { username, password } });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -927,14 +986,39 @@ app.post('/api/import/:type/:orgId', upload.single('file'), async (req, res) => 
                     }
                     existingKey.add(key);  // aynı dosyada iki satır aynı kişiyse ikinciyi de atla
 
-                    const uname = await generateUniqueUsername(firstName, lastName);
+                    let uname = await generateUniqueUsername(firstName, lastName);
 
                     let pwd = (r.password || r.sifre || '').toString();
                     if (!pwd) pwd = generatePassword();
 
-                    const emailAddr = usernameToEmail(uname);
+                    let emailAddr = usernameToEmail(uname);
 
-                    const { data: authUser, error: authErr } = await supabase.auth.admin.createUser({ email: emailAddr, password: pwd, email_confirm: true });
+                    // Auth tablosu global; aynı email iki org'da kullanılamaz.
+                    // generateUniqueUsername sadece public.users'tan kontrol
+                    // ediyor — orphan auth user veya tarihsel hesap varsa
+                    // çakışabilir. Burst halinde "User already registered"
+                    // hatasını yakalayıp username'i suffix'leyerek 5 kez
+                    // tekrar dene. 32 satırlık import'un yarısı silent fail
+                    // olamasın diye.
+                    let authUser = null;
+                    let authErr = null;
+                    for (let attempt = 0; attempt <= 5; attempt++) {
+                        const res = await supabase.auth.admin.createUser({ email: emailAddr, password: pwd, email_confirm: true });
+                        if (!res.error) { authUser = res.data; authErr = null; break; }
+                        const m = (res.error.message || '').toLowerCase();
+                        const collision = m.includes('user already registered')
+                            || m.includes('already been registered')
+                            || m.includes('email already registered')
+                            || (m.includes('duplicate key') && m.includes('email'));
+                        if (collision && attempt < 5) {
+                            const ts = String(Date.now() % 10000).padStart(4, '0');
+                            uname = `${uname}_${ts}_${attempt + 1}`;
+                            emailAddr = usernameToEmail(uname);
+                            continue;
+                        }
+                        authErr = res.error;
+                        break;
+                    }
                     if (authErr) { errors.push(`${firstName} ${lastName}: ${authErr.message}`); continue; }
 
                     const { error: userErr } = await supabase.from('users').insert({ id: authUser.user.id, org_id: orgIdInt, username: uname, role: 'lecturer', must_change_password: true });

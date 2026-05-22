@@ -54,38 +54,76 @@ class LecturerRepository {
         email: String? = null
     ): Pair<String, String> {
         val baseUsername   = CredentialGenerator.generateUsername(firstName, lastName)
-        val username       = generateUniqueUsername(baseUsername)
+        // İlk aday: BU admin'in görebildiği (RLS-filtered) public.users üzerinde unique.
+        // Auth global çakışmasında aşağıda retry yapılır.
+        var username       = generateUniqueUsername(baseUsername)
         val plainPassword  = CredentialGenerator.generatePassword()
-        val syntheticEmail = AuthRepository.usernameToEmail(username)
+        var syntheticEmail = AuthRepository.usernameToEmail(username)
 
         val adminSession = client.auth.currentSessionOrNull()
             ?: throw com.unischeduler.util.UniSchedulerException(com.unischeduler.R.string.err_auth_no_admin_session)
 
-        // ── Step 1: Create the Auth user (Supabase will switch our
-        //           current session to the new user as a side-effect). ──
-        val authUserId: String
-        try {
-            val signUpResult = client.auth.signUpWith(Email) {
-                this.email = syntheticEmail
-                this.password = plainPassword
-            }
-            authUserId = signUpResult?.id
-                ?: client.auth.currentUserOrNull()?.id
-                ?: throw IllegalStateException(
-                    "Kullanıcı oluşturulamadı (email: $syntheticEmail). " +
-                    "Supabase Auth ayarlarında 'Enable email confirmations' kapalı olmalı."
+        // ── Step 1: Create the Auth user with COLLISION RETRY ─────────────
+        //
+        // KRİTİK: Supabase Auth tablosu GLOBAL — email'ler tüm org'lar arası
+        // unique olmalı. Mobile generateUniqueUsername() public.users'a
+        // bakıyor ama RLS gereği başka org'ların kullanıcıları görünmüyor.
+        // Cumhuriyet admin'i Sivas'taki ahmet_yilmaz'ı göremez → "unique"
+        // sayar → signUpWith fail eder "User already registered". Bu bug 32
+        // satırlık Excel import'ları 0 başarılı / 32 başarısız çıkartıyordu.
+        //
+        // Fix: collision yakalanırsa username'e timestamp+counter suffix
+        // eklenip 5 kez retry. Timestamp 4 hane → 10000'de bir teorik
+        // çakışma; counter ile pratikte sıfır.
+        var authUserId: String = ""
+        var attempt = 0
+        val maxRetries = 5
+        while (true) {
+            try {
+                val signUpResult = client.auth.signUpWith(Email) {
+                    this.email = syntheticEmail
+                    this.password = plainPassword
+                }
+                authUserId = signUpResult?.id
+                    ?: client.auth.currentUserOrNull()?.id
+                    ?: throw IllegalStateException(
+                        "Kullanıcı oluşturulamadı (email: $syntheticEmail). " +
+                        "Supabase Auth ayarlarında 'Enable email confirmations' kapalı olmalı."
+                    )
+                break  // SUCCESS
+            } catch (e: Exception) {
+                val msgLower = (e.message ?: "").lowercase()
+                val isAlreadyRegistered =
+                    msgLower.contains("user already registered") ||
+                    msgLower.contains("already been registered") ||
+                    msgLower.contains("email already registered") ||
+                    msgLower.contains("duplicate key") && msgLower.contains("email")
+
+                if (isAlreadyRegistered && attempt < maxRetries) {
+                    attempt++
+                    // 4-haneli zaman damgası + retry counter. Aynı milisaniyede
+                    // iki collision olsa bile counter farklı.
+                    val ts = (System.currentTimeMillis() % 10000).toString().padStart(4, '0')
+                    username = "${baseUsername}_${ts}_$attempt"
+                    syntheticEmail = AuthRepository.usernameToEmail(username)
+                    android.util.Log.w(
+                        "LecturerRepo",
+                        "Auth collision for $baseUsername — retry #$attempt with $username"
+                    )
+                    continue
+                }
+
+                // Best-effort: restore admin session even on failure so the
+                // app is usable afterward.
+                runCatching { client.auth.importSession(adminSession) }
+                if (e is IllegalStateException) throw e
+                if (e is com.unischeduler.util.UniSchedulerException) throw e
+                throw com.unischeduler.util.UniSchedulerException(
+                    com.unischeduler.R.string.err_auth_create_user,
+                    arrayOf(e.message ?: e::class.java.simpleName),
+                    e
                 )
-        } catch (e: Exception) {
-            // Best-effort: restore admin session even on failure so the
-            // app is usable afterward.
-            runCatching { client.auth.importSession(adminSession) }
-            if (e is IllegalStateException) throw e
-            if (e is com.unischeduler.util.UniSchedulerException) throw e
-            throw com.unischeduler.util.UniSchedulerException(
-                com.unischeduler.R.string.err_auth_create_user,
-                arrayOf(e.message ?: e::class.java.simpleName),
-                e
-            )
+            }
         }
 
         // ── Step 2: IMMEDIATELY restore the admin session BEFORE any
