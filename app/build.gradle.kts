@@ -20,8 +20,8 @@ android {
         applicationId = "com.unischeduler"
         minSdk        = 26
         targetSdk     = 34
-        versionCode   = 8
-        versionName   = "1.2.7"
+        versionCode   = 9
+        versionName   = "1.2.8"
 
         buildConfigField("String", "SUPABASE_URL",      "\"${localProps["SUPABASE_URL"] ?: ""}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProps["SUPABASE_ANON_KEY"] ?: ""}\"")
