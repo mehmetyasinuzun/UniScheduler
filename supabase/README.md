@@ -1,232 +1,162 @@
 # UniScheduler — Supabase Setup
 
-> İki kurulum yolu var:
-> 1. **Quick install** — sıfırdan yeni proje için, [`schema.sql`](schema.sql)'i tek seferde çalıştır
-> 2. **Production deploy** — canlı veri varken sürüm güncellemek için [dbmate](https://github.com/amacneil/dbmate) ile versiyonlu migration'lar
->
-> Eski parçalı dosyalar [`migrations/legacy/`](migrations/legacy/) altında arşivde. **Çalıştırmayın.**
+**TEK DOSYA, TEK RUN.** [`schema.sql`](schema.sql)'i Supabase SQL Editor'a
+yapıştır, **Run** butonuna bas — proje çalışmaya hazır. Yama / migration
+zinciri yok; her şey tek dosyada idempotent.
+
+Opsiyonel: [`functions/bulk-create-lecturers`](functions/bulk-create-lecturers/)
+Edge Function'ını da deploy et → 350 hocalık bulk import 9 dakika yerine
+30 saniye sürer.
 
 ---
 
-## 1. Yeni Proje Kurulumu (Quick Install)
+## Hızlı Kurulum (5 dakika)
 
-### 1.1 Supabase Projesi Oluştur
+### 1. Supabase Projesi Aç
 1. [supabase.com](https://supabase.com) → **New Project**
-2. Bir proje adı belirleyin (örn. `unischeduler-prod`)
-3. Güçlü bir DB parolası seçin, parola yöneticisine kaydedin
-4. Kullanıcılarınıza en yakın region (`eu-central-1` Türkiye için iyi)
-5. ~2 dakika provision bekleyin
+2. Proje adı + güçlü DB parolası + en yakın region
+3. ~2 dakika provision bekle
 
-### 1.2 Şemayı Yükle
-1. Dashboard → **SQL Editor → New query**
-2. [`schema.sql`](schema.sql) dosyasının tamamını yapıştır
+### 2. Şemayı Yükle
+1. Dashboard → **SQL Editor** → **New query**
+2. [`schema.sql`](schema.sql) dosyasının **tamamını** yapıştır
 3. **Run**
 
-Bu komut şunları kurar:
-- 11 tablo (organizations, org_settings, users, departments, lecturers, courses, classrooms, offerings, schedule_entries, lecturer_availability, client_error_logs, audit_log, login_attempts, super_admins)
-- Org-scoped sorgular için tüm indeksler
-- 5 SECURITY DEFINER helper fonksiyon (`current_org_id`, `current_user_role`, `is_admin`, `is_lecturer`, `current_lecturer_id`)
-- Her tabloda Row-Level Security politikaları (multi-tenant izolasyonu)
-- Realtime publication (schedule_entries, courses, lecturer_availability, offerings)
-- `prevent_schedule_overlap` trigger (race-condition korumalı çakışma engeli)
-- `admin_reset_lecturer_password` RPC (mobile admin'in service_role gerektirmeden hoca şifresi sıfırlaması)
-
-> ⚠ Script `DROP TABLE IF EXISTS` ile başlar ve `auth.users` içindeki `*@unischeduler.app` satırları siler. **Mevcut tüm veri silinir.** Sadece yeni projede çalıştırın veya önce yedek alın.
-
-### 1.3 İlk Organizasyonu Ekle
-```sql
-INSERT INTO organizations (name, code) VALUES ('Default University', 'default') RETURNING id;
+Beklenen sonuç (alt panelde):
+```
+status                          tables  rls_policies  triggers  functions
+UniScheduler schema installed   14      32+           30+       10+
 ```
 
-### 1.4 İlk Admin'i Oluştur
-**Dashboard → Authentication → Users → Add user**
-- Email: `admin@unischeduler.app` (synthetic — gerçek e-posta gerekmez)
+Bu tek script şunları kurar:
+- **14 tablo** — organizations, org_settings, users, departments, lecturers, courses, classrooms, offerings, schedule_entries, lecturer_availability, client_error_logs, audit_log, login_attempts, super_admins
+- **32+ RLS policy** — multi-tenant izolasyon (her admin sadece kendi org'unu görür)
+- **5 SECURITY DEFINER helper** — `current_org_id`, `current_user_role`, `is_admin`, `is_lecturer`, `current_lecturer_id`
+- **3 SECURITY DEFINER RPC** — admin işlemleri için:
+  - `admin_reset_lecturer_password(lecturer_id, new_password)` — mobile admin'in service_role gerektirmeden hoca şifresi sıfırlaması
+  - `generate_unique_lecturer_username(first, last)` — global-unique username üretimi (cross-org collision + Auth orphan koruması)
+- **`prevent_schedule_overlap` trigger** — TOCTOU race koruması
+- **Audit trigger'ları** — users / lecturers / courses / classrooms / departments / offerings / schedule_entries değişiklikleri otomatik kayıt
+- **Realtime publication** — schedule_entries, courses, offerings, lecturer_availability (mobile uygulamada canlı güncelleme)
+
+> ⚠ Script **DROP TABLE IF EXISTS** ile başlar ve `auth.users` içindeki
+> `*@unischeduler.app` synthetic kullanıcılarını siler. Canlı veri varsa
+> ÖNCE yedek al.
+
+### 3. İlk Admin'i Oluştur
+
+Dashboard → **Authentication** → **Users** → **Add user**:
+- Email: `superadmin@unischeduler.app`
 - Password: güçlü bir parola
-- **Auto-confirm user**: ✅
+- ✅ Auto-confirm user
 
-UUID'yi kopyalayın, sonra:
+Kaydet → açılan satırdan **UUID**'yi kopyala.
+
+SQL Editor'da:
 ```sql
+-- Organizasyon yarat
+INSERT INTO organizations (name, code) VALUES ('Sivas BTÜ', 'SBTU') RETURNING id;
+-- → dönen id (örn. 1) aşağıdaki insert'in org_id'sine yazılır
+
+-- Admin profilini bağla
 INSERT INTO public.users (id, org_id, username, role, must_change_password)
-VALUES ('<auth-user-uuid>', 1, 'admin', 'admin', true);
+VALUES ('<UUID-buraya>', 1, 'superadmin', 'admin', false);
+
+-- Opsiyonel: panel super_admins kaydı
+INSERT INTO super_admins (username) VALUES ('superadmin');
 ```
 
-### 1.5 API Anahtarları
-**Settings → API**:
-- **Project URL** → `local.properties` içinde `SUPABASE_URL`
-- **anon / public key** → mobile için `SUPABASE_ANON_KEY`
-- **service_role key** → sadece [super-admin paneli](../super-admin-paneli/) için, **mobile APK'ya asla koyma**
+### 4. Auth Confirm Email kapat
+Dashboard → **Authentication** → **Providers** → **Email**
+→ "Confirm email" → **OFF** + Save.
+
+(Mobile uygulama email doğrulama beklemediği için açık kalırsa lecturer
+girişleri patlatır.)
+
+### 5. Mobile + Panel
+- **Mobile:** APK'yı telefona yükle, `superadmin` + verdiğin parola ile giriş yap.
+- **Panel:** `cd super-admin-paneli && npm install && npm start` → http://localhost:3000
 
 ---
 
-## 2. Production Deploy — dbmate ile Versiyonlu Migration
+## Edge Function (opsiyonel ama önerilen)
 
-> Quick install yeni projeye uygundur ama canlı veri varken `DROP TABLE` yapamayız. Şema değişiklikleri için **dbmate** kullanıyoruz — single Go binary, `DATABASE_URL` env'ine bağlanır, basit `up`/`down`/`new` komutları sunar.
+Mobile admin'in 350+ hocayı Excel ile toplu eklemesi durumunda Supabase
+Auth'un 30 createUser/dk rate-limit'i devreye girer ve import 9 dakika sürer.
+Edge Function bunu **30 saniyeye** indirir.
 
-### 2.1 dbmate Kurulumu
+### Deploy (Dashboard üzerinden, CLI gerekmez)
 
+1. Dashboard → **Edge Functions** → **Create a new function**
+2. Function adı: **`bulk-create-lecturers`** (bu isim sabit, mobile kodu bekliyor)
+3. Editor'a [`functions/bulk-create-lecturers/index.ts`](functions/bulk-create-lecturers/index.ts) içeriğini yapıştır
+4. **Deploy function** → "Status: Active" yeşil
+
+Detaylı talimat: [`functions/README.md`](functions/README.md)
+
+### Doğrulama
 ```bash
-# macOS
-brew install dbmate
-
-# Linux
-curl -fsSL -o /usr/local/bin/dbmate \
-    https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64
-chmod +x /usr/local/bin/dbmate
-
-# Windows (PowerShell)
-iwr https://github.com/amacneil/dbmate/releases/latest/download/dbmate-windows-amd64.exe `
-    -OutFile $env:USERPROFILE\bin\dbmate.exe
+# 401 dönmeli (Authorization eksik) — doğru davranış
+curl -X POST https://<project-ref>.supabase.co/functions/v1/bulk-create-lecturers
+# → {"error":"Authorization header eksik."}
 ```
 
-Doğrulama:
-```bash
-dbmate --version
-```
-
-### 2.2 Bağlantı Konfigürasyonu
-
-`supabase/migrations/.env` oluşturun (gitignored):
-```bash
-cp supabase/migrations/.dbmate.example.env supabase/migrations/.env
-```
-
-`DATABASE_URL`'i Supabase Settings → Database → **Connection string (URI)** kısmından kopyalayın. Production için **pooled connection** (port 6543) önerilir:
-
-```
-DATABASE_URL=postgresql://postgres.[REF]:[PASSWORD]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres
-```
-
-### 2.3 Baseline'ı İşaretle
-
-İlk dbmate kullanımında **schema.sql** ile zaten kurulmuş veritabanına dbmate'i tanıtmak gerekir. Bunu **bir defalık** yapın:
-
-```bash
-cd supabase
-dbmate --migrations-dir migrations status   # bakım için: 1 pending görmeli (baseline)
-dbmate --migrations-dir migrations up       # baseline migration uygulanır (no-op marker)
-```
-
-Veya manuel SQL ile (bağlantı yoksa):
-```sql
-CREATE TABLE IF NOT EXISTS schema_migrations (version VARCHAR(255) PRIMARY KEY);
-INSERT INTO schema_migrations (version) VALUES ('20260521000000') ON CONFLICT DO NOTHING;
-```
-
-Bu, dbmate'in "baseline applied, devam et" demesini sağlar.
-
-### 2.4 Yeni Migration Yazma
-
-```bash
-cd supabase
-dbmate new add_audit_request_id
-# → migrations/20260601120000_add_audit_request_id.sql oluşturuldu
-```
-
-Dosyayı açın, iki bölümü doldurun:
-```sql
--- migrate:up
-ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS request_id TEXT;
-CREATE INDEX IF NOT EXISTS idx_audit_request_id ON audit_log(request_id);
-
--- migrate:down
-DROP INDEX IF EXISTS idx_audit_request_id;
-ALTER TABLE audit_log DROP COLUMN IF EXISTS request_id;
-```
-
-### 2.5 Production'a Uygula
-
-```bash
-# Önce: backup al!  Dashboard → Database → Backups
-# veya: pg_dump $DATABASE_URL > backup-$(date +%F).sql
-
-# Dry-run — uygulanacak migration'ları listele
-dbmate --migrations-dir migrations status
-
-# Uygula
-dbmate --migrations-dir migrations up
-
-# Sorun varsa rollback
-dbmate --migrations-dir migrations rollback
-```
-
-### 2.6 Best Practice'ler
-
-**✅ Her migration'da:**
-- `IF NOT EXISTS` / `IF EXISTS` kullanın (idempotent olsun, yarıda kalırsa devam edebilesiniz)
-- `migrate:down` boş bırakmayın — geri alma yolu olmalı
-- Büyük tablo değişikliklerinde `ALTER TABLE ... ADD COLUMN ... DEFAULT NULL` (DEFAULT değer atamak prod'da full table rewrite tetikler)
-- INDEX'leri `CONCURRENTLY` ile ekleyin (production'da yazma kilitlemez):
-  ```sql
-  CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_xx ON foo(bar);
-  ```
-
-**❌ Asla:**
-- Mevcut migration dosyasının içeriğini DEĞİŞTİRMEYİN. Yeni migration yazın.
-  (dbmate hash'lere bakmaz ama takım üyelerinin DB'leri uyumsuz hale gelir.)
-- Production'da `dbmate drop` (TÜM veriyi siler) çalıştırmayın.
-- Migration'ı kontrol etmeden `dbmate up` yapmayın — `status` ile önce ne uygulanacağını görün.
-
-### 2.7 CI/CD Entegrasyonu
-
-`.github/workflows/deploy-migrations.yml` örneği (ileride):
-```yaml
-- name: Apply migrations
-  env:
-    DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
-  run: dbmate --migrations-dir supabase/migrations up
-```
-
-GitHub Secrets'a `SUPABASE_DATABASE_URL` ekledikten sonra tag-based deploy mümkün.
+> Edge Function deploy edilmemişse mobile app yine çalışır — sadece eski
+> yavaş yola düşer (~9 dakika). Yani önce APK yüklemen sorun yok, Edge'i
+> sonra deploy edebilirsin.
 
 ---
 
-## 3. Tablo Özeti
+## Bağlantı Anahtarları
 
-| Tablo | Amaç |
+Dashboard → **Project Settings** → **API**
+
+| Anahtar | Nerede kullanılır | Gizli mi? |
+|---|---|---|
+| `Project URL` | local.properties `SUPABASE_URL` + panel `.env` | Hayır |
+| `anon (public)` key | local.properties `SUPABASE_ANON_KEY` (APK'da gömülü) | Hayır (RLS koruyor) |
+| `service_role` key | panel `.env` `SUPABASE_SERVICE_KEY` + Edge Function ortamı | **EVET — asla repo'ya koyma** |
+
+`local.properties` ve `.env` zaten `.gitignore`'da; commit etmiyoruz.
+
+---
+
+## Eski Migration'lar (Tarihsel)
+
+[`migrations/legacy/`](migrations/legacy/) klasöründe önceki kurulum
+versiyonları arşivlenmiş. **Çalıştırmayın** — `schema.sql` zaten her
+şeyi içeriyor.
+
+| Dosya | İçerik (artık schema.sql'de) |
 |---|---|
-| `organizations` | Multi-tenant kök (her kurum bir satır) |
-| `org_settings` | Org-bazlı yapılandırma (zaman dilimi, mesai saatleri, aktif günler) |
-| `users` | Auth profili (`auth.users` ile 1:1) — rol + org bağı |
-| `departments` | Bölüm listesi (org'a scoped) |
-| `lecturers` | Hoca profilleri (`users` + `departments` FK) |
-| `courses` | Ders kataloğu (org'a scoped) |
-| `classrooms` | Fiziksel/lab sınıflar (org'a scoped) |
-| `offerings` | Açılan dersler (akademik yıl + dönem) |
-| `schedule_entries` | Nihai program: offering × hoca × derslik × gün × saat |
-| `lecturer_availability` | Hocaların müsait/meşgul saatleri |
-| `client_error_logs` | Mobile + panel hata raporları |
-| `audit_log` | Trigger ile her INSERT/UPDATE/DELETE jsonb diff'i |
-| `login_attempts` | CTI için tüm giriş denemeleri (başarılı + başarısız) |
-| `super_admins` | Panel sahibi listesi (sadece audit kaydı için) |
-
-## 4. RLS Hızlı Referans
-
-- **Herkes** sadece kendi organizasyonunu görür (`current_org_id()`).
-- **Admin'ler** kendi org'larında her tabloya yazabilir.
-- **Hoca'lar** sadece kendi `lecturer_availability` satırlarını yazabilir.
-- **service_role** anahtarı (sadece süper-admin paneli kullanır) her politikayı bypass eder — DB root parolası gibi koruyun.
+| `001_schema.sql` → `005_error_log_source.sql` | İlk RLS denemeleri (artık 17.–20. bölümler) |
+| `20260521000000_baseline.sql` | dbmate baseline marker |
+| `20260522000000_fix_login_attempts_rls.sql` | login_attempts RLS (schema.sql bölüm 20) |
+| `20260523000000_unique_username_rpc.sql` | RPC ilk sürümü |
+| `20260523100000_secure_username_rpc.sql` | RPC güvenlik sıkılaştırma (schema.sql bölüm 22c) |
 
 ---
 
-## 5. Yedekleme Stratejisi
+## Mevcut Veri Üzerine Re-Deploy
 
-**Supabase otomatik backup:**
-- Free tier: 7 günlük günlük backup
-- Pro tier: 7 gün + Point-in-Time Recovery (PITR)
+Aynı `schema.sql`'i mevcut bir proje üzerinde tekrar çalıştırırsan:
 
-**Manuel yedek:**
-```bash
-pg_dump $DATABASE_URL > backup-$(date +%Y%m%d).sql
-```
+1. `DROP TABLE IF EXISTS ... CASCADE` ile tüm tablolar silinir
+2. `DELETE FROM auth.users WHERE email LIKE '%@unischeduler.app'` ile
+   sentetik kullanıcılar silinir
+3. Yeniden temiz şema kurulur
 
-**Geri yükleme:**
-```bash
-# Önce mevcut DB'yi temizle (DİKKAT)
-psql $DATABASE_URL -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-psql $DATABASE_URL < backup-2026-05-21.sql
-```
+**Yani veri kaybı kesin.** Sadece geliştirme/test ortamında yap. Production
+re-deploy için (canlı veri korumayla) ayrı bir migration yazılması gerekir.
 
-**Migration sonrası verification:**
-```bash
-dbmate --migrations-dir migrations status  # tüm migration applied göstermeli
-```
+---
+
+## Sorun Giderme
+
+| Belirti | Sebep | Çözüm |
+|---|---|---|
+| Mobile giriş "Profile not found" | `public.users` insert eksik | Adım 3'ü tamamla |
+| Mobile giriş "Email not confirmed" | Auth confirm aktif | Adım 4'ü uygula |
+| Bulk import 9 dakika sürüyor | Edge Function deploy edilmemiş | Edge Function bölümünü uygula |
+| RPC çağrısı "Yetkisiz" | Caller admin değil | `public.users.role='admin'` ata |
+| CTI sayfası boş | `login_attempts` policy yok | `schema.sql`'i yeniden çalıştır |

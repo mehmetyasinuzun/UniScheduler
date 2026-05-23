@@ -2,13 +2,29 @@
 -- ║                   UniScheduler — Production Schema                      ║
 -- ║              Multi-tenant • RLS • Audit • Realtime                      ║
 -- ╠══════════════════════════════════════════════════════════════════════════╣
--- ║ SINGLE SOURCE OF TRUTH. Run this ONE file in Supabase SQL Editor.       ║
--- ║ Everything is idempotent — safe to re-run on a fresh project.           ║
+-- ║ TEK HAKİKAT KAYNAĞI — bu dosyayı Supabase SQL Editor'a yapıştır ve Run. ║
+-- ║ Her şey idempotent: aynı dosya temiz proje üzerinde de re-deploy'da da   ║
+-- ║ aynı sonucu verir. Yama eklemeye gerek yok.                              ║
 -- ║                                                                          ║
--- ║ The legacy migration files in supabase/migrations/legacy/ are for       ║
--- ║ historical reference only. Do NOT run them.                              ║
+-- ║ İÇERİK                                                                   ║
+-- ║   • 14 tablo  (organizations, users, lecturers, courses, ...)            ║
+-- ║   • 32 RLS policy (multi-tenant izolasyon)                              ║
+-- ║   • SECURITY DEFINER fonksiyonlar:                                       ║
+-- ║       - admin_reset_lecturer_password (mobile admin için)                ║
+-- ║       - generate_unique_lecturer_username (cross-org collision fix)      ║
+-- ║       - prevent_schedule_overlap (TOCTOU koruması)                       ║
+-- ║   • 32 trigger (touch_updated_at, audit, schedule_overlap)               ║
+-- ║   • Realtime publications (schedule, courses, offerings, availability)   ║
 -- ║                                                                          ║
--- ║ ⚠  This script DROPs all UniScheduler tables. Take a backup first.      ║
+-- ║ İLAVE KURULUM (bu dosya dışında, opsiyonel)                              ║
+-- ║   • Edge Function 'bulk-create-lecturers':                               ║
+-- ║       supabase/functions/bulk-create-lecturers/index.ts                  ║
+-- ║       Dashboard → Edge Functions → Create → kodu yapıştır → Deploy       ║
+-- ║       (Mobile bulk import'u 9dk → 30sn'ye düşürür)                       ║
+-- ║                                                                          ║
+-- ║ ⚠  Bu script TÜM UniScheduler tablolarını DROP eder + auth.users         ║
+-- ║    içindeki @unischeduler.app sentetik kullanıcılarını siler.            ║
+-- ║    Veri kaybı önemli ise önce yedek al.                                  ║
 -- ╚══════════════════════════════════════════════════════════════════════════╝
 
 -- ──────────────────────────────────────────────────────────────────────────
@@ -828,20 +844,214 @@ REVOKE ALL    ON FUNCTION public.admin_reset_lecturer_password(INT, TEXT) FROM P
 GRANT EXECUTE ON FUNCTION public.admin_reset_lecturer_password(INT, TEXT) TO authenticated;
 
 -- ──────────────────────────────────────────────────────────────────────────
--- 23. Done
+-- 22c. Global-unique lecturer username RPC (SECURITY DEFINER + admin-only)
 -- ──────────────────────────────────────────────────────────────────────────
--- After running this script:
---   1. Authentication → Settings: turn OFF "Confirm email"
---   2. Authentication → Users → Add user (auto-confirm) for the first admin
---   3. Run:
---        INSERT INTO organizations (name, code) VALUES ('Your Univ', 'YOUR') RETURNING id;
+-- AMAÇ
+-- ────
+-- Multi-tenant lecturer kayıt akışında "globally unique username" üretmek.
+-- 3 katmanlı problemi tek noktada çözer:
+--
+--   public.users   (RLS active, org-scoped) ── username UNIQUE
+--          ↓
+--   auth.users    (global, no RLS)         ── email   UNIQUE
+--          ↓
+--   mobile signUp  / panel admin.createUser
+--
+-- Mobile client-side generateUniqueUsername() public.users'a anon_key ile
+-- bakıyordu → RLS yüzünden başka org'un kullanıcılarını GÖRMÜYORDU →
+-- "ahmet_yilmaz" Org 1'de varsa, Cumhuriyet admin'i "unique" sayıp signUp
+-- atınca Auth email collision → "User already registered" → 32 satırlık
+-- import 0 başarılı. Bu RPC sorunu tek noktada çözer (postgres role,
+-- RLS bypass, hem public hem auth tablosuna bakar).
+--
+-- GÜVENLİK
+-- ────────
+-- ÖNEMLİ: RPC her ne kadar sadece username üretmek için olsa da kötüye
+-- kullanılırsa "username enumeration" saldırı vektörü olur. Saldırgan
+-- "Ahmet Yilmaz" diye sorgu yapıp yanıt 'ahmet_yilmaz' ise → yok,
+-- 'ahmet_yilmaz2' ise → 1 var çıkarımı yapabilir. Bu yüzden:
+--
+--   • anon role → REVOKE (giriş yapmamış kullanıcı 403)
+--   • authenticated lecturer → içeride RAISE EXCEPTION
+--   • authenticated admin   → ✅ geçer
+--   • service_role          → ✅ geçer (panel/Edge Function)
+--
+-- Ayrıca timing-attack koruması (30ms sabit pg_sleep) + audit_log her
+-- başarılı çağrıya kayıt yazar — anomali tespiti için.
+--
+-- FORMAT
+-- ──────
+-- "Farhan Adl" (ilk)    → "farhan_adl"
+-- "Farhan Adl" (ikinci) → "farhan_adl2"
+-- "Çağrı Öz"            → "cagri_oz" (Türkçe karakter normalize)
+CREATE OR REPLACE FUNCTION public.generate_unique_lecturer_username(
+    p_first_name TEXT,
+    p_last_name  TEXT
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+DECLARE
+    base            TEXT;
+    candidate       TEXT;
+    candidate_email TEXT;
+    suffix          INT := 2;
+    v_caller_role   TEXT;
+    v_caller_uid    UUID;
+    v_is_authorized BOOLEAN := FALSE;
+BEGIN
+    -- ── 1) YETKİLENDİRME ──────────────────────────────────────────────
+    v_caller_role := auth.role();
+    v_caller_uid  := auth.uid();
+
+    IF v_caller_role = 'service_role' THEN
+        -- Panel / Edge Function — koşulsuz geçer
+        v_is_authorized := TRUE;
+    ELSIF v_caller_role = 'authenticated' AND v_caller_uid IS NOT NULL THEN
+        -- Mobile admin — public.users.role='admin' kontrolü
+        SELECT EXISTS (
+            SELECT 1 FROM public.users
+            WHERE id = v_caller_uid
+              AND role = 'admin'
+              AND is_active = TRUE
+        ) INTO v_is_authorized;
+    END IF;
+
+    IF NOT v_is_authorized THEN
+        -- Timing-aware reject: yetki kontrolü fail olsa da aynı gecikme
+        -- uygulanır ki saldırgan "yetki yoksa hızlı, varsa yavaş" diye
+        -- inferans yapamasın.
+        PERFORM pg_sleep(0.03);
+        RAISE EXCEPTION 'Yetkisiz: bu işlem sadece yönetici hesaplarına açıktır.'
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
+
+    -- ── 2) TIMING ATTACK KORUMASI ─────────────────────────────────────
+    -- Sabit ~30ms gecikme. Loop iteration sayısından (1 vs 9) yanıt
+    -- süresi tahmin edilmesin diye.
+    PERFORM pg_sleep(0.03);
+
+    -- ── 3) GİRDİ DOĞRULAMA ────────────────────────────────────────────
+    IF p_first_name IS NULL OR p_last_name IS NULL THEN
+        RAISE EXCEPTION 'First name and last name cannot be null';
+    END IF;
+
+    -- ── 4) TÜRKÇE NORMALİZASYON + LOWERCASE ──────────────────────────
+    --   "Farhan Âdl"  → "farhan adl" → "farhan_adl"
+    --   "Çağrı Öz"    → "cagri_oz"
+    --   "Şükran"      → "sukran"
+    base := lower(translate(
+        trim(p_first_name) || '_' || trim(p_last_name),
+        'çğıöşüâîûçğıöşüÇĞIİÖŞÜÂÎÛ',
+        'cgiosuaiucgiosuCGIIOSUAIU'
+    ));
+    base := regexp_replace(base, '\s+', '_', 'g');
+    base := regexp_replace(base, '[^a-z0-9_]', '', 'g');
+    base := regexp_replace(base, '_+', '_', 'g');
+    base := regexp_replace(base, '^_+|_+$', '', 'g');
+
+    IF base = '' OR base IS NULL THEN
+        RAISE EXCEPTION 'Cannot derive a valid username from "%" "%"', p_first_name, p_last_name;
+    END IF;
+
+    -- ── 5) UNIQUE KONTROL DÖNGÜSÜ (hem public.users hem auth.users) ───
+    -- usernameToEmail mapping: '_' → '.'
+    candidate       := base;
+    candidate_email := replace(candidate, '_', '.') || '@unischeduler.app';
+
+    WHILE EXISTS (SELECT 1 FROM public.users WHERE username = candidate)
+       OR EXISTS (SELECT 1 FROM auth.users   WHERE lower(email) = candidate_email)
+    LOOP
+        candidate       := base || suffix::TEXT;
+        candidate_email := replace(candidate, '_', '.') || '@unischeduler.app';
+        suffix          := suffix + 1;
+        IF suffix > 9999 THEN
+            RAISE EXCEPTION 'Cannot generate unique username for "%_%" after 9999 attempts',
+                p_first_name, p_last_name;
+        END IF;
+    END LOOP;
+
+    -- ── 6) AUDIT LOG — anomali tespiti için ───────────────────────────
+    -- Her başarılı çağrı kayıt edilir. Saatlik 500+ çağrı = anomali
+    -- (gerçek admin günde 0-50 yapar).
+    BEGIN
+        INSERT INTO public.audit_log (
+            actor_id, actor_role, table_name, record_id, operation, new_data
+        ) VALUES (
+            v_caller_uid,
+            COALESCE(v_caller_role, 'unknown'),
+            'username.generate',
+            candidate,
+            'INSERT',
+            jsonb_build_object(
+                'first_name', p_first_name,
+                'last_name',  p_last_name,
+                'result',     candidate
+            )
+        );
+    EXCEPTION WHEN OTHERS THEN
+        -- Audit fail olursa ana akışı bozma — sadece warning.
+        RAISE WARNING 'audit_log insert failed: %', SQLERRM;
+    END;
+
+    RETURN candidate;
+END;
+$$;
+
+-- Yetki: sadece authenticated + service_role. anon dışlanır (kritik!).
+REVOKE ALL    ON FUNCTION public.generate_unique_lecturer_username(TEXT, TEXT) FROM PUBLIC;
+REVOKE ALL    ON FUNCTION public.generate_unique_lecturer_username(TEXT, TEXT) FROM anon;
+GRANT EXECUTE ON FUNCTION public.generate_unique_lecturer_username(TEXT, TEXT) TO authenticated, service_role;
+
+-- ──────────────────────────────────────────────────────────────────────────
+-- 23. Kurulum sonrası adımlar
+-- ──────────────────────────────────────────────────────────────────────────
+-- Bu script tek başına şema + RLS + fonksiyonlar + trigger'ları kurar.
+-- Kullanıcı verisi yaratmaz — ilk admin'i şu adımlarla oluştur:
+--
+--   1) Dashboard → Authentication → Providers → Email
+--      "Confirm email" KAPALI olmalı (mobile signUpWith confirm beklemez).
+--
+--   2) Dashboard → Authentication → Users → Add user
+--      Email: superadmin@unischeduler.app
+--      Password: <güçlü-şifre>
+--      Auto Confirm User: ✅
+--      Kaydet → açılan satırdan UUID'yi kopyala.
+--
+--   3) SQL Editor → New query → şunu çalıştır (UUID'yi kendi kopyaladığınla
+--      değiştir, organizasyon adını kendi üniversiten yap):
+--
+--        INSERT INTO organizations (name, code)
+--             VALUES ('Sivas BTÜ', 'SBTU')
+--          RETURNING id;
+--        -- dönen org_id'yi aşağıdaki insert'e yaz (örnek: 1)
+--
 --        INSERT INTO users (id, org_id, username, role)
 --             VALUES ('<auth-user-uuid>', 1, 'superadmin', 'admin');
---   4. Optionally INSERT INTO super_admins (username) VALUES ('superadmin');
---   5. The mobile app and web panel are now ready.
-
+--
+--        -- Opsiyonel: super-admin panel için kayıt (UI için)
+--        INSERT INTO super_admins (username) VALUES ('superadmin');
+--
+--   4) Edge Function (opsiyonel ama önerilen):
+--      Dashboard → Edge Functions → Create function
+--        Name: bulk-create-lecturers
+--        Code: supabase/functions/bulk-create-lecturers/index.ts içeriğini yapıştır
+--      → Deploy. Bu fonksiyon mobile'ın 350+ hocayı 30 saniyede import
+--      etmesini sağlar (yoksa 9 dakikalık yedek yol devreye girer).
+--
+--   5) Mobile app: APK'yı yükle. Panel: 'npm install && npm start' ile çalıştır.
+--      İlk girişte (superadmin / yukarıda verdiğin şifre) Welcome ekranı görünür.
+--
+-- ──────────────────────────────────────────────────────────────────────────
+-- Kurulum doğrulama — tabloların, policy'lerin, trigger'ların sayısını döndürür
+-- ──────────────────────────────────────────────────────────────────────────
 SELECT
     'UniScheduler schema installed' AS status,
-    (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public') AS tables,
-    (SELECT COUNT(*) FROM pg_policies WHERE schemaname='public')                  AS rls_policies,
-    (SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_schema='public') AS triggers;
+    (SELECT COUNT(*) FROM information_schema.tables    WHERE table_schema='public')        AS tables,
+    (SELECT COUNT(*) FROM pg_policies                  WHERE schemaname='public')          AS rls_policies,
+    (SELECT COUNT(*) FROM information_schema.triggers  WHERE trigger_schema='public')      AS triggers,
+    (SELECT COUNT(*) FROM information_schema.routines  WHERE routine_schema='public'
+                                                         AND routine_type='FUNCTION')      AS functions;
+-- Beklenen: 14 table, 32+ policy, 30+ trigger, 10+ function
