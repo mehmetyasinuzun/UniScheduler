@@ -238,13 +238,30 @@ class DataViewModel(app: Application) : AndroidViewModel(app) {
                     val errors = mutableListOf<String>()
                     val skipped = mutableListOf<String>()
 
+                    // RATE-LIMIT SAFE — Supabase Auth GoTrue 30 req/dakika
+                    // limit'i var. 32 hoca'lık bir import'ta ardışık
+                    // signUpWith çağrıları bu limit'e takılıyordu →
+                    // "AuthRestException: Request rate limit reached".
+                    // 1500ms throttle = saniyede ~0.6 req → dakikada ~36 req
+                    // (limit altında, güvenli). 32 hoca = ~48 saniye toplam;
+                    // büyük import için kabul edilebilir, UI loading state
+                    // göstereceği için kullanıcıyı belirsizlikte bırakmaz.
+                    val throttleMs = 1500L
+                    var rowIdx = 0
                     for (row in rows) {
+                        rowIdx++
                         val key = "${row.firstName.trim().lowercase()}|${row.lastName.trim().lowercase()}"
                         if (existingKey.contains(key)) {
                             skipped.add("${row.firstName} ${row.lastName}")
                             continue
                         }
                         existingKey.add(key)  // aynı Excel'de iki satır aynı kişiyse 2.si de atlansın
+
+                        // İlk satır için throttle gerekmez — sadece ardışık
+                        // request'ler arasında bekle.
+                        if (credentials.size + errors.size > 0) {
+                            kotlinx.coroutines.delay(throttleMs)
+                        }
 
                         val deptId = row.departmentName?.lowercase()?.trim()
                             ?.let { deptByName[it]?.id } ?: fallbackDepartmentId

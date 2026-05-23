@@ -53,77 +53,59 @@ class LecturerRepository {
         orgId: Int,
         email: String? = null
     ): Pair<String, String> {
-        val baseUsername   = CredentialGenerator.generateUsername(firstName, lastName)
-        // İlk aday: BU admin'in görebildiği (RLS-filtered) public.users üzerinde unique.
-        // Auth global çakışmasında aşağıda retry yapılır.
-        var username       = generateUniqueUsername(baseUsername)
+        // ── Step 0: Globally-unique username via SECURITY DEFINER RPC ──────
+        //
+        // Username kararı server-side bir Postgres fonksiyonuna delege edildi
+        // (generate_unique_lecturer_username). RPC fonksiyonu:
+        //   - SECURITY DEFINER → postgres role'üyle çalışır, RLS bypass eder
+        //   - Hem public.users hem auth.users tablosunu kontrol eder
+        //   - Sıralı suffix verir: farhan_adl → farhan_adl2 → farhan_adl3
+        //     (timestamp + counter karmaşası yok)
+        //
+        // Eski client-side generateUniqueUsername() public.users'a anon_key
+        // ile bakıyordu; RLS yüzünden cross-org collision'ları göremiyordu.
+        // Sonra Auth signUpWith "user already registered" → timestamp+counter
+        // suffix retry → hem çirkin "farhan_adl_4823_1" hem de 32 ardışık
+        // Auth çağrısı 30/dk rate-limit'i aşıyordu. Tek RPC + tek signUpWith
+        // = stabil, hızlı, temiz.
+        val username = generateUniqueUsernameRpc(firstName, lastName)
         val plainPassword  = CredentialGenerator.generatePassword()
-        var syntheticEmail = AuthRepository.usernameToEmail(username)
+        val syntheticEmail = AuthRepository.usernameToEmail(username)
 
         val adminSession = client.auth.currentSessionOrNull()
             ?: throw com.unischeduler.util.UniSchedulerException(com.unischeduler.R.string.err_auth_no_admin_session)
 
-        // ── Step 1: Create the Auth user with COLLISION RETRY ─────────────
+        // ── Step 1: Create the Auth user (single attempt — RPC garantili) ──
         //
-        // KRİTİK: Supabase Auth tablosu GLOBAL — email'ler tüm org'lar arası
-        // unique olmalı. Mobile generateUniqueUsername() public.users'a
-        // bakıyor ama RLS gereği başka org'ların kullanıcıları görünmüyor.
-        // Cumhuriyet admin'i Sivas'taki ahmet_yilmaz'ı göremez → "unique"
-        // sayar → signUpWith fail eder "User already registered". Bu bug 32
-        // satırlık Excel import'ları 0 başarılı / 32 başarısız çıkartıyordu.
-        //
-        // Fix: collision yakalanırsa username'e timestamp+counter suffix
-        // eklenip 5 kez retry. Timestamp 4 hane → 10000'de bir teorik
-        // çakışma; counter ile pratikte sıfır.
-        var authUserId: String = ""
-        var attempt = 0
-        val maxRetries = 5
-        while (true) {
-            try {
-                val signUpResult = client.auth.signUpWith(Email) {
-                    this.email = syntheticEmail
-                    this.password = plainPassword
-                }
-                authUserId = signUpResult?.id
-                    ?: client.auth.currentUserOrNull()?.id
-                    ?: throw IllegalStateException(
-                        "Kullanıcı oluşturulamadı (email: $syntheticEmail). " +
-                        "Supabase Auth ayarlarında 'Enable email confirmations' kapalı olmalı."
-                    )
-                break  // SUCCESS
-            } catch (e: Exception) {
-                val msgLower = (e.message ?: "").lowercase()
-                val isAlreadyRegistered =
-                    msgLower.contains("user already registered") ||
-                    msgLower.contains("already been registered") ||
-                    msgLower.contains("email already registered") ||
-                    msgLower.contains("duplicate key") && msgLower.contains("email")
-
-                if (isAlreadyRegistered && attempt < maxRetries) {
-                    attempt++
-                    // 4-haneli zaman damgası + retry counter. Aynı milisaniyede
-                    // iki collision olsa bile counter farklı.
-                    val ts = (System.currentTimeMillis() % 10000).toString().padStart(4, '0')
-                    username = "${baseUsername}_${ts}_$attempt"
-                    syntheticEmail = AuthRepository.usernameToEmail(username)
-                    android.util.Log.w(
-                        "LecturerRepo",
-                        "Auth collision for $baseUsername — retry #$attempt with $username"
-                    )
-                    continue
-                }
-
-                // Best-effort: restore admin session even on failure so the
-                // app is usable afterward.
-                runCatching { client.auth.importSession(adminSession) }
-                if (e is IllegalStateException) throw e
-                if (e is com.unischeduler.util.UniSchedulerException) throw e
-                throw com.unischeduler.util.UniSchedulerException(
-                    com.unischeduler.R.string.err_auth_create_user,
-                    arrayOf(e.message ?: e::class.java.simpleName),
-                    e
-                )
+        // Username RPC tarafından global-unique olarak üretildi; signUpWith
+        // burada teorik olarak sadece şu durumda fail eder:
+        //   (a) RPC ile signUpWith arası başka biri aynı isimle ekledi
+        //       (race window ~birkaç yüz ms) — pratikte yok
+        //   (b) auth.users'taki bir kayıt RPC'nin gördüğü zaman yarış
+        //       içinde silindi sonra yeniden eklendi — yok
+        // Yine de defansif — collision olursa ErrorMessages.map() güzel
+        // mesaj verir.
+        val authUserId: String
+        try {
+            val signUpResult = client.auth.signUpWith(Email) {
+                this.email = syntheticEmail
+                this.password = plainPassword
             }
+            authUserId = signUpResult?.id
+                ?: client.auth.currentUserOrNull()?.id
+                ?: throw IllegalStateException(
+                    "Kullanıcı oluşturulamadı (email: $syntheticEmail). " +
+                    "Supabase Auth ayarlarında 'Enable email confirmations' kapalı olmalı."
+                )
+        } catch (e: Exception) {
+            runCatching { client.auth.importSession(adminSession) }
+            if (e is IllegalStateException) throw e
+            if (e is com.unischeduler.util.UniSchedulerException) throw e
+            throw com.unischeduler.util.UniSchedulerException(
+                com.unischeduler.R.string.err_auth_create_user,
+                arrayOf(e.message ?: e::class.java.simpleName),
+                e
+            )
         }
 
         // ── Step 2: IMMEDIATELY restore the admin session BEFORE any
@@ -262,17 +244,52 @@ class LecturerRepository {
         return JsonUtil.extractIntsFromColumn(raw, column)
     }
 
-    private suspend fun generateUniqueUsername(base: String): String {
-        var candidate = base
-        var suffix = 2
-        while (usernameExists(candidate)) {
-            candidate = "$base$suffix"
-            suffix++
+    /**
+     * Calls the [generate_unique_lecturer_username] RPC and returns the
+     * globally-unique username (across all orgs, both public.users and
+     * auth.users tables).
+     *
+     * Pattern: "Farhan Adl" → "farhan_adl"
+     *          "Farhan Adl" (ikinci) → "farhan_adl2"
+     *          "Farhan Adl" (üçüncü) → "farhan_adl3"
+     *
+     * RPC SECURITY DEFINER ile postgres role'üyle çalıştığı için RLS atlanır;
+     * mobile anon_key bile çağırabilir.
+     */
+    private suspend fun generateUniqueUsernameRpc(firstName: String, lastName: String): String {
+        return try {
+            client.postgrest.rpc(
+                function = "generate_unique_lecturer_username",
+                parameters = kotlinx.serialization.json.buildJsonObject {
+                    put("p_first_name", kotlinx.serialization.json.JsonPrimitive(firstName))
+                    put("p_last_name", kotlinx.serialization.json.JsonPrimitive(lastName))
+                }
+            ).data.trim('"', ' ', '\n', '\r', '\t')
+        } catch (e: Exception) {
+            // Fallback — RPC mevcut değilse (migration uygulanmamış) eski
+            // pattern'a düş ki uygulama tamamen kırılmasın. Bu durumda
+            // cross-org collision riski yine var ama yeni proje setup'ında
+            // migration eklenince devre dışı kalır.
+            android.util.Log.e(
+                "LecturerRepo",
+                "generate_unique_lecturer_username RPC fail — fallback'e geçildi. " +
+                "Supabase'e 20260523000000_unique_username_rpc.sql uygulayın. " +
+                "Hata: ${e.message}"
+            )
+            val baseUsername = CredentialGenerator.generateUsername(firstName, lastName)
+            var candidate = baseUsername
+            var suffix = 2
+            while (usernameExistsLocal(candidate)) {
+                candidate = "$baseUsername$suffix"
+                suffix++
+                if (suffix > 1000) break
+            }
+            candidate
         }
-        return candidate
     }
 
-    private suspend fun usernameExists(username: String): Boolean {
+    /** Fallback (RPC yoksa). RLS-bounded — eski davranış. */
+    private suspend fun usernameExistsLocal(username: String): Boolean {
         val raw = client.postgrest["users"]
             .select(Columns.raw("id")) {
                 filter { eq("username", username) }

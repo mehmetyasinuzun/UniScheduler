@@ -870,17 +870,54 @@ function stripTitle(name) {
     return result;
 }
 
+/**
+ * Generates a globally-unique lecturer username by delegating to the
+ * Postgres SECURITY DEFINER function `generate_unique_lecturer_username`.
+ *
+ * Bu RPC hem mobile hem panel'in tek hakikat kaynağı — username üretim
+ * mantığı iki yerde çoğaltılmıyor. RPC SECURITY DEFINER ile çalıştığı
+ * için RLS atlanır ve hem public.users hem auth.users tablosunu kontrol
+ * eder; sıralı suffix verir: farhan_adl → farhan_adl2 → farhan_adl3.
+ *
+ * Fallback: RPC mevcut değilse (migration uygulanmamış proje) eski
+ * client-side counter pattern'ına düşer. Bu durumda cross-org Auth
+ * collision yine olabilir — migration kritik.
+ */
 async function generateUniqueUsername(firstName, lastName) {
+    // 1) RPC öncelikli yol
+    try {
+        const { data, error } = await supabase.rpc('generate_unique_lecturer_username', {
+            p_first_name: firstName,
+            p_last_name: lastName
+        });
+        if (!error && typeof data === 'string' && data.length > 0) {
+            return data;
+        }
+        if (error) {
+            console.warn('[generateUniqueUsername] RPC fail, falling back. Error:', error.message);
+        }
+    } catch (e) {
+        console.warn('[generateUniqueUsername] RPC threw, falling back:', e.message);
+    }
+
+    // 2) Fallback — RPC yoksa (migration uygulanmamış) eski client-side
+    //    pattern. service_role ile çalıştığı için RLS atlar ve global
+    //    public.users sorgusu yapar (mobile'daki RLS sınırlı sürümün aksine).
+    //    Auth tablosunu kontrol etmez, dolayısıyla Auth orphan olduğunda
+    //    yine "user already registered" hatası riski var — migration kritik.
     const first = normalizeText(stripTitle(firstName));
     const last = normalizeText(stripTitle(lastName));
     const base = `${first}_${last}`;
     let username = base;
-    let counter = 1;
+    let counter = 2;
     while (true) {
         const { data } = await supabase.from('users').select('id').eq('username', username).single();
-        if (!data) return username; // unique!
+        if (!data) return username;
         username = `${base}${counter}`;
         counter++;
+        if (counter > 9999) {
+            throw new Error(`Cannot generate unique username for "${firstName} ${lastName}"`);
+        }
     }
 }
 
@@ -944,34 +981,14 @@ app.post('/api/lecturers', async (req, res) => {
         return res.status(400).json({ error: 'orgId, firstName and lastName required.' });
 
     try {
-        let username = await generateUniqueUsername(firstName, lastName);
+        // RPC garantili global-unique username (public.users + auth.users)
+        const username = await generateUniqueUsername(firstName, lastName);
         const password = generatePassword();
-        let emailAddr = usernameToEmail(username);
+        const emailAddr = usernameToEmail(username);
 
-        // Auth global namespace — bkz. bulk import içindeki yorum.
-        // Burst kullanım veya orphan auth user'lar nedeniyle collision
-        // olabilir; retry-with-suffix ile sessiz fail engellenir.
-        let authUser = null;
-        let authError = null;
-        for (let attempt = 0; attempt <= 5; attempt++) {
-            const res2 = await supabase.auth.admin.createUser({
-                email: emailAddr, password, email_confirm: true
-            });
-            if (!res2.error) { authUser = res2.data; authError = null; break; }
-            const m = (res2.error.message || '').toLowerCase();
-            const collision = m.includes('user already registered')
-                || m.includes('already been registered')
-                || m.includes('email already registered')
-                || (m.includes('duplicate key') && m.includes('email'));
-            if (collision && attempt < 5) {
-                const ts = String(Date.now() % 10000).padStart(4, '0');
-                username = `${username}_${ts}_${attempt + 1}`;
-                emailAddr = usernameToEmail(username);
-                continue;
-            }
-            authError = res2.error;
-            break;
-        }
+        const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+            email: emailAddr, password, email_confirm: true
+        });
         if (authError) return res.status(400).json({ error: authError.message });
 
         const { data: userRow, error: userErr } = await supabase.from('users').insert({
@@ -1137,39 +1154,17 @@ app.post('/api/import/:type/:orgId', upload.single('file'), async (req, res) => 
                     }
                     existingKey.add(key);  // aynı dosyada iki satır aynı kişiyse ikinciyi de atla
 
-                    let uname = await generateUniqueUsername(firstName, lastName);
-
+                    // RPC garantili global-unique username (public.users +
+                    // auth.users kontrolü); timestamp+counter suffix retry
+                    // pattern'ı kaldırıldı — tek pas, temiz format.
+                    const uname = await generateUniqueUsername(firstName, lastName);
                     let pwd = (r.password || r.sifre || '').toString();
                     if (!pwd) pwd = generatePassword();
+                    const emailAddr = usernameToEmail(uname);
 
-                    let emailAddr = usernameToEmail(uname);
-
-                    // Auth tablosu global; aynı email iki org'da kullanılamaz.
-                    // generateUniqueUsername sadece public.users'tan kontrol
-                    // ediyor — orphan auth user veya tarihsel hesap varsa
-                    // çakışabilir. Burst halinde "User already registered"
-                    // hatasını yakalayıp username'i suffix'leyerek 5 kez
-                    // tekrar dene. 32 satırlık import'un yarısı silent fail
-                    // olamasın diye.
-                    let authUser = null;
-                    let authErr = null;
-                    for (let attempt = 0; attempt <= 5; attempt++) {
-                        const res = await supabase.auth.admin.createUser({ email: emailAddr, password: pwd, email_confirm: true });
-                        if (!res.error) { authUser = res.data; authErr = null; break; }
-                        const m = (res.error.message || '').toLowerCase();
-                        const collision = m.includes('user already registered')
-                            || m.includes('already been registered')
-                            || m.includes('email already registered')
-                            || (m.includes('duplicate key') && m.includes('email'));
-                        if (collision && attempt < 5) {
-                            const ts = String(Date.now() % 10000).padStart(4, '0');
-                            uname = `${uname}_${ts}_${attempt + 1}`;
-                            emailAddr = usernameToEmail(uname);
-                            continue;
-                        }
-                        authErr = res.error;
-                        break;
-                    }
+                    const { data: authUser, error: authErr } = await supabase.auth.admin.createUser({
+                        email: emailAddr, password: pwd, email_confirm: true
+                    });
                     if (authErr) { errors.push(`${firstName} ${lastName}: ${authErr.message}`); continue; }
 
                     const { error: userErr } = await supabase.from('users').insert({ id: authUser.user.id, org_id: orgIdInt, username: uname, role: 'lecturer', must_change_password: true });
