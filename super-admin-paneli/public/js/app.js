@@ -25,6 +25,30 @@ async function apiFetch(url,opts={}){
 function escapeHtml(v){return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function showAlert(id,msg,type){const el=document.getElementById(id);if(!el)return;el.innerHTML='<div class="alert-box '+type+'">'+msg+'</div>';setTimeout(()=>{if(el)el.innerHTML=''},5000)}
 
+// ── Form submit lock helper ──────────────────────────────────────────
+// Aynı butona art arda tıklama → 2. tıklamayı yutar, sadece ilk tıklamada
+// async fn çalışır. Buton submit süresince disable edilir + spinner gösterilir.
+// Kullanım:
+//   document.getElementById('btnX').addEventListener('click',
+//     withSubmitLock('btnX', async () => { ... }));
+function withSubmitLock(btnId, fn) {
+    return async function(ev) {
+        const btn = document.getElementById(btnId);
+        if (!btn || btn.disabled) return;
+        const origText = btn.textContent;
+        btn.disabled = true;
+        const spinner = btn.querySelector('.spinner-border');
+        if (spinner) spinner.classList.remove('d-none');
+        try {
+            return await fn(ev);
+        } finally {
+            btn.disabled = false;
+            if (spinner) spinner.classList.add('d-none');
+            else btn.textContent = origText;
+        }
+    };
+}
+
 // ── Empty state + skeleton helper'ları ───────────────────────────────
 // `tt()` i18n yüklenmeden de güvenli — fallback key döndürür. Empty state
 // için ikon Bootstrap Icons class'ı (`bi-...`), başlık ve hint i18n key'leri.
@@ -976,6 +1000,66 @@ if (btnCleanupOld) {
             setTimeout(loadSecurityPage, 500);
         } catch (e) {
             resultEl.textContent = 'Hata: ' + e.message;
+        }
+    });
+}
+
+// ── Auth orphan cleanup (Admins sayfası) ─────────────────────────────────
+let _orphanScanCount = 0;
+const btnAuthOrphanScan = document.getElementById('btnAuthOrphanScan');
+if (btnAuthOrphanScan) {
+    btnAuthOrphanScan.addEventListener('click', async () => {
+        const alertEl = document.getElementById('authOrphanAlert');
+        const cleanupBtn = document.getElementById('btnAuthOrphanCleanup');
+        alertEl.innerHTML = '<div class="alert-box info">Taranıyor…</div>';
+        cleanupBtn.disabled = true;
+        try {
+            const r = await apiFetch('/api/admin/auth-orphans');
+            const d = await r.json();
+            if (d.error) { alertEl.innerHTML = `<div class="alert-box error">${escapeHtml(d.error)}</div>`; return; }
+            _orphanScanCount = d.orphanCount;
+            if (d.orphanCount === 0) {
+                alertEl.innerHTML = `<div class="alert-box success">Yetim Auth kullanıcısı yok. Toplam ${d.totalAuthScanned} kullanıcı tarandı.</div>`;
+                return;
+            }
+            const sample = (d.sample || []).slice(0, 10).map(o =>
+                `<li><code style="font-size:0.75rem">${escapeHtml(o.email)}</code></li>`
+            ).join('');
+            alertEl.innerHTML =
+                `<div class="alert-box warning">` +
+                `<strong>${d.orphanCount}</strong> yetim Auth kullanıcısı bulundu` +
+                (d.totalAuthScanned ? ` (toplam ${d.totalAuthScanned} kullanıcı tarandı).` : '.') +
+                (sample ? `<ul class="mb-0 mt-2">${sample}</ul>` : '') +
+                `</div>`;
+            cleanupBtn.disabled = false;
+        } catch (e) {
+            alertEl.innerHTML = `<div class="alert-box error">Tarama hatasi: ${escapeHtml(e.message)}</div>`;
+            sendPanelLog('authOrphan', 'scan', e.message, e.stack);
+        }
+    });
+}
+const btnAuthOrphanCleanup = document.getElementById('btnAuthOrphanCleanup');
+if (btnAuthOrphanCleanup) {
+    btnAuthOrphanCleanup.addEventListener('click', async () => {
+        const alertEl = document.getElementById('authOrphanAlert');
+        if (!confirm(`${_orphanScanCount} yetim Auth kullanıcısı kalıcı olarak silinecek. Devam edilsin mi?`)) return;
+        alertEl.innerHTML = '<div class="alert-box info">Temizleniyor…</div>';
+        btnAuthOrphanCleanup.disabled = true;
+        try {
+            const r = await apiFetch('/api/admin/auth-orphans/cleanup', { method: 'POST' });
+            const d = await r.json();
+            if (d.error) { alertEl.innerHTML = `<div class="alert-box error">${escapeHtml(d.error)}</div>`; return; }
+            let msg = `<div class="alert-box success">${d.deleted} yetim kullanıcı silindi.`;
+            if (d.errors && d.errors.length) {
+                msg += `<br><small>${d.errors.length} kullanıcı silinemedi:</small><ul class="mb-0 small">` +
+                       d.errors.slice(0, 5).map(e => `<li>${escapeHtml(e)}</li>`).join('') + '</ul>';
+            }
+            msg += '</div>';
+            alertEl.innerHTML = msg;
+            _orphanScanCount = 0;
+        } catch (e) {
+            alertEl.innerHTML = `<div class="alert-box error">Temizlik hatasi: ${escapeHtml(e.message)}</div>`;
+            sendPanelLog('authOrphan', 'cleanup', e.message, e.stack);
         }
     });
 }

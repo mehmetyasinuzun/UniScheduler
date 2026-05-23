@@ -110,3 +110,42 @@ fun Fragment.shareDocument(uri: Uri, mimeType: String) {
     }
     startActivity(Intent.createChooser(send, getString(R.string.export_share_title)))
 }
+
+/**
+ * Lifecycle-safe wrapper for findNavController().navigate(). Returns false (no-op)
+ * if the fragment is detached or its NavController is unavailable. Eski pattern
+ * `findNavController().navigate(...)` doğrudan çağırınca isAdded=false durumunda
+ * IllegalStateException atıyordu — özellikle async callback'lerden Fragment
+ * navigate edildiğinde (login success → fragment hızlıca destroy ediliyorsa).
+ */
+fun Fragment.navigateSafe(actionId: Int): Boolean {
+    if (!isAdded || view == null) return false
+    return runCatching {
+        androidx.navigation.fragment.NavHostFragment.findNavController(this).navigate(actionId)
+        true
+    }.getOrDefault(false)
+}
+
+/**
+ * Click debounce: aynı butona art arda tıklama → ilk tıklamadan sonra
+ * [windowMs] süresi boyunca diğer tıklamaları yutar. setOnClickListener
+ * yerine bunu kullan. Eski pattern: kullanıcı kayıt ekle butonuna 3 kez
+ * tıklarsa 3 ayrı insert ediliyordu — şimdi tek başarılı insert.
+ *
+ * Kullanım:
+ *   binding.btnAdd.setDebouncedClickListener {
+ *       viewModel.addLecturer(...)
+ *   }
+ */
+fun android.view.View.setDebouncedClickListener(
+    windowMs: Long = 600L,
+    onClick: (android.view.View) -> Unit
+) {
+    var lastClickAt = 0L
+    setOnClickListener { v ->
+        val now = android.os.SystemClock.uptimeMillis()
+        if (now - lastClickAt < windowMs) return@setOnClickListener
+        lastClickAt = now
+        onClick(v)
+    }
+}

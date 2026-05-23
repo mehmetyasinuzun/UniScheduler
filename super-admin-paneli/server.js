@@ -507,6 +507,117 @@ app.post('/api/admins', async (req, res) => {
     }
 });
 
+// ═══ Auth orphan diagnostic + cleanup ═══════════════════════════════════
+//
+// "Orphan auth user" = auth.users tablosunda var ama public.users'ta yok.
+// Bu durum şu senaryolarda oluşur:
+//   - Lecturer/admin create akışında auth user yaratılır, sonra users INSERT
+//     fail eder (RLS, schema mismatch). Rollback `auth.admin.deleteUser`
+//     çağrısı yapar ama o da fail edebilir (network, vs.) → orphan.
+//   - Manuel SQL temizliği yapan biri public.users'tan row siler ama
+//     auth.users'ı unutur.
+//
+// Orphan'lar zararsız ama:
+//   - Email namespace'i tutuyorlar → aynı isimle yeni hoca eklenince
+//     "User already registered" hatasına neden olabilir.
+//   - Auth user limit kotalarını boş yere şişirirler.
+//
+// GET → listele (sadece super-admin için, sayı + ilk N email)
+// POST /cleanup → tümünü sil
+app.get('/api/admin/auth-orphans', async (req, res) => {
+    try {
+        // public.users'taki tüm uuid'leri tek seferde çek (binlerce satırda
+        // bile O(n) — auth user'lar arasında lookup için Set kullanıyoruz).
+        const knownIds = new Set();
+        let from = 0;
+        const pageSize = 1000;
+        while (true) {
+            const { data, error } = await supabase
+                .from('users')
+                .select('id')
+                .range(from, from + pageSize - 1);
+            if (error) return res.status(500).json({ error: error.message });
+            if (!data || data.length === 0) break;
+            for (const u of data) knownIds.add(u.id);
+            if (data.length < pageSize) break;
+            from += pageSize;
+        }
+
+        // auth.users'ı sayfalayarak çek; varsayılan 50/sayfa, max 1000.
+        const orphans = [];
+        let page = 1;
+        const perPage = 200;
+        while (true) {
+            const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
+            if (error) return res.status(500).json({ error: error.message });
+            const users = data.users || [];
+            for (const u of users) {
+                if (!knownIds.has(u.id)) {
+                    orphans.push({
+                        id: u.id,
+                        email: u.email,
+                        created_at: u.created_at
+                    });
+                }
+            }
+            if (users.length < perPage) break;
+            page++;
+            if (page > 50) break;  // safety — 10k user üstüne çıkmasın
+        }
+
+        res.json({
+            orphanCount: orphans.length,
+            sample: orphans.slice(0, 20),  // UI'da ilk 20'yi göster
+            totalAuthScanned: knownIds.size + orphans.length
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/admin/auth-orphans/cleanup', async (req, res) => {
+    try {
+        // public.users id Set'i
+        const knownIds = new Set();
+        let from = 0;
+        const pageSize = 1000;
+        while (true) {
+            const { data, error } = await supabase.from('users').select('id').range(from, from + pageSize - 1);
+            if (error) return res.status(500).json({ error: error.message });
+            if (!data || data.length === 0) break;
+            for (const u of data) knownIds.add(u.id);
+            if (data.length < pageSize) break;
+            from += pageSize;
+        }
+
+        let deleted = 0;
+        const errors = [];
+        let page = 1;
+        const perPage = 200;
+        while (true) {
+            const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
+            if (error) return res.status(500).json({ error: error.message });
+            const users = data.users || [];
+            for (const u of users) {
+                if (!knownIds.has(u.id)) {
+                    const { error: delErr } = await supabase.auth.admin.deleteUser(u.id);
+                    if (delErr) errors.push(`${u.email}: ${delErr.message}`);
+                    else deleted++;
+                    // Auth API'sini boğmamak için 50ms throttle
+                    await new Promise(r => setTimeout(r, 50));
+                }
+            }
+            if (users.length < perPage) break;
+            page++;
+            if (page > 50) break;
+        }
+
+        res.json({ deleted, errors, message: `${deleted} orphan kullanıcı silindi.` });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.delete('/api/admins/:id', async (req, res) => {
     try {
         // Delete from auth.users (cascades to public.users via FK)
@@ -778,6 +889,46 @@ function generatePassword() {
     let pass = '';
     for (let i = 0; i < 6; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
     return pass;
+}
+
+/**
+ * DB error sanitizer — Supabase / Postgres exception mesajlarını kullanıcıya
+ * göndermeden önce schema sızıntısını engeller. Eski davranış: "duplicate key
+ * value violates unique constraint 'organizations_code_key'" tarayan biri için
+ * tablo + kolon adlarını öğrenmek için fısıltıydı. Şimdi tip bazlı net mesaj.
+ *
+ * Kullanım:
+ *   if (error) return res.status(400).json({ error: sanitizeDbError(error) });
+ */
+function sanitizeDbError(error, context = '') {
+    if (!error) return 'Beklenmeyen veritabanı hatası.';
+    const raw = (error.message || String(error)).toLowerCase();
+    // Server-side full log — tanı için
+    console.error(`[db-error${context ? ':' + context : ''}]`, error);
+
+    if (raw.includes('duplicate key') || raw.includes('unique constraint') || raw.includes('already exists')) {
+        return 'Bu değer zaten kullanılıyor. Lütfen farklı bir değer girin.';
+    }
+    if (raw.includes('violates foreign key') || raw.includes('foreign key constraint')) {
+        return 'İlişkili kayıtlar olduğu için silinemiyor. Önce bağlı kayıtları temizleyin.';
+    }
+    if (raw.includes('violates check constraint')) {
+        return 'Geçersiz veri formatı. Lütfen girdiğiniz değerleri kontrol edin.';
+    }
+    if (raw.includes('violates not-null constraint')) {
+        return 'Zorunlu bir alan boş bırakıldı.';
+    }
+    if (raw.includes('new row violates row-level security')) {
+        return 'Bu işlem için yetkiniz yok.';
+    }
+    if (raw.includes('statement timeout')) {
+        return 'Sorgu zaman aşımına uğradı. Lütfen tekrar deneyin.';
+    }
+    if (raw.includes('connection') && raw.includes('refused')) {
+        return 'Veritabanına bağlanılamadı. Lütfen daha sonra tekrar deneyin.';
+    }
+    // Bilinmeyen hata — generic mesaj ama orijinal hata server log'da var.
+    return 'Veritabanı hatası. Lütfen tekrar deneyin.';
 }
 
 // Converts username to synthetic email for Supabase Auth

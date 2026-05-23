@@ -168,6 +168,19 @@
                 <h3 data-i18n="admin.list_title">Tüm Adminler</h3>
                 <div id="adminList"><div class="skeleton skeleton-row full"></div><div class="skeleton skeleton-row medium"></div><div class="skeleton skeleton-row short"></div></div>
             </div>
+
+            <!-- Auth orphan temizliği — yetim Supabase Auth kullanıcılarını listeler ve siler -->
+            <div class="card">
+                <h3>Auth Temizliği</h3>
+                <p class="text-muted small mb-2">
+                    Sistemde "yetim" Supabase Auth kullanıcısı olabilir (Auth'ta var, public.users'ta yok).
+                    Bunlar email namespace'ini bloke eder; yeni hoca eklenirken "User already registered"
+                    hatasına neden olur. Önce taratıp sayıyı gör, sonra temizle.
+                </p>
+                <button class="btn btn-outline-secondary btn-sm me-2" id="btnAuthOrphanScan">Tara</button>
+                <button class="btn btn-danger btn-sm" id="btnAuthOrphanCleanup" disabled>Temizle</button>
+                <div id="authOrphanAlert" class="mt-2"></div>
+            </div>
         </div>
 
         <!-- Dashboard -->

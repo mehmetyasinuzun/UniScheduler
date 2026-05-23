@@ -796,15 +796,35 @@ class DataFragment : Fragment() {
     private fun showLecturerImportResult(result: LecturerImportResult) {
         val credentialsBlock = result.credentials.joinToString("\n") { (u, p) -> "$u  /  $p" }
         val sb = StringBuilder()
-        sb.appendLine("İçe aktarılan: ${result.imported}")
-        if (result.errors.isNotEmpty()) sb.appendLine("Başarısız: ${result.errors.size}")
+        sb.appendLine(getString(R.string.import_result_imported, result.imported))
+        // Atlanan (idempotent skip) sayacı — aynı org'da aynı isim varsa
+        // güvenlik için yeniden yaratmıyoruz. Kullanıcının bilmesi lazım.
+        if (result.skipped.isNotEmpty()) {
+            sb.appendLine(getString(R.string.import_result_skipped, result.skipped.size))
+        }
+        if (result.errors.isNotEmpty()) {
+            sb.appendLine(getString(R.string.import_result_failed, result.errors.size))
+        }
         sb.appendLine()
-        sb.appendLine("Oluşturulan kullanıcı bilgileri:")
-        sb.appendLine(credentialsBlock)
+        if (result.credentials.isNotEmpty()) {
+            sb.appendLine(getString(R.string.import_result_credentials_header))
+            sb.appendLine(credentialsBlock)
+        }
+        if (result.skipped.isNotEmpty()) {
+            sb.appendLine()
+            sb.appendLine(getString(R.string.import_result_skipped_header))
+            result.skipped.take(20).forEach { sb.appendLine("• $it") }
+            if (result.skipped.size > 20) {
+                sb.appendLine(getString(R.string.import_result_more_rows, result.skipped.size - 20))
+            }
+        }
         if (result.errors.isNotEmpty()) {
             sb.appendLine()
-            sb.appendLine("Hatalar:")
-            result.errors.forEach { sb.appendLine("• $it") }
+            sb.appendLine(getString(R.string.import_result_errors_header))
+            result.errors.take(20).forEach { sb.appendLine("• $it") }
+            if (result.errors.size > 20) {
+                sb.appendLine(getString(R.string.import_result_more_rows, result.errors.size - 20))
+            }
         }
 
         val tv = TextView(requireContext()).apply {

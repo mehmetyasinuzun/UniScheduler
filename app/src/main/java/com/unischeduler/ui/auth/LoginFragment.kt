@@ -13,6 +13,7 @@ import com.unischeduler.R
 import com.unischeduler.databinding.FragmentLoginBinding
 import com.unischeduler.util.UiState
 import com.unischeduler.util.collectFlow
+import com.unischeduler.util.setDebouncedClickListener
 
 class LoginFragment : Fragment() {
 
@@ -28,13 +29,20 @@ class LoginFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.btnLogin.setOnClickListener {
+        // Debounced — kullanıcı hızlıca 2 kez basarsa 2. tıklama yutulur,
+        // tek bir signIn request gider. Aksi durumda Supabase 5 req/dk
+        // rate-limit'e takılma veya double-session race riski vardı.
+        binding.btnLogin.setDebouncedClickListener {
             val username = binding.etUsername.text?.toString().orEmpty().trim()
             val password = binding.etPassword.text?.toString().orEmpty()
             viewModel.login(username, password)
         }
 
         collectFlow(viewModel.state) { state ->
+            // Fragment detached olduktan sonra StateFlow emit gelebilir
+            // (login background'da tamamlanırsa). isAdded kontrolü
+            // findNavController() IllegalStateException'ını önler.
+            if (!isAdded) return@collectFlow
             when (state) {
                 is UiState.Idle    -> Unit
                 is UiState.Loading -> showLoading(true)
@@ -51,6 +59,7 @@ class LoginFragment : Fragment() {
     }
 
     private fun navigate(result: LoginResult) {
+        if (!isAdded) return
         // Lecturer just finished logging in → arm tomorrow's reminders so
         // they don't have to wait for the next 23:00 worker tick. No-op
         // for admins (cancelAll inside scheduleNextDayReminders bails out

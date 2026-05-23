@@ -27,7 +27,10 @@ data class CreatedCredentials(val username: String, val password: String)
 data class LecturerImportResult(
     val imported: Int,
     val credentials: List<Pair<String, String>>,
-    val errors: List<String>
+    val errors: List<String>,
+    // Aynı org içinde aynı ad+soyad varsa atlanan satırların kişi adları.
+    // UI bunları "X mevcut hoca atlandı" özetinde gösterir.
+    val skipped: List<String> = emptyList()
 )
 
 class DataViewModel(app: Application) : AndroidViewModel(app) {
@@ -220,9 +223,29 @@ class DataViewModel(app: Application) : AndroidViewModel(app) {
                     val orgId = session.orgId
                     val depts = deptRepo.getAllDepartments(orgId)
                     val deptByName = depts.associateBy { it.name.lowercase().trim() }
+
+                    // IDEMPOTENT SKIP — aynı org'da aynı ad+soyad varsa atla.
+                    // Excel'i yanlışlıkla 2 kez yüklersen mevcut hocaları yine
+                    // suffix ile yaratmaz — sessizce skipped listesine ekler.
+                    // Önce mevcut org hocaları tek seferde çekilir; satır başı
+                    // ayrı sorgu RLS'e + network'e gereksiz yük getirir.
+                    val existingLecturers = lecturerRepo.getAllLecturers(orgId)
+                    val existingKey = existingLecturers
+                        .map { "${it.firstName.trim().lowercase()}|${it.lastName.trim().lowercase()}" }
+                        .toMutableSet()
+
                     val credentials = mutableListOf<Pair<String, String>>()
                     val errors = mutableListOf<String>()
+                    val skipped = mutableListOf<String>()
+
                     for (row in rows) {
+                        val key = "${row.firstName.trim().lowercase()}|${row.lastName.trim().lowercase()}"
+                        if (existingKey.contains(key)) {
+                            skipped.add("${row.firstName} ${row.lastName}")
+                            continue
+                        }
+                        existingKey.add(key)  // aynı Excel'de iki satır aynı kişiyse 2.si de atlansın
+
                         val deptId = row.departmentName?.lowercase()?.trim()
                             ?.let { deptByName[it]?.id } ?: fallbackDepartmentId
                         runCatching {
@@ -245,7 +268,12 @@ class DataViewModel(app: Application) : AndroidViewModel(app) {
                             )
                         }
                     }
-                    LecturerImportResult(imported = credentials.size, credentials = credentials, errors = errors)
+                    LecturerImportResult(
+                        imported = credentials.size,
+                        credentials = credentials,
+                        errors = errors,
+                        skipped = skipped
+                    )
                 }
             }.onSuccess { _lecturerImportState.value = UiState.Success(it) }
              .onFailure { e ->

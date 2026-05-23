@@ -112,8 +112,11 @@ object ReminderScheduler {
             return
         }
 
-        @Suppress("OPT_IN_USAGE")
-        GlobalScope.launch(Dispatchers.IO) {
+        // GlobalScope yerine App.applicationScope: process lifecycle'a bağlı
+        // SupervisorJob + Dispatchers.IO. GlobalScope no-op cancel'da işi
+        // sürdürür ama kaynak sızıntısı için anti-pattern; applicationScope
+        // app öldüğünde JVM ile birlikte gider, structured concurrency uygun.
+        com.unischeduler.App.applicationScope.launch {
             val entries = runCatching {
                 ScheduleRepository().getEntriesForLecturer(lecturerId, orgId)
             }.onFailure { Log.w(TAG, "Schedule fetch failed", it) }

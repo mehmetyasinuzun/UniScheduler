@@ -523,6 +523,11 @@
     <string name="backup_offering_count">• Offering: %1$d</string>
     <string name="backup_schedule_count">• Schedule entry: %1$d</string>
     <string name="backup_classroom_count">• Classroom: %1$d</string>
+    <string name="import_result_imported">Imported: %1$d</string>
+    <string name="import_result_skipped">Already exists (skipped): %1$d</string>
+    <string name="import_result_failed">Failed: %1$d</string>
+    <string name="import_result_skipped_header">Skipped (same name exists):</string>
+    <string name="import_result_more_rows">…and %1$d more rows.</string>
     <string name="backup_availability_count">• Availability entry: %1$d</string>
     <string name="restore_summary_title">Restored:</string>
     <string name="restore_org_settings_ok">• Org settings: ✓</string>

@@ -547,6 +547,11 @@
     <string name="backup_offering_count">• Açılan ders: %1$d</string>
     <string name="backup_schedule_count">• Program kaydı: %1$d</string>
     <string name="backup_classroom_count">• Derslik: %1$d</string>
+    <string name="import_result_imported">İçe aktarılan: %1$d</string>
+    <string name="import_result_skipped">Zaten kayıtlı (atlandı): %1$d</string>
+    <string name="import_result_failed">Başarısız: %1$d</string>
+    <string name="import_result_skipped_header">Atlanan kayıtlar (aynı isim mevcut):</string>
+    <string name="import_result_more_rows">…ve %1$d satır daha.</string>
     <string name="backup_availability_count">• Müsaitlik kaydı: %1$d</string>
     <string name="restore_summary_title">Geri yüklendi:</string>
     <string name="restore_org_settings_ok">• Org ayarları: ✓</string>
