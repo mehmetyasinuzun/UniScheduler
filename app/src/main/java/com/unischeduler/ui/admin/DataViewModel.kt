@@ -7,6 +7,7 @@ import com.unischeduler.data.model.Course
 import com.unischeduler.data.model.Department
 import com.unischeduler.data.model.Lecturer
 import com.unischeduler.data.model.Offering
+import com.unischeduler.data.remote.EdgeFunctionClient
 import com.unischeduler.data.repository.CourseRepository
 import com.unischeduler.data.repository.DepartmentRepository
 import com.unischeduler.data.repository.LecturerRepository
@@ -221,14 +222,46 @@ class DataViewModel(app: Application) : AndroidViewModel(app) {
             runCatching {
                 withContext(Dispatchers.IO) {
                     val orgId = session.orgId
+
+                    // ── EDGE FUNCTION PROXY (önerilen yol, ~30 saniye / 350 hoca) ─
+                    //
+                    // Eski davranış: satır satır LecturerRepository.insertLecturer
+                    // WithUser → her satır Supabase Auth signUpWith → IP başına 30
+                    // req/dk rate-limit → 350 hoca 9 dakika.
+                    //
+                    // Yeni: Tüm satırlar tek POST ile bulk-create-lecturers Edge
+                    // Function'a gönderilir. Edge Function service_role ile
+                    // auth.admin.createUser çağırır → rate-limit yok → 30 saniye.
+                    // İçeride RPC ile global-unique username üretimi, idempotent
+                    // skip, atomic rollback, audit log hepsi mevcut.
+                    //
+                    // FALLBACK: Edge Function deploy edilmemişse veya HTTP fail
+                    // olursa eski client-side bulk loop'a düşülür (rate-limit
+                    // throttle ile, yavaş ama çalışır).
+                    val edgeResult = runCatching {
+                        EdgeFunctionClient.bulkCreateLecturers(
+                            orgId = orgId,
+                            rows = rows,
+                            fallbackDepartmentId = fallbackDepartmentId
+                        )
+                    }.getOrNull()
+
+                    if (edgeResult != null) {
+                        android.util.Log.d("DataViewModel", "importLecturers via Edge Function — imported=${edgeResult.imported}, skipped=${edgeResult.skipped}, errors=${edgeResult.errors.size}")
+                        return@withContext LecturerImportResult(
+                            imported = edgeResult.imported,
+                            credentials = edgeResult.credentials.map { it.username to it.password },
+                            errors = edgeResult.errors,
+                            skipped = edgeResult.skippedNames
+                        )
+                    }
+
+                    // ── FALLBACK (Edge Function yoksa) — eski client-side yol ────
+                    android.util.Log.w("DataViewModel", "Edge Function unavailable — falling back to client-side import (slow, rate-limit'e tabi)")
+
                     val depts = deptRepo.getAllDepartments(orgId)
                     val deptByName = depts.associateBy { it.name.lowercase().trim() }
 
-                    // IDEMPOTENT SKIP — aynı org'da aynı ad+soyad varsa atla.
-                    // Excel'i yanlışlıkla 2 kez yüklersen mevcut hocaları yine
-                    // suffix ile yaratmaz — sessizce skipped listesine ekler.
-                    // Önce mevcut org hocaları tek seferde çekilir; satır başı
-                    // ayrı sorgu RLS'e + network'e gereksiz yük getirir.
                     val existingLecturers = lecturerRepo.getAllLecturers(orgId)
                     val existingKey = existingLecturers
                         .map { "${it.firstName.trim().lowercase()}|${it.lastName.trim().lowercase()}" }
@@ -238,27 +271,16 @@ class DataViewModel(app: Application) : AndroidViewModel(app) {
                     val errors = mutableListOf<String>()
                     val skipped = mutableListOf<String>()
 
-                    // RATE-LIMIT SAFE — Supabase Auth GoTrue 30 req/dakika
-                    // limit'i var. 32 hoca'lık bir import'ta ardışık
-                    // signUpWith çağrıları bu limit'e takılıyordu →
-                    // "AuthRestException: Request rate limit reached".
-                    // 1500ms throttle = saniyede ~0.6 req → dakikada ~36 req
-                    // (limit altında, güvenli). 32 hoca = ~48 saniye toplam;
-                    // büyük import için kabul edilebilir, UI loading state
-                    // göstereceği için kullanıcıyı belirsizlikte bırakmaz.
+                    // Rate-limit safe: 1500ms throttle (Supabase Auth 30/dk)
                     val throttleMs = 1500L
-                    var rowIdx = 0
                     for (row in rows) {
-                        rowIdx++
                         val key = "${row.firstName.trim().lowercase()}|${row.lastName.trim().lowercase()}"
                         if (existingKey.contains(key)) {
                             skipped.add("${row.firstName} ${row.lastName}")
                             continue
                         }
-                        existingKey.add(key)  // aynı Excel'de iki satır aynı kişiyse 2.si de atlansın
+                        existingKey.add(key)
 
-                        // İlk satır için throttle gerekmez — sadece ardışık
-                        // request'ler arasında bekle.
                         if (credentials.size + errors.size > 0) {
                             kotlinx.coroutines.delay(throttleMs)
                         }
@@ -275,10 +297,6 @@ class DataViewModel(app: Application) : AndroidViewModel(app) {
                         }.onFailure { e ->
                             if (e is kotlinx.coroutines.CancellationException) throw e
                             errors.add("${row.firstName} ${row.lastName}: ${e.message}")
-                            // Per-row failure'ı audit log'una yaz — eskiden sadece UI
-                            // mesajına ekleniyordu, admin paneli sessiz kalıyordu.
-                            // Action alanında satır id'sini de tutuyoruz ki "10 hocadan
-                            // 3'ü neden eklenmedi" sorgusu kolay olsun.
                             reportError(
                                 "importLecturers.row[${row.firstName} ${row.lastName}]",
                                 e
