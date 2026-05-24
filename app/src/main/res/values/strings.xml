@@ -556,6 +556,9 @@
     <string name="progress_importing_courses">Dersler içe aktarılıyor</string>
     <string name="progress_importing_classrooms">Derslikler içe aktarılıyor</string>
     <string name="progress_message_wait">Lütfen bekleyin, bu işlem 30 saniyeye kadar sürebilir.</string>
+    <string name="auto_schedule_no_max_daily">Yok</string>
+    <string name="import_invalid_rows_summary">Geçerli satır yok. %1$d satır atlandı:\n%2$s</string>
+    <string name="ux_delete_failed_rollback">\"%1$s\" silinemedi, geri alındı. Lütfen tekrar deneyin.</string>
     <string name="backup_availability_count">• Müsaitlik kaydı: %1$d</string>
     <string name="restore_summary_title">Geri yüklendi:</string>
     <string name="restore_org_settings_ok">• Org ayarları: ✓</string>

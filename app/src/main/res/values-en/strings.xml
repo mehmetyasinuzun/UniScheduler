@@ -532,6 +532,9 @@
     <string name="progress_importing_courses">Importing courses</string>
     <string name="progress_importing_classrooms">Importing classrooms</string>
     <string name="progress_message_wait">Please wait — this may take up to 30 seconds.</string>
+    <string name="auto_schedule_no_max_daily">None</string>
+    <string name="import_invalid_rows_summary">No valid rows. %1$d rows skipped:\n%2$s</string>
+    <string name="ux_delete_failed_rollback">\"%1$s\" could not be deleted, rolled back. Please try again.</string>
     <string name="backup_availability_count">• Availability entry: %1$d</string>
     <string name="restore_summary_title">Restored:</string>
     <string name="restore_org_settings_ok">• Org settings: ✓</string>

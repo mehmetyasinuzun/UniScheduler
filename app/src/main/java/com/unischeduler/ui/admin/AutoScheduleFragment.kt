@@ -22,6 +22,7 @@ import com.unischeduler.scheduler.SchedulePreferences
 import com.unischeduler.scheduler.ScheduleResult
 import com.unischeduler.util.UiState
 import com.unischeduler.util.collectFlow
+import com.unischeduler.util.setDebouncedClickListener
 
 class AutoScheduleFragment : Fragment() {
 
@@ -39,19 +40,24 @@ class AutoScheduleFragment : Fragment() {
 
         binding.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
 
-        binding.btnGenerate.setOnClickListener {
+        // ── Mutation butonları DEBOUNCED ───────────────────────────────────
+        // Üreteç çalışırken kullanıcı tekrar tıklarsa yeni bir generate
+        // tetiklenip alternatives state'i karışırdı. 600ms pencere yeterli.
+        binding.btnGenerate.setDebouncedClickListener {
             syncPreferencesToViewModel()
             viewModel.generateSchedule()
         }
-        binding.btnRegenerate.setOnClickListener {
+        binding.btnRegenerate.setDebouncedClickListener {
             syncPreferencesToViewModel()
             viewModel.generateSchedule()
         }
-        binding.btnRetry.setOnClickListener {
+        binding.btnRetry.setDebouncedClickListener {
             syncPreferencesToViewModel()
             viewModel.generateSchedule()
         }
 
+        // Navigation butonları debounce gerekmiyor — state karşılaştırma ile
+        // out-of-bound zaten engelleniyor; rapid tap UX kaybı küçük.
         binding.btnPrevAlt.setOnClickListener {
             val idx = viewModel.selectedIndex.value
             if (idx > 0) viewModel.selectAlternative(idx - 1)
@@ -62,7 +68,9 @@ class AutoScheduleFragment : Fragment() {
             if (idx < max) viewModel.selectAlternative(idx + 1)
         }
 
-        binding.btnApprove.setOnClickListener {
+        // Approve — confirm dialog'lu ama yine de debounce iyi (dialog
+        // açılmadan önce iki kez basılırsa iki dialog görünürdü).
+        binding.btnApprove.setDebouncedClickListener {
             AlertDialog.Builder(requireContext())
                 .setTitle(getString(R.string.auto_schedule_approve_title))
                 .setMessage(getString(R.string.auto_schedule_approve_message))
@@ -114,7 +122,7 @@ class AutoScheduleFragment : Fragment() {
     private fun setupSettingsListeners() {
         binding.sliderMaxDaily.addOnChangeListener(Slider.OnChangeListener { _, value, _ ->
             val v = value.toInt()
-            binding.tvMaxDailyValue.text = if (v == 0) "Yok" else "$v"
+            binding.tvMaxDailyValue.text = if (v == 0) getString(R.string.auto_schedule_no_max_daily) else "$v"
         })
 
         binding.sliderAltCount.addOnChangeListener(Slider.OnChangeListener { _, value, _ ->
@@ -224,9 +232,17 @@ class AutoScheduleFragment : Fragment() {
         binding.llProposedEntries.removeAllViews()
 
         val dayOrder = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+        // i18n — strings.xml zaten day_monday..day_sunday tanımlı (values + values-en).
+        // Aktif locale'e göre otomatik çevrilir. Eskiden hardcoded TR map vardı,
+        // İngilizce moda geçince "Pazartesi" kalıyordu.
         val dayNames = mapOf(
-            "Monday" to "Pazartesi", "Tuesday" to "Salı", "Wednesday" to "Çarşamba",
-            "Thursday" to "Perşembe", "Friday" to "Cuma", "Saturday" to "Cumartesi", "Sunday" to "Pazar"
+            "Monday"    to getString(R.string.day_monday),
+            "Tuesday"   to getString(R.string.day_tuesday),
+            "Wednesday" to getString(R.string.day_wednesday),
+            "Thursday"  to getString(R.string.day_thursday),
+            "Friday"    to getString(R.string.day_friday),
+            "Saturday"  to getString(R.string.day_saturday),
+            "Sunday"    to getString(R.string.day_sunday)
         )
 
         val grouped = result.assigned.groupBy { it.day }

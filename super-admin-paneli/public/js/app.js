@@ -315,7 +315,43 @@ async function importExcel(type, file, alertId) {
         sendPanelLog('importExcel', type, 'Exception: ' + e.message, e.stack);
     }
 }
-function exportExcel(type){const orgId=getCurrentOrgId();if(!orgId){alert('Org secin.');return}window.open('/api/export/'+type+'/'+orgId+'?token='+authToken,'_blank')}
+// Excel export — token Authorization header'ında, URL'de DEĞİL.
+//
+// ESKİ DAVRANIŞ: window.open('?token=' + authToken, '_blank')
+//   → Token browser geçmişi + Referer + access log'lara yazılıyordu;
+//     paylaşılan cihazlarda veya proxy log'larında token sızıntı riski.
+//
+// YENİ: fetch ile Authorization Bearer header, blob URL ile indir.
+//   → Token sadece HTTPS body'sinde, log'lara yazılmaz.
+async function exportExcel(type) {
+    const orgId = getCurrentOrgId();
+    if (!orgId) { alert('Org secin.'); return; }
+    try {
+        const r = await fetch('/api/export/' + type + '/' + orgId, {
+            method: 'GET',
+            headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const blob = await r.blob();
+        // Content-Disposition'dan filename'i parse et — yoksa default'a düş
+        const cd = r.headers.get('Content-Disposition') || '';
+        const fnMatch = cd.match(/filename="?([^"]+)"?/);
+        const filename = fnMatch ? fnMatch[1] : (type + '.xlsx');
+        // Blob URL ile invisible <a> tetikle → indirme başlar, sayfa
+        // yenilenmez. URL.revokeObjectURL ile sonradan bellek temizlenir.
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+        alert('Dosya indirilemedi: ' + e.message);
+        sendPanelLog('exportExcel', type, e.message, e.stack);
+    }
+}
 async function bulkResetPasswords(){const orgId=getCurrentOrgId();if(!orgId)return;if(!confirm('TUM akademisyenlerin sifreleri sifirlanacak!'))return;try{const r=await apiFetch('/api/lecturers/bulk-reset/'+orgId,{method:'POST'});const d=await r.json();if(d.error){alert(d.error);return}if(d.credentials&&d.credentials.length){const csv='﻿'+'Ad,Soyad,Kullanici,Sifre\n'+d.credentials.map(c=>'"'+c.ad+'","'+c.soyad+'","'+c.kullanici_adi+'","'+c.yeni_sifre+'"').join('\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sifreler.csv';a.click();alert(d.reset+' sifre sifirlandi.')}loadDashboard()}catch(e){alert(e.message)}}
 
 // ── Offerings

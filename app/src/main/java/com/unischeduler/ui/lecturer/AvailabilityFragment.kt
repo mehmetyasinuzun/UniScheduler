@@ -17,6 +17,7 @@ import com.unischeduler.databinding.FragmentAvailabilityBinding
 import com.unischeduler.ui.shared.AvailabilityGridConfig
 import com.unischeduler.util.UiState
 import com.unischeduler.util.collectFlow
+import com.unischeduler.util.setDebouncedClickListener
 
 class AvailabilityFragment : Fragment() {
 
@@ -38,7 +39,8 @@ class AvailabilityFragment : Fragment() {
 
         binding.etStartTime.setOnClickListener { showTimePicker { binding.etStartTime.setText(it) } }
         binding.etEndTime.setOnClickListener   { showTimePicker { binding.etEndTime.setText(it) } }
-        binding.btnAdd.setOnClickListener      { onAddClicked() }
+        // Mutation butonu — 600ms debounce ile duplicate availability slot engellenir.
+        binding.btnAdd.setDebouncedClickListener { onAddClicked() }
         binding.btnRetry.setOnClickListener    { viewModel.load() }
 
         binding.availabilityGrid.setOnBusySlotClickListener { slot ->

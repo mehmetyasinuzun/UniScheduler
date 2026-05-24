@@ -29,6 +29,7 @@ import com.unischeduler.util.DropdownController
 import com.unischeduler.util.PendingDelete
 import com.unischeduler.util.UiState
 import com.unischeduler.util.dismissProgressDialog
+import com.unischeduler.util.setDebouncedClickListener
 import com.unischeduler.util.showErrorSnackbar
 import com.unischeduler.util.showProgressDialog
 import com.unischeduler.util.showSnackbar
@@ -126,7 +127,8 @@ class ClassroomsFragment : Fragment() {
 
         binding.btnRetry.setOnClickListener            { viewModel.loadClassrooms() }
         binding.btnGoAssignment.setOnClickListener     { findNavController().navigate(R.id.action_classrooms_to_assignment) }
-        binding.btnAddClassroom.setOnClickListener     { onAddClicked() }
+        // Mutation butonu — 600ms içinde 2. tıklamayı yutar; duplicate insert engellenir.
+        binding.btnAddClassroom.setDebouncedClickListener { onAddClicked() }
         binding.btnImportClassrooms.setOnClickListener { classroomImportLauncher.launch("*/*") }
         binding.btnExportClassrooms.setOnClickListener { classroomExportLauncher.launch("classrooms.xlsx") }
 
@@ -246,7 +248,20 @@ class ClassroomsFragment : Fragment() {
                         classrooms = (classrooms + classroom).sortedBy { it.roomCode }
                         refreshClassroomList()
                     },
-                    performDelete = { viewModel.deleteClassroom(classroom.id) }
+                    performDelete = { viewModel.deleteClassroom(classroom.id) },
+                    // Network/RLS fail durumunda UI state'i restore et + hata göster.
+                    // Eski davranış: silent fail → kullanıcı UI'da silinmiş görüyor
+                    // ama server'da hâlâ var → bir sonraki refresh'te derslik
+                    // "geri geliyormuş" gibi görünüyordu.
+                    onDeleteFailure = { e ->
+                        if (isAdded) {
+                            classrooms = (classrooms + classroom).sortedBy { it.roomCode }
+                            refreshClassroomList()
+                            showErrorSnackbar(
+                                getString(R.string.ux_delete_failed_rollback, classroom.roomCode)
+                            )
+                        }
+                    }
                 )
             }
             .setNegativeButton(getString(R.string.common_cancel), null)
@@ -343,8 +358,11 @@ class ClassroomsFragment : Fragment() {
 
         if (result.valid.isEmpty()) {
             val errMsg = if (result.errors.isEmpty()) getString(R.string.import_preview_no_rows)
-            else "Geçerli satır yok. ${result.errors.size} satır atlandı:\n" +
-                 result.errors.take(5).joinToString("\n") { "• $it" }
+            else getString(
+                R.string.import_invalid_rows_summary,
+                result.errors.size,
+                result.errors.take(5).joinToString("\n") { "• $it" }
+            )
             AlertDialog.Builder(requireContext())
                 .setTitle(getString(R.string.import_dialog_title))
                 .setMessage(errMsg)

@@ -55,7 +55,12 @@ object PendingDelete {
         owner: LifecycleOwner,
         message: String,
         onUndo: () -> Unit,
-        performDelete: suspend () -> Unit
+        performDelete: suspend () -> Unit,
+        // Network/RLS/server fail durumunda caller'ı bilgilendir — UI state'i
+        // restore edip kullanıcıya hata göstermek için. Önceden performDelete
+        // fail'i runCatching ile sessizce yutuluyordu → kullanıcı arayüzde
+        // silinmiş görüyordu ama server'da hâlâ kayıt vardı (data inconsistency).
+        onDeleteFailure: ((Throwable) -> Unit)? = null
     ) {
         // Single source of truth for "did the delete already happen?"
         // Snackbar callback and the lifecycle-scope coroutine race; the
@@ -69,6 +74,13 @@ object PendingDelete {
             if (!committed.compareAndSet(false, true)) return
             owner.lifecycleScope.launch {
                 runCatching { performDelete() }
+                    .onFailure { e ->
+                        if (e is kotlinx.coroutines.CancellationException) throw e
+                        // Caller'a haber ver — UI state'ini restore etsin +
+                        // kullanıcıya hata göstersin. Silent fail eski
+                        // davranıştı, server-client tutarsızlığına yol açıyordu.
+                        onDeleteFailure?.invoke(e)
+                    }
             }
         }
 
