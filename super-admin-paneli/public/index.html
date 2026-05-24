@@ -704,8 +704,14 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
             integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4"
             crossorigin="anonymous"></script>
-    <script src="js/i18n.js"></script>
-    <script src="js/geo.js"></script>
-    <script src="js/app.js"></script>
+    <!--
+      Cache-buster: __BUST__ placeholder'ı server-side (server.js içindeki
+      "/" handler) tarafından panel sunucu uptime epoch'u ile değiştirilir.
+      Her sunucu restart'ında değer değişir → tarayıcı cache otomatik invalid.
+      Sıralı script load garantili (browser native, async/defer yok).
+    -->
+    <script src="js/i18n.js?v=__BUST__"></script>
+    <script src="js/geo.js?v=__BUST__"></script>
+    <script src="js/app.js?v=__BUST__"></script>
 </body>
 </html>

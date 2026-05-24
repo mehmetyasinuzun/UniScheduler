@@ -121,19 +121,43 @@ function getCurrentOrgId(){return document.getElementById('globalOrg').value||''
 function setCurrentOrgId(id){if(!id)return;localStorage.setItem('currentOrgId',String(id));const el=document.getElementById('globalOrg');if(el)el.value=id;['dashOrg','schedOrg','availOrg','offOrg','logOrg','adminOrg'].forEach(sid=>{const s=document.getElementById(sid);if(s)s.value=id})}
 
 // ── Auth
-// Login öncesi public IP fetch — mobile uygulamayla aynı pattern
-// (api.ipify.org). Server-side req.ip localhost'ta 127.0.0.1 dönüyordu;
-// burası login_attempts.ip_address'e gerçek dış IP'yi yazar.
-// 1.5sn timeout — fail olursa null geç, server-side IP fallback olur.
+// Login öncesi public IP fetch — mobile uygulamayla aynı pattern.
+// İlk provider fail olursa diğerleri denenir; üçü de fail olursa null
+// dönerse server-side req.ip'ye düşülür (localhost'tan giriş yapıyorsa
+// 127.0.0.1 olur ama en azından sistem stabil).
+//
+// 3 provider seçimi:
+//   1. api.ipify.org      — en yaygın, CORS aware, plain text yanıt
+//   2. ipv4.icanhazip.com — text-only, super basit
+//   3. api.my-ip.io       — JSON yanıt (yedek format)
+//
+// Her birine 2 saniye timeout; toplam en kötü 6 saniye (sıralı), ama
+// genelde 1.'si başarılıysa 100-300ms biter.
 async function fetchPublicIp() {
-    try {
-        const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 1500);
-        const r = await fetch('https://api.ipify.org?format=text', { signal: ctrl.signal });
-        clearTimeout(timer);
-        const ip = (await r.text()).trim();
-        if (ip && ip.length <= 45) return ip;
-    } catch (_) { /* offline / firewall / timeout — sessiz */ }
+    const providers = [
+        { url: 'https://api.ipify.org?format=text', parse: t => t.trim() },
+        { url: 'https://ipv4.icanhazip.com',        parse: t => t.trim() },
+        { url: 'https://api.my-ip.io/v2/ip.txt',    parse: t => t.trim() }
+    ];
+    for (const p of providers) {
+        try {
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), 2000);
+            const r = await fetch(p.url, { signal: ctrl.signal, mode: 'cors' });
+            clearTimeout(timer);
+            if (!r.ok) continue;
+            const raw = await r.text();
+            const ip = p.parse(raw);
+            // IPv4: a.b.c.d, IPv6 max 39 char; sınırı geniş tut ama saçma değer kabul etme
+            if (ip && /^[0-9a-fA-F:.]{7,45}$/.test(ip)) {
+                console.log('[panel-auth] public IP detected via', p.url, '→', ip);
+                return ip;
+            }
+        } catch (e) {
+            console.warn('[panel-auth] IP provider failed:', p.url, e.message || e);
+        }
+    }
+    console.warn('[panel-auth] All IP providers failed — server-side req.ip will be used (likely 127.0.0.1 on localhost)');
     return null;
 }
 
@@ -147,6 +171,7 @@ async function doLogin() {
 
         // Public IP — best effort, login akışını bloklamaz
         const clientPublicIp = await fetchPublicIp();
+        console.log('[panel-auth] sending login with clientPublicIp =', clientPublicIp);
 
         const r = await fetch('/api/auth/login', {
             method: 'POST',

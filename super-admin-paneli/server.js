@@ -59,7 +59,21 @@ app.use(helmet({
             styleSrc:  ["'self'", "https://cdn.jsdelivr.net", "'unsafe-inline'"],
             fontSrc:   ["'self'", "https://cdn.jsdelivr.net", "data:"],
             imgSrc:    ["'self'", "data:", "blob:"],
-            connectSrc:["'self'"],
+            // External fetch izinleri:
+            //  - api.ipify.org, ipv4.icanhazip.com, api.my-ip.io: doLogin
+            //    public IP fetch (3-fallback chain; mobile ile aynı pattern).
+            //    Tek provider down olsa diğeri çalışsın diye 3 sağlayıcı.
+            //  - ip-api.com (pro + free): CTI dashboard geo lookup.
+            // Bunlar olmadan login_attempts.ip_address localhost'tan giriş
+            // yapan superadmin için 127.0.0.1 kalırdı — analiz değeri sıfır.
+            connectSrc: [
+                "'self'",
+                "https://api.ipify.org",
+                "https://ipv4.icanhazip.com",
+                "https://api.my-ip.io",
+                "https://pro.ip-api.com",
+                "https://ip-api.com"
+            ],
             objectSrc: ["'none'"],
             frameAncestors: ["'none'"],
             baseUri: ["'self'"],
@@ -126,6 +140,31 @@ app.use('/api', (req, res, next) => {
     res.set('Surrogate-Control', 'no-store');
     next();
 });
+
+// ── index.html cache-buster injection ─────────────────────────────────────
+// HTML içindeki `?v=__BUST__` placeholder'larını process startup epoch'u
+// ile değiştirir. Her panel restart'ında değer değişir → tarayıcı eski JS
+// dosyalarını cache'den DEĞİL sunucudan çeker. Static serve'den ÖNCE
+// route'lanması kritik; sıra önemli.
+const APP_BOOT_BUST = Date.now().toString(36);
+// path zaten yukarıda require edilmiş; sadece fs lazım.
+const fs = require('fs');
+
+function serveIndexWithBust(_req, res) {
+    const file = path.join(__dirname, 'public', 'index.html');
+    fs.readFile(file, 'utf8', (err, html) => {
+        if (err) {
+            res.status(500).send('index.html load failed: ' + err.message);
+            return;
+        }
+        const out = html.replace(/__BUST__/g, APP_BOOT_BUST);
+        res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.set('Content-Type', 'text/html; charset=utf-8');
+        res.send(out);
+    });
+}
+app.get('/', serveIndexWithBust);
+app.get('/index.html', serveIndexWithBust);
 
 app.use(express.static('public', {
     setHeaders: (res, filePath) => {
@@ -206,6 +245,14 @@ app.post('/api/auth/login', async (req, res) => {
     );
     const reportedIp = normalizeIp(req.body?.clientPublicIp);
     const ip = reportedIp || serverIp;
+
+    // Diagnostic — kullanıcı "hala 127.0.0.1 görüyorum" derse logdan
+    // doğrula: reportedIp dolu mu, server hangi IP'yi seçti?
+    // Filter: tail -f panel.log | grep "panel-auth"
+    console.log(
+        '[panel-auth] login attempt: serverIp=%s, clientReported=%s, chosen=%s, ua=%s',
+        serverIp, reportedIp || '(null)', ip, (req.headers['user-agent'] || '').substring(0, 80)
+    );
 
     // Sec-CH-UA-Platform-Version: Chromium-based browser'ların gönderdiği
     // ek header — Windows 10 vs 11 ayrımı için tek güvenilir kaynak.
