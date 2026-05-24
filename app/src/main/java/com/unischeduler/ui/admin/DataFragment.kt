@@ -171,16 +171,10 @@ class DataFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Coach mark — Excel import butonu için ilk-açılış balonu.
-        // TapTargetView view tree hazır olduktan sonra göster; view.post {}
-        // CoachMarks.showOnce içinde zaten yapılıyor.
-        com.unischeduler.util.CoachMarks.showOnce(
-            fragment = this,
-            target   = binding.btnImportLecturers,
-            titleRes = R.string.coach_excel_title,
-            bodyRes  = R.string.coach_excel_body,
-            key      = com.unischeduler.util.CoachKey.EXCEL_IMPORT
-        )
+        // Excel import için coach mark eski sürümde TapTargetView ile vardı;
+        // yeni Spotlight Tour (TourCoordinator) Data sekmesini zaten ziyaret
+        // ediyor ve BottomSheet ile aynı bilgiyi veriyor → coach mark gereksiz
+        // (çift gösterim engellendi).
 
         setupStaticDropdowns()
         setupAccordion()

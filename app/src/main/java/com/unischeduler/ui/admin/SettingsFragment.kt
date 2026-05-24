@@ -282,19 +282,22 @@ class SettingsFragment : Fragment() {
             restoreOpenLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
         }
 
-        // Tanıtımı tekrar göster — admin tutorial + coach mark flag'lerini
-        // sıfırlar, ardından AdminTutorialActivity'i başlatır. Kullanıcı
-        // tek tıkla rehbere geri dönebilir. Defensive try/catch — tutorial
-        // başlatma sırasında crash olursa app çökmesin, error log'a düşsün.
+        // Tanıtımı tekrar göster — Spotlight Tour'u yeniden başlatır.
+        // TourCoordinator MainActivity'nin NavController'ına ihtiyaç duyar.
         binding.btnReplayTutorial.setOnClickListener {
             runCatching {
+                val mainAct = requireActivity() as? MainActivity ?: return@runCatching
                 com.unischeduler.util.TutorialPrefs(requireContext()).resetAdminTutorial()
-                com.unischeduler.ui.onboarding.AdminTutorialActivity.start(requireContext())
+                val navController = androidx.navigation.fragment.NavHostFragment
+                    .findNavController(this)
+                com.unischeduler.util.TourCoordinator.start(
+                    mainAct, navController, com.unischeduler.util.TourCoordinator.Type.ADMIN
+                )
             }.onFailure { e ->
-                android.util.Log.e("SettingsFragment", "replayTutorial fail", e)
+                android.util.Log.e("SettingsFragment", "replayTour fail", e)
                 runCatching {
                     com.unischeduler.util.CrashHandler.appendPendingCrash(
-                        requireContext().applicationContext, "Settings", "replayTutorial", e
+                        requireContext().applicationContext, "Settings", "replayTour", e
                     )
                 }
                 showErrorSnackbar(e.message ?: "Tanıtım başlatılamadı")

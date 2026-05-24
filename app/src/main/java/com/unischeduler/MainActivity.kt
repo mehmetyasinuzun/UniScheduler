@@ -50,35 +50,53 @@ class MainActivity : AppCompatActivity() {
             com.unischeduler.ui.onboarding.OnboardingActivity.start(this)
         }
 
-        // ROL-BAZLI TUTORIAL — login sonrası ilk kez.
+        // SPOTLIGHT TOUR — login sonrası ilk kez. Statik slayt yerine
+        // gerçek uygulama içinde sekme sekme rehberli gezinme.
         //
-        // savedInstanceState != null demek configuration change (rotation,
-        // night mode toggle, locale change) sonrası recreate olduk. O durumda
-        // tutorial activity'i ZATEN tetiklemiştik; tekrar çağırmak sonsuz
-        // döngü / üst üste açılma / window leak yaratır. Yalnız fresh launch'ta
-        // (savedInstanceState == null) kontrol et.
+        // ÖNEMLİ: Bottom nav + NavController henüz setupWithNavController
+        // edilmemiş olabilir bu noktada. ensureNavSetup() onCreate sonrası
+        // çağrılıyor. Tour'u BottomSheet ile başlatmak için NavController
+        // ve fragment-hazır state'in bitmesini beklemeliyiz → postDelayed.
         //
-        // forceLogout durumunda session.clear() yapıldı → isLoggedIn false →
-        // tutorial start etmez (zaten istenmez).
+        // savedInstanceState != null → configuration change recreate;
+        // tour zaten devam ediyor olabilir, yeniden başlatma.
         if (savedInstanceState == null && session.isLoggedIn && session.isHealthy()) {
-            runCatching {
-                if (session.isAdmin &&
-                    com.unischeduler.ui.onboarding.AdminTutorialActivity.isPending(this)
-                ) {
-                    com.unischeduler.ui.onboarding.AdminTutorialActivity.start(this)
-                } else if (session.isLecturer &&
-                    com.unischeduler.ui.onboarding.LecturerTutorialActivity.isPending(this)
-                ) {
-                    com.unischeduler.ui.onboarding.LecturerTutorialActivity.start(this)
-                }
-            }.onFailure { e ->
-                // Tutorial başlatma sırasında crash olursa app yine açılsın.
-                android.util.Log.e("MainActivity", "Tutorial start failed: ${e.message}", e)
-                runCatching {
-                    com.unischeduler.util.CrashHandler.appendPendingCrash(
-                        applicationContext, "MainActivity", "tutorial.start", e
-                    )
-                }
+            val tutorialPrefs = com.unischeduler.util.TutorialPrefs(this)
+            val tourType = when {
+                session.isAdmin && !tutorialPrefs.adminTutorialDone ->
+                    com.unischeduler.util.TourCoordinator.Type.ADMIN
+                session.isLecturer && !tutorialPrefs.lecturerTutorialDone ->
+                    com.unischeduler.util.TourCoordinator.Type.LECTURER
+                else -> null
+            }
+            if (tourType != null) {
+                // Nav setup + fragment render için kısa bir bekleme. 800ms
+                // BottomNav'ın setupWithNavController'ı çağrıldıktan sonra
+                // ilk destination render olması için yeterli marj.
+                //
+                // ÖNEMLİ: Tour başlatmadan önce CrashHandler.flushPendingCrashes
+                // çağrılıyor. Aksi takdirde önceki turda tour crash dosyaları
+                // beklemede kalırdı (sonraki destination change'i bekleyecekti).
+                // Erken flush → super admin paneli Error Logs anında günceller.
+                binding.root.postDelayed({
+                    runCatching {
+                        if (!isFinishing && !isDestroyed) {
+                            // Eski tour crash'lerini DB'ye gönder
+                            com.unischeduler.util.CrashHandler.flushPendingCrashes(application)
+                            // Tour başlat
+                            com.unischeduler.util.TourCoordinator.start(
+                                this, navController, tourType
+                            )
+                        }
+                    }.onFailure { e ->
+                        android.util.Log.e("MainActivity", "Tour start failed: ${e.message}", e)
+                        runCatching {
+                            com.unischeduler.util.CrashHandler.appendPendingCrash(
+                                applicationContext, "MainActivity", "tour.start", e
+                            )
+                        }
+                    }
+                }, 800L)
             }
         }
 

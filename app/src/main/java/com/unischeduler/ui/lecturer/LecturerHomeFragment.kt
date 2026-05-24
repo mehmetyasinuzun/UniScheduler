@@ -119,14 +119,8 @@ class LecturerHomeFragment : Fragment() {
             pdfSaveLauncher.launch(getString(R.string.export_pdf_default_filename))
         }
 
-        // Coach mark — lecturer PDF butonu için ilk-açılış balonu.
-        com.unischeduler.util.CoachMarks.showOnce(
-            fragment = this,
-            target   = binding.btnExportPdf,
-            titleRes = R.string.coach_lecturer_pdf_title,
-            bodyRes  = R.string.coach_lecturer_pdf_body,
-            key      = com.unischeduler.util.CoachKey.LECTURER_PDF
-        )
+        // Coach mark kaldırıldı — TourCoordinator Home/PDF bilgisini tek
+        // bütün adımda anlatıyor.
         binding.btnExportIcs.setOnClickListener {
             icsSaveLauncher.launch(getString(R.string.export_ics_default_filename))
         }
@@ -157,13 +151,18 @@ class LecturerHomeFragment : Fragment() {
 
         binding.btnReplayTutorial.setOnClickListener {
             runCatching {
+                val mainAct = requireActivity() as? MainActivity ?: return@runCatching
                 com.unischeduler.util.TutorialPrefs(requireContext()).resetLecturerTutorial()
-                com.unischeduler.ui.onboarding.LecturerTutorialActivity.start(requireContext())
+                val navController = androidx.navigation.fragment.NavHostFragment
+                    .findNavController(this)
+                com.unischeduler.util.TourCoordinator.start(
+                    mainAct, navController, com.unischeduler.util.TourCoordinator.Type.LECTURER
+                )
             }.onFailure { e ->
-                android.util.Log.e("LecturerHome", "replayTutorial fail", e)
+                android.util.Log.e("LecturerHome", "replayTour fail", e)
                 runCatching {
                     com.unischeduler.util.CrashHandler.appendPendingCrash(
-                        requireContext().applicationContext, "LecturerHome", "replayTutorial", e
+                        requireContext().applicationContext, "LecturerHome", "replayTour", e
                     )
                 }
                 showErrorSnackbar(e.message ?: "Tanıtım başlatılamadı")

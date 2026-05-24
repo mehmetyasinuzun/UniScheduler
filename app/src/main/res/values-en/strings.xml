@@ -486,6 +486,36 @@
     <string name="common_back">Back</string>
     <string name="tutorial_page_counter">%1$d / %2$d</string>
 
+    <!-- ═══ Spotlight Tour — in-app guided walkthrough ═════════════════════ -->
+    <string name="tour_a_home_title">🏠 Welcome to Home</string>
+    <string name="tour_a_home_body">Your home screen! A live snapshot of your institution: departments, lecturers, courses, classrooms. Unassigned items are highlighted in red — tap to assign directly. Tap \"Next\" and I\'ll take you to the next tab.</string>
+
+    <string name="tour_a_data_title">📊 Data Management</string>
+    <string name="tour_a_data_body">You\'re on the \"Data\" tab. Add lecturers and courses here. ⚡ The killer feature: the \"📥 Import\" button — adds 350 lecturers from an Excel file in 30 seconds. Duplicate names are auto-resolved (farhan_adl, farhan_adl2…), passwords generated and downloaded as CSV.</string>
+
+    <string name="tour_a_class_title">🏫 Classrooms</string>
+    <string name="tour_a_class_body">We\'re on the \"Classrooms\" tab. Add rooms here: code, capacity, type (theory/lab/mixed). Bulk Excel import works the same — bottom \"📥 Import\" button.</string>
+
+    <string name="tour_a_assign_title">⚡ Auto-Schedule</string>
+    <string name="tour_a_assign_body">Here\'s your strongest feature: the \"Assign\" tab. The \"🤖 Auto\" button generates 5 alternative valid schedules. Preview each — lecturer availability, classroom capacity, conflict-free placement all checked automatically. Approve the best one, lecturers see it in real-time.</string>
+
+    <string name="tour_a_cal_title">📅 Weekly Calendar</string>
+    <string name="tour_a_cal_body">The \"Calendar\" tab shows the whole week. The \"📄 PDF\" icon (top right) — export with filters: full schedule, one lecturer\'s schedule, or one classroom\'s. Print or share.</string>
+
+    <string name="tour_a_set_title">⚙️ Settings</string>
+    <string name="tour_a_set_body">Final tab: \"Settings\". Theme, language, notifications, backup/restore, password change. 🎯 You can replay this tour anytime via \"Replay Tour\" here. Let\'s wrap up!</string>
+
+    <string name="tour_l_home_title">🏠 Home + Settings</string>
+    <string name="tour_l_home_body">All weekly classes here — day, time, course code, classroom. When your admin generates a new schedule, it updates live. The \"📄 PDF\" icon (top right) saves the schedule to your phone. ⚙️ Scroll down: class reminders (15-60 min before), theme (light/dark), language (TR/EN), and password change. 🎯 Replay this tour anytime via \"Replay Tour\".</string>
+
+    <string name="tour_l_avail_title">🗓️ Mark Availability</string>
+    <string name="tour_l_avail_body">We\'re on the \"Availability\" tab. Mark days and times you\'re busy — e.g. Monday 10:00-12:00 meeting. Your admin respects these when generating the next schedule → no conflicts for you. Tour complete, enjoy!</string>
+
+    <string name="tour_l_set_title">⚙️ Settings</string>
+    <string name="tour_l_set_body">The settings section below your home tab: class reminders (15-60 min before), theme (light/dark/auto), language (TR/EN), password change. 🎯 Replay this tour anytime via \"Replay Tour\".</string>
+
+    <string name="tour_completed">🎉 Tour complete — enjoy!</string>
+
     <!-- ─── Notifications (Sprint B2 + B3) ──────────────────────────────────── -->
     <string name="notif_card_title">Notification Preferences</string>
     <string name="notif_card_description">Local reminders for tomorrow\'s classes.</string>

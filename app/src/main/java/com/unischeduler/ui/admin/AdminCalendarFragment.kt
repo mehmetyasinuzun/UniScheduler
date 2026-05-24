@@ -156,14 +156,8 @@ class AdminCalendarFragment : Fragment() {
             pdfSaveLauncher.launch(buildFileName())
         }
 
-        // Coach mark — admin PDF export butonu için ilk-açılış balonu.
-        com.unischeduler.util.CoachMarks.showOnce(
-            fragment = this,
-            target   = binding.btnExportPdf,
-            titleRes = R.string.coach_pdf_title,
-            bodyRes  = R.string.coach_pdf_body,
-            key      = com.unischeduler.util.CoachKey.ADMIN_PDF
-        )
+        // Coach mark kaldırıldı — TourCoordinator Calendar sekmesinde aynı
+        // bilgiyi BottomSheet ile veriyor.
 
         binding.weeklySchedule.setOnEntryClickListener { entry ->
             showEntryDetail(entry)

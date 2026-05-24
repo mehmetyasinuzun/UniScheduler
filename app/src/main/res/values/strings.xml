@@ -499,6 +499,38 @@
     <string name="common_back">Geri</string>
     <string name="tutorial_page_counter">%1$d / %2$d</string>
 
+    <!-- ═══ Spotlight Tour — in-app guided walkthrough ═════════════════════ -->
+    <!-- Admin tour: 6 sekme, sırasıyla Home → Data → Classrooms → Assign → Calendar → Settings -->
+    <string name="tour_a_home_title">🏠 Buradayız: Home Sekmesi</string>
+    <string name="tour_a_home_body">Bu ana sayfan! Burada kurumunun anlık fotoğrafını görürsün: bölüm sayısı, hoca, ders, derslik. Atanmamış dersler kırmızı vurgu ile gözükür — listeden tıklayıp doğrudan atamaya geçebilirsin. \"İlerle\" tıkla, seni sıradaki sekmeye götüreyim.</string>
+
+    <string name="tour_a_data_title">📊 Veri Yönetimi</string>
+    <string name="tour_a_data_body">Şimdi \"Data\" sekmesindesin. Buradan hocaları, dersleri ekliyorsun. ⚡ En önemli özelliği: \"📥 İçe Aktar\" butonu — Excel dosyandaki 350 hocayı 30 saniyede sisteme ekler. Aynı isimleri otomatik ayırt eder (farhan_adl, farhan_adl2…), her birine şifre üretip CSV olarak indirir.</string>
+
+    <string name="tour_a_class_title">🏫 Derslikler</string>
+    <string name="tour_a_class_body">\"Classrooms\" sekmesindeyiz. Buradan dersliklerini ekle: kod, kapasite, tip (teori/lab/karma). Excel ile toplu import burada da var — alttaki \"📥 İçe Aktar\" ile aynı şekilde.</string>
+
+    <string name="tour_a_assign_title">⚡ Otomatik Program</string>
+    <string name="tour_a_assign_body">Burası en güçlü özelliğin: \"Assign\" sekmesi. \"🤖 Otomatik\" butonuna bastığında sistem 5 farklı geçerli program üretir. Her birini önizleyebilirsin — hoca müsaitliği, derslik kapasitesi, çakışmasız atama otomatik kontrol edilir. En iyisini seçip onayla, hocaların ekranına gerçek zamanlı düşer.</string>
+
+    <string name="tour_a_cal_title">📅 Haftalık Takvim</string>
+    <string name="tour_a_cal_body">\"Calendar\" sekmesinde tüm haftanın programını görürsün. Sağ üstteki \"📄 PDF\" ikonu — istediğin filtre ile dışa aktar: tüm program, sadece bir hocanın programı, ya da sadece bir dersliğinki. Yazdırılabilir veya paylaşılabilir.</string>
+
+    <string name="tour_a_set_title">⚙️ Ayarlar</string>
+    <string name="tour_a_set_body">Son sekme: \"Settings\". Buradan tema, dil, bildirim ayarları, yedek alma/geri yükleme, ve şifre değiştirme. 🎯 Bu turu istediğin zaman buradaki \"Tanıtımı Tekrar Göster\" butonuyla yeniden başlatabilirsin. Hadi turumuzu bitirelim!</string>
+
+    <!-- Lecturer tour: 3 ana adım -->
+    <string name="tour_l_home_title">🏠 Ana Sayfan + Ayarlar</string>
+    <string name="tour_l_home_body">Haftanın tüm dersleri burada — gün, saat, ders kodu, derslik. Yöneticin yeni bir program oluşturduğunda otomatik güncellenir. Sağ üstteki \"📄 PDF\" ile programını telefonuna kaydedebilirsin. ⚙️ Aşağı kaydır: ders öncesi bildirim, tema (açık/koyu), dil (TR/EN) ve şifre değiştirme ayarları. 🎯 Bu turu \"Tanıtımı Tekrar Göster\" butonuyla istediğin zaman yeniden açabilirsin.</string>
+
+    <string name="tour_l_avail_title">🗓️ Müsaitlik Belirleme</string>
+    <string name="tour_l_avail_body">\"Availability\" sekmesindeyiz. Hangi gün ve saatlerde meşgul olduğunu işaretle — örn. Pazartesi 10:00-12:00 toplantı. Yöneticin bir sonraki programı oluştururken bu bilgileri dikkate alır → sana çakışma çıkmaz. Tur tamamlandı, iyi kullanımlar!</string>
+
+    <string name="tour_l_set_title">⚙️ Ayarlar</string>
+    <string name="tour_l_set_body">Ana sayfanın altındaki ayarlar bölümünden: ders öncesi bildirim (15-60 dk öncesinden), tema (açık/koyu/otomatik), dil (TR/EN) ve şifre değiştirme. 🎯 Bu turu istediğin zaman \"Tanıtımı Tekrar Göster\" ile yeniden açabilirsin.</string>
+
+    <string name="tour_completed">🎉 Tur tamamlandı — iyi kullanımlar!</string>
+
     <!-- ─── Notifications (Sprint B2 + B3) ──────────────────────────────────── -->
     <string name="notif_card_title">Bildirim Tercihleri</string>
     <string name="notif_card_description">Yarınki dersleriniz için yerel hatırlatma bildirimleri.</string>

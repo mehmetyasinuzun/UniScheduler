@@ -49,15 +49,10 @@
             android:exported="false"
             android:theme="@style/Theme.UniScheduler" />
 
-        <activity
-            android:name=".ui.onboarding.AdminTutorialActivity"
-            android:exported="false"
-            android:theme="@style/Theme.UniScheduler" />
-
-        <activity
-            android:name=".ui.onboarding.LecturerTutorialActivity"
-            android:exported="false"
-            android:theme="@style/Theme.UniScheduler" />
+        <!-- AdminTutorialActivity ve LecturerTutorialActivity kaldırıldı —
+             yerine in-app spotlight tour (TourCoordinator + BottomSheet).
+             Eski statik 9-sayfa swipe kullanıcı geri bildirimi sonrası
+             uygulama-içi rehberli tura çevrildi. -->
 
         <!-- Fires when AlarmManager triggers a scheduled reminder. -->
         <receiver
