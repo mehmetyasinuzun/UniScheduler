@@ -49,6 +49,16 @@
             android:exported="false"
             android:theme="@style/Theme.UniScheduler" />
 
+        <activity
+            android:name=".ui.onboarding.AdminTutorialActivity"
+            android:exported="false"
+            android:theme="@style/Theme.UniScheduler" />
+
+        <activity
+            android:name=".ui.onboarding.LecturerTutorialActivity"
+            android:exported="false"
+            android:theme="@style/Theme.UniScheduler" />
+
         <!-- Fires when AlarmManager triggers a scheduled reminder. -->
         <receiver
             android:name=".notif.ReminderReceiver"

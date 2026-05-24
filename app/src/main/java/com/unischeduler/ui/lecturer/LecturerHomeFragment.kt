@@ -117,6 +117,15 @@ class LecturerHomeFragment : Fragment() {
         binding.btnExportPdf.setOnClickListener {
             pdfSaveLauncher.launch(getString(R.string.export_pdf_default_filename))
         }
+
+        // Coach mark — lecturer PDF butonu için ilk-açılış balonu.
+        com.unischeduler.util.CoachMarks.showOnce(
+            fragment = this,
+            target   = binding.btnExportPdf,
+            titleRes = R.string.coach_lecturer_pdf_title,
+            bodyRes  = R.string.coach_lecturer_pdf_body,
+            key      = com.unischeduler.util.CoachKey.LECTURER_PDF
+        )
         binding.btnExportIcs.setOnClickListener {
             icsSaveLauncher.launch(getString(R.string.export_ics_default_filename))
         }
@@ -144,6 +153,11 @@ class LecturerHomeFragment : Fragment() {
             .onFailure { android.util.Log.e("LecturerHome", "Theme setup failed", it) }
         runCatching { setupLanguageSelector() }
             .onFailure { android.util.Log.e("LecturerHome", "Lang setup failed", it) }
+
+        binding.btnReplayTutorial.setOnClickListener {
+            com.unischeduler.util.TutorialPrefs(requireContext()).resetLecturerTutorial()
+            com.unischeduler.ui.onboarding.LecturerTutorialActivity.start(requireContext())
+        }
 
         binding.btnLogout.setOnClickListener {
             AlertDialog.Builder(requireContext())

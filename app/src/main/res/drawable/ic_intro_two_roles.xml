@@ -1,0 +1,80 @@
+<!--
+  "İki rol" illustration — yan yana 2 figür (admin + hoca) + paylaşılan ekran.
+  Marketing'in özü: "yönetici de hoca da aynı uygulama içinde, farklı deneyim".
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp"
+    android:height="240dp"
+    android:viewportWidth="240"
+    android:viewportHeight="240">
+
+    <!-- SOL FİGÜR: Yönetici -->
+    <!-- Baş -->
+    <path
+        android:pathData="M60,80 m-18,0 a18,18 0 1,0 36,0 a18,18 0 1,0 -36,0"
+        android:fillColor="#1565C0"/>
+    <!-- Yaka / suit -->
+    <path
+        android:pathData="M30,110 L90,110 L82,160 L38,160 Z"
+        android:fillColor="#0D47A1"/>
+    <!-- Kravat -->
+    <path
+        android:pathData="M58,115 L62,115 L64,145 L60,150 L56,145 Z"
+        android:fillColor="#E53935"/>
+    <!-- Admin etiketi -->
+    <path
+        android:pathData="M30,180 L90,180 L90,200 L30,200 Z"
+        android:fillColor="#1565C0"/>
+
+    <!-- SAĞ FİGÜR: Hoca -->
+    <!-- Baş -->
+    <path
+        android:pathData="M180,80 m-18,0 a18,18 0 1,0 36,0 a18,18 0 1,0 -36,0"
+        android:fillColor="#43A047"/>
+    <!-- Gömlek -->
+    <path
+        android:pathData="M150,110 L210,110 L202,160 L158,160 Z"
+        android:fillColor="#2E7D32"/>
+    <!-- Kitap (hoca aksesuarı) -->
+    <path
+        android:pathData="M170,118 L190,118 L190,148 L170,148 Z"
+        android:fillColor="#FFFFFF"/>
+    <path
+        android:pathData="M180,118 L180,148"
+        android:strokeColor="#2E7D32"
+        android:strokeWidth="1.5"/>
+    <!-- Hoca etiketi -->
+    <path
+        android:pathData="M150,180 L210,180 L210,200 L150,200 Z"
+        android:fillColor="#43A047"/>
+
+    <!-- ORTADA PAYLAŞILAN EKRAN — küçük telefon -->
+    <path
+        android:pathData="M110,90 L130,90 Q133,90 133,93 L133,150 Q133,153 130,153 L110,153 Q107,153 107,150 L107,93 Q107,90 110,90 Z"
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#212121"
+        android:strokeWidth="1.5"/>
+    <!-- Ekran üst bar -->
+    <path
+        android:pathData="M111,96 L129,96 L129,102 L111,102 Z"
+        android:fillColor="#1565C0"/>
+    <!-- Ekran içeriği (basit takvim) -->
+    <path android:pathData="M111,108 L129,108 L129,114 L111,114 Z" android:fillColor="#E3F2FD"/>
+    <path android:pathData="M111,116 L129,116 L129,128 L111,128 Z" android:fillColor="#1976D2"/>
+    <path android:pathData="M111,130 L129,130 L129,140 L111,140 Z" android:fillColor="#43A047"/>
+    <path android:pathData="M111,142 L129,142 L129,148 L111,148 Z" android:fillColor="#FFA726"/>
+
+    <!-- Bağlantı çizgileri (figürlerden ekrana) -->
+    <path
+        android:pathData="M85,120 L107,120"
+        android:strokeColor="#9E9E9E"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"/>
+    <path
+        android:pathData="M155,120 L133,120"
+        android:strokeColor="#9E9E9E"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"/>
+</vector>

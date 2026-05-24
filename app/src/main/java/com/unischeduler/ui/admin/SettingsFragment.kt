@@ -282,6 +282,14 @@ class SettingsFragment : Fragment() {
             restoreOpenLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
         }
 
+        // Tanıtımı tekrar göster — admin tutorial + coach mark flag'lerini
+        // sıfırlar, ardından AdminTutorialActivity'i başlatır. Kullanıcı
+        // tek tıkla rehbere geri dönebilir.
+        binding.btnReplayTutorial.setOnClickListener {
+            com.unischeduler.util.TutorialPrefs(requireContext()).resetAdminTutorial()
+            com.unischeduler.ui.onboarding.AdminTutorialActivity.start(requireContext())
+        }
+
         binding.btnLogout.setOnClickListener {
             AlertDialog.Builder(requireContext())
                 .setTitle(R.string.logout_confirm_title)

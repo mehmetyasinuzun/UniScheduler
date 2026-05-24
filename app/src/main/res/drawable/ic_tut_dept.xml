@@ -1,0 +1,17 @@
+<!-- Departments illustration — ağaç (tree) hiyerarşi -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp" android:height="240dp"
+    android:viewportWidth="240" android:viewportHeight="240">
+    <!-- Üst kutu: Kurum -->
+    <path android:pathData="M90,30 L150,30 Q155,30 155,35 L155,60 Q155,65 150,65 L90,65 Q85,65 85,60 L85,35 Q85,30 90,30 Z" android:fillColor="#1565C0"/>
+    <!-- 3 alt kutu: Bölümler -->
+    <path android:pathData="M25,120 L80,120 Q85,120 85,125 L85,150 Q85,155 80,155 L25,155 Q20,155 20,150 L20,125 Q20,120 25,120 Z" android:fillColor="#43A047"/>
+    <path android:pathData="M95,120 L150,120 Q155,120 155,125 L155,150 Q155,155 150,155 L95,155 Q90,155 90,150 L90,125 Q90,120 95,120 Z" android:fillColor="#43A047"/>
+    <path android:pathData="M165,120 L220,120 Q225,120 225,125 L225,150 Q225,155 220,155 L165,155 Q160,155 160,150 L160,125 Q160,120 165,120 Z" android:fillColor="#43A047"/>
+    <!-- Bağlantı çizgileri -->
+    <path android:pathData="M120,65 L120,90 M120,90 L52,90 L52,120 M120,90 L122,120 M120,90 L192,90 L192,120" android:strokeColor="#9E9E9E" android:strokeWidth="2" android:fillColor="#00000000"/>
+    <!-- İkonlar (computer chip simgesi) -->
+    <path android:pathData="M40,170 L65,170 L65,185 L40,185 Z" android:fillColor="#E0E0E0"/>
+    <path android:pathData="M110,170 L135,170 L135,185 L110,185 Z" android:fillColor="#E0E0E0"/>
+    <path android:pathData="M180,170 L205,170 L205,185 L180,185 Z" android:fillColor="#E0E0E0"/>
+</vector>

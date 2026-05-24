@@ -1,0 +1,26 @@
+<!-- Auto-schedule: dişli + takvim + 5 alternatif -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp" android:height="240dp"
+    android:viewportWidth="240" android:viewportHeight="240">
+    <!-- Merkez büyük dişli -->
+    <path android:pathData="M120,120 m-40,0 a40,40 0 1,0 80,0 a40,40 0 1,0 -80,0" android:fillColor="#1565C0"/>
+    <path android:pathData="M120,120 m-25,0 a25,25 0 1,0 50,0 a25,25 0 1,0 -50,0" android:fillColor="#FAFAFA"/>
+    <!-- Dişli tırnakları (8 yön) -->
+    <path android:pathData="M120,70 L116,80 L124,80 Z" android:fillColor="#1565C0"/>
+    <path android:pathData="M120,170 L116,160 L124,160 Z" android:fillColor="#1565C0"/>
+    <path android:pathData="M70,120 L80,116 L80,124 Z" android:fillColor="#1565C0"/>
+    <path android:pathData="M170,120 L160,116 L160,124 Z" android:fillColor="#1565C0"/>
+    <path android:pathData="M85,85 L92,92 L96,80 Z" android:fillColor="#1565C0"/>
+    <path android:pathData="M155,85 L148,92 L144,80 Z" android:fillColor="#1565C0"/>
+    <path android:pathData="M85,155 L92,148 L96,160 Z" android:fillColor="#1565C0"/>
+    <path android:pathData="M155,155 L148,148 L144,160 Z" android:fillColor="#1565C0"/>
+
+    <!-- 5 alternatif rozet (dişlinin etrafında) -->
+    <path android:pathData="M35,40 m-12,0 a12,12 0 1,0 24,0 a12,12 0 1,0 -24,0" android:fillColor="#43A047"/>
+    <path android:pathData="M205,40 m-12,0 a12,12 0 1,0 24,0 a12,12 0 1,0 -24,0" android:fillColor="#43A047"/>
+    <path android:pathData="M205,200 m-12,0 a12,12 0 1,0 24,0 a12,12 0 1,0 -24,0" android:fillColor="#43A047"/>
+    <path android:pathData="M35,200 m-12,0 a12,12 0 1,0 24,0 a12,12 0 1,0 -24,0" android:fillColor="#43A047"/>
+    <path android:pathData="M120,30 m-12,0 a12,12 0 1,0 24,0 a12,12 0 1,0 -24,0" android:fillColor="#FFD54F"/>
+    <!-- Ortadaki büyük "★" -->
+    <path android:pathData="M120,32 L122,38 L128,38 L123,42 L125,48 L120,44 L115,48 L117,42 L112,38 L118,38 Z" android:fillColor="#F57F17"/>
+</vector>

@@ -1,0 +1,24 @@
+<!-- Dashboard illustration — stat cards + chart -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp" android:height="240dp"
+    android:viewportWidth="240" android:viewportHeight="240">
+    <!-- Çerçeve -->
+    <path android:pathData="M30,40 L210,40 L210,200 L30,200 Z" android:fillColor="#FAFAFA" android:strokeColor="#BDBDBD" android:strokeWidth="1.5"/>
+    <path android:pathData="M30,40 L210,40 L210,58 L30,58 Z" android:fillColor="#1565C0"/>
+    <!-- 4 stat kartı -->
+    <path android:pathData="M45,72 L100,72 L100,108 L45,108 Z" android:fillColor="#E3F2FD" android:strokeColor="#1976D2" android:strokeWidth="1"/>
+    <path android:pathData="M55,82 L75,82 L75,86 L55,86 Z" android:fillColor="#1976D2"/>
+    <path android:pathData="M52,95 L75,95 L75,103 L52,103 Z" android:fillColor="#0D47A1"/>
+    <path android:pathData="M110,72 L165,72 L165,108 L110,108 Z" android:fillColor="#E8F5E9" android:strokeColor="#43A047" android:strokeWidth="1"/>
+    <path android:pathData="M120,82 L140,82 L140,86 L120,86 Z" android:fillColor="#43A047"/>
+    <path android:pathData="M117,95 L140,95 L140,103 L117,103 Z" android:fillColor="#1B5E20"/>
+    <!-- Bar chart -->
+    <path android:pathData="M45,180 L60,180 L60,150 L45,150 Z" android:fillColor="#1976D2"/>
+    <path android:pathData="M70,180 L85,180 L85,130 L70,130 Z" android:fillColor="#43A047"/>
+    <path android:pathData="M95,180 L110,180 L110,160 L95,160 Z" android:fillColor="#FFA726"/>
+    <path android:pathData="M120,180 L135,180 L135,120 L120,120 Z" android:fillColor="#7E57C2"/>
+    <path android:pathData="M145,180 L160,180 L160,140 L145,140 Z" android:fillColor="#26A69A"/>
+    <path android:pathData="M170,180 L185,180 L185,170 L170,170 Z" android:fillColor="#EF5350"/>
+    <!-- Spotlight -->
+    <path android:pathData="M105,90 m-50,0 a50,30 0 1,0 100,0 a50,30 0 1,0 -100,0" android:fillColor="#FFD54F" android:fillAlpha="0.18"/>
+</vector>

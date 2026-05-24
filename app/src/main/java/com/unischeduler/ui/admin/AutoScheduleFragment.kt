@@ -40,6 +40,15 @@ class AutoScheduleFragment : Fragment() {
 
         binding.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
 
+        // Coach mark — "5 alternatif program" butonu için ilk-açılış balonu.
+        com.unischeduler.util.CoachMarks.showOnce(
+            fragment = this,
+            target   = binding.btnGenerate,
+            titleRes = R.string.coach_autosched_title,
+            bodyRes  = R.string.coach_autosched_body,
+            key      = com.unischeduler.util.CoachKey.AUTO_SCHEDULE
+        )
+
         // ── Mutation butonları DEBOUNCED ───────────────────────────────────
         // Üreteç çalışırken kullanıcı tekrar tıklarsa yeni bir generate
         // tetiklenip alternatives state'i karışırdı. 600ms pencere yeterli.

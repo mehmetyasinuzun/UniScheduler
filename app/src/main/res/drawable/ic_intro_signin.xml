@@ -1,0 +1,74 @@
+<!--
+  "Sign in" illustration — login formu + ok işareti.
+  Bunu görünce kullanıcı "Hadi başla" butonuna basacak.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp"
+    android:height="240dp"
+    android:viewportWidth="240"
+    android:viewportHeight="240">
+
+    <!-- Telefon gövdesi -->
+    <path
+        android:pathData="M75,25 L165,25 Q175,25 175,35 L175,205 Q175,215 165,215 L75,215 Q65,215 65,205 L65,35 Q65,25 75,25 Z"
+        android:fillColor="#37474F"
+        android:strokeColor="#263238"
+        android:strokeWidth="2"/>
+
+    <!-- Ekran -->
+    <path
+        android:pathData="M75,45 L165,45 L165,195 L75,195 Z"
+        android:fillColor="#FAFAFA"/>
+
+    <!-- Logo / app icon (üstte daire) -->
+    <path
+        android:pathData="M120,70 m-14,0 a14,14 0 1,0 28,0 a14,14 0 1,0 -28,0"
+        android:fillColor="#1565C0"/>
+    <!-- Logo içinde takvim ikonu -->
+    <path
+        android:pathData="M114,64 L126,64 L126,76 L114,76 Z"
+        android:fillColor="#FFFFFF"/>
+    <path android:pathData="M114,68 L126,68" android:strokeColor="#1565C0" android:strokeWidth="1"/>
+
+    <!-- Kullanıcı adı input -->
+    <path
+        android:pathData="M85,100 L155,100 L155,115 L85,115 Z"
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#BDBDBD"
+        android:strokeWidth="1"/>
+    <path
+        android:pathData="M92,107 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0"
+        android:fillColor="#9E9E9E"/>
+    <path android:pathData="M100,105 L145,105 L145,110 L100,110 Z" android:fillColor="#EEEEEE"/>
+
+    <!-- Şifre input -->
+    <path
+        android:pathData="M85,125 L155,125 L155,140 L85,140 Z"
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#BDBDBD"
+        android:strokeWidth="1"/>
+    <path
+        android:pathData="M92,132 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0"
+        android:fillColor="#9E9E9E"/>
+    <path android:pathData="M100,130 L130,130 L130,135 L100,135 Z" android:fillColor="#EEEEEE"/>
+
+    <!-- Giriş yap butonu -->
+    <path
+        android:pathData="M85,155 L155,155 L155,175 L85,175 Z"
+        android:fillColor="#1565C0"/>
+
+    <!-- Ok işareti (buton üstünden) — kullanıcıya "şuraya bas" gösterir -->
+    <path
+        android:pathData="M195,165 L165,165 M170,160 L165,165 L170,170"
+        android:strokeColor="#E53935"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"/>
+
+    <!-- Spotlight glow (butonun etrafında) -->
+    <path
+        android:pathData="M120,165 m-45,-15 a45,15 0 1,0 90,0 a45,15 0 1,0 -90,0"
+        android:fillColor="#FFD54F"
+        android:fillAlpha="0.20"/>
+</vector>

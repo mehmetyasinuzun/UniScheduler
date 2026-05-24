@@ -417,15 +417,62 @@
 
     <string name="onboarding_skip">Skip</string>
     <string name="onboarding_next">Next</string>
-    <string name="onboarding_finish">Get Started</string>
+    <string name="onboarding_finish">Let\'s Start</string>
     <string name="onboarding_p1_title">Welcome to UniScheduler</string>
-    <string name="onboarding_p1_body">Manage your university timetable in one place: lecturers, courses, classrooms and conflict-free weekly assignments.</string>
-    <string name="onboarding_p2_title">1. Add Departments</string>
-    <string name="onboarding_p2_body">Use the Settings tab to add departments. Every lecturer, course and classroom is tied to one.</string>
-    <string name="onboarding_p3_title">2. Add Lecturers &amp; Courses</string>
-    <string name="onboarding_p3_body">Add manually from the Data tab or bulk-import via Excel/CSV. The system generates each lecturer\'s credentials.</string>
-    <string name="onboarding_p4_title">3. Run Auto-Schedule</string>
-    <string name="onboarding_p4_body">Tap "Auto-Schedule" on the Assignment screen. Conflict checks included — ready in minutes.</string>
+    <string name="onboarding_p1_body">University timetables done in minutes. Smart conflict detection, automatic assignment, real-time sync — all in one app.</string>
+    <string name="onboarding_p2_title">For Lecturers &amp; Admins Alike</string>
+    <string name="onboarding_p2_body">Admins manage courses and assignments. Lecturers view their weekly schedule and mark unavailable hours. Each role gets a tailored experience.</string>
+    <string name="onboarding_p3_title">Sign In to Continue</string>
+    <string name="onboarding_p3_body">After signing in we\'ll show you a tour tailored to your role — bulk-import hundreds of lecturers in 30 seconds, auto-generate schedules, export PDFs and more.</string>
+
+    <!-- Admin tutorial — first login, ~9 pages -->
+    <string name="admin_tut_p1_title">Welcome Administrator</string>
+    <string name="admin_tut_p1_body">This quick tour will get you running in 5 minutes. We\'ll walk through every screen — replay any time from Settings.</string>
+    <string name="admin_tut_p2_title">Dashboard — At a Glance</string>
+    <string name="admin_tut_p2_body">The home screen shows institution stats: lecturers, courses, classrooms, scheduled entries. Unassigned items are highlighted — tap to assign.</string>
+    <string name="admin_tut_p3_title">Define Departments</string>
+    <string name="admin_tut_p3_body">Everything is grouped by department (Computer Engineering, Electrical, etc.). Add via Settings → Departments. Lecturers and courses are auto-categorised.</string>
+    <string name="admin_tut_p4_title">Add Lecturers — Manually</string>
+    <string name="admin_tut_p4_body">Data tab → Lecturers → \"Add Lecturer\". Title, first/last name, department. The system generates a unique username and 6-digit password; share it with the lecturer, they\'ll change it on first login.</string>
+    <string name="admin_tut_p5_title">⚡ Bulk Excel Import</string>
+    <string name="admin_tut_p5_body">Import 350 lecturers in 30 seconds. Pick \"Import\" from the Excel button — duplicates are auto-resolved (farhan_adl, farhan_adl2…), passwords generated and downloaded as CSV. A dedicated cloud function bypasses rate limits.</string>
+    <string name="admin_tut_p6_title">Courses and Classrooms</string>
+    <string name="admin_tut_p6_body">Add courses (code, name, theory/lab hours) from the Data tab. Add classrooms (capacity, type) from the Classrooms tab. Both support bulk Excel import.</string>
+    <string name="admin_tut_p7_title">⚡ Auto-Schedule</string>
+    <string name="admin_tut_p7_body">Assignment screen → Auto. The system generates 5 alternative schedules, each preview-able. Lecturer availability, classroom capacity, conflict-free placement — all automatic. Approve the best one.</string>
+    <string name="admin_tut_p8_title">📄 PDF / Excel Export</string>
+    <string name="admin_tut_p8_body">On the weekly calendar, tap the menu (top right) to download as PDF or Excel. Full schedule, one lecturer only, or one classroom only — whichever filter you pick.</string>
+    <string name="admin_tut_p9_title">You\'re All Set 🎉</string>
+    <string name="admin_tut_p9_body">Don\'t forget to share each lecturer\'s password! They\'ll set their own on first login. Replay this tour from Settings any time. Tips will pop up the first time you visit key screens.</string>
+
+    <!-- Lecturer tutorial — first login, ~5 pages -->
+    <string name="lect_tut_p1_title">Welcome</string>
+    <string name="lect_tut_p1_body">UniScheduler lets you view your weekly schedule, mark unavailable hours, and download your timetable. This 1-minute tour covers everything.</string>
+    <string name="lect_tut_p2_title">Your Weekly Schedule</string>
+    <string name="lect_tut_p2_body">The home screen shows your week — day, time, course code, classroom. When your admin generates a new schedule, it updates automatically — no refresh needed.</string>
+    <string name="lect_tut_p3_title">Mark Availability</string>
+    <string name="lect_tut_p3_body">Availability tab — mark days and times you\'re busy (e.g. Monday 10-12 meeting). Your admin will respect these when generating the next schedule — no conflicts for you.</string>
+    <string name="lect_tut_p4_title">📄 Download as PDF</string>
+    <string name="lect_tut_p4_body">The download icon (top right) saves your weekly schedule as a PDF to your phone. Print it, share it, keep it as backup.</string>
+    <string name="lect_tut_p5_title">Notifications &amp; Theme</string>
+    <string name="lect_tut_p5_body">Settings tab — class reminders (15-60 min before), theme (light/dark/auto), language (TR/EN), and password change.</string>
+
+    <!-- Settings: "Replay tutorial" button -->
+    <string name="settings_replay_tutorial">Replay Tour</string>
+    <string name="settings_replay_tutorial_hint">Walk through the app features once more.</string>
+
+    <!-- Coach mark balloons -->
+    <string name="coach_excel_title">Hundreds of Lecturers in One Click</string>
+    <string name="coach_excel_body">All lecturers in your Excel file are added in 30 seconds. The system handles duplicate names, generates passwords and exports a CSV. Try it!</string>
+    <string name="coach_autosched_title">5 Schedule Alternatives — One Tap</string>
+    <string name="coach_autosched_body">This button analyses all classrooms, lecturers and availabilities, then proposes 5 valid schedules. Pick the best.</string>
+    <string name="coach_pdf_title">Export Your Schedule</string>
+    <string name="coach_pdf_body">Download the weekly timetable as PDF or Excel. Filter by lecturer or classroom.</string>
+    <string name="coach_lecturer_pdf_title">Save Your Week as PDF</string>
+    <string name="coach_lecturer_pdf_body">Tap to save your weekly schedule to your phone as PDF.</string>
+    <string name="coach_got_it">Got it</string>
+    <string name="common_back">Back</string>
+    <string name="tutorial_page_counter">%1$d / %2$d</string>
 
     <!-- ─── Notifications (Sprint B2 + B3) ──────────────────────────────────── -->
     <string name="notif_card_title">Notification Preferences</string>

@@ -89,6 +89,13 @@ dependencies {
     implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.security.crypto)
 
+    // TapTargetView — coach marks (ilk-kullanım balon ipuçları).
+    // Excel import / Auto-schedule / PDF gibi kritik özelliklerin yanında
+    // "Bu butonla şunu yapabilirsin" balonu gösterir. Bir kez tıklanınca
+    // SharedPreferences flag ile bir daha çıkmaz.
+    // Stable, MIT, ~50KB. Maintainer aktif değil ama API kırılma yok.
+    implementation("com.getkeepsafe.taptargetview:taptargetview:1.13.3")
+
     implementation(libs.lifecycle.viewmodel.ktx)
     implementation(libs.lifecycle.runtime.ktx)
 

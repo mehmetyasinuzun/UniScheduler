@@ -1,0 +1,27 @@
+<!-- PDF export — PDF dosya + indir oku -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp" android:height="240dp"
+    android:viewportWidth="240" android:viewportHeight="240">
+    <!-- PDF dosyası -->
+    <path android:pathData="M70,40 L150,40 L170,60 L170,190 Q170,200 160,200 L70,200 Q60,200 60,190 L60,50 Q60,40 70,40 Z" android:fillColor="#FAFAFA" android:strokeColor="#E53935" android:strokeWidth="2.5"/>
+    <!-- Kağıt köşesi katı -->
+    <path android:pathData="M150,40 L170,60 L150,60 Z" android:fillColor="#FFCDD2"/>
+    <!-- PDF rozeti -->
+    <path android:pathData="M75,135 L130,135 L130,165 L75,165 Z" android:fillColor="#E53935"/>
+    <!-- PDF yazısı simulasyon (4 dikey) -->
+    <path android:pathData="M80,142 L85,142 L85,158 L80,158 Z" android:fillColor="#FFFFFF"/>
+    <path android:pathData="M90,142 L95,142 L95,158 L90,158 Z" android:fillColor="#FFFFFF"/>
+    <path android:pathData="M100,142 L105,142 L105,158 L100,158 Z" android:fillColor="#FFFFFF"/>
+    <path android:pathData="M110,142 L125,142 L125,158 L110,158 Z" android:fillColor="#FFFFFF"/>
+    <!-- Kağıt üzerinde takvim minimasyonu -->
+    <path android:pathData="M75,70 L155,70 L155,80 L75,80 Z" android:fillColor="#1565C0"/>
+    <path android:pathData="M75,85 L100,85 L100,110 L75,110 Z" android:fillColor="#E3F2FD"/>
+    <path android:pathData="M105,85 L130,85 L130,110 L105,110 Z" android:fillColor="#BBDEFB"/>
+    <path android:pathData="M135,85 L155,85 L155,110 L135,110 Z" android:fillColor="#E3F2FD"/>
+    <path android:pathData="M75,115 L100,115 L100,125 L75,125 Z" android:fillColor="#BBDEFB"/>
+    <path android:pathData="M105,115 L155,115 L155,125 L105,125 Z" android:fillColor="#90CAF9"/>
+
+    <!-- İndirme oku (sağ tarafta) -->
+    <path android:pathData="M195,100 L195,160 M180,145 L195,160 L210,145" android:strokeColor="#43A047" android:strokeWidth="5" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"/>
+    <path android:pathData="M180,170 L210,170 L210,180 L180,180 Z" android:fillColor="#43A047"/>
+</vector>

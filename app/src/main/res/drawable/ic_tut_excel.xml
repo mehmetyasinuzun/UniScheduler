@@ -1,0 +1,43 @@
+<!-- Excel import — Excel dosya simgesi + ok + telefon -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp" android:height="240dp"
+    android:viewportWidth="240" android:viewportHeight="240">
+    <!-- SOL: Excel dosyası -->
+    <path android:pathData="M25,55 L95,55 Q100,55 100,60 L100,185 Q100,190 95,190 L25,190 Q20,190 20,185 L20,60 Q20,55 25,55 Z" android:fillColor="#2E7D32"/>
+    <!-- Sayfa headeri -->
+    <path android:pathData="M25,65 L95,65 L95,75 L25,75 Z" android:fillColor="#1B5E20"/>
+    <!-- Grid satırları -->
+    <path android:pathData="M28,80 L97,80" android:strokeColor="#FFFFFF" android:strokeWidth="0.5" android:fillColor="#00000000"/>
+    <path android:pathData="M28,95 L97,95 M28,110 L97,110 M28,125 L97,125 M28,140 L97,140 M28,155 L97,155 M28,170 L97,170" android:strokeColor="#FFFFFF" android:strokeWidth="0.5" android:fillColor="#00000000"/>
+    <!-- Vertical separators -->
+    <path android:pathData="M48,75 L48,185 M68,75 L68,185 M88,75 L88,185" android:strokeColor="#FFFFFF" android:strokeWidth="0.5" android:fillColor="#00000000"/>
+    <!-- Hücreler içi data noktaları -->
+    <path android:pathData="M32,85 L43,85 L43,90 L32,90 Z" android:fillColor="#A5D6A7"/>
+    <path android:pathData="M52,100 L63,100 L63,105 L52,105 Z" android:fillColor="#A5D6A7"/>
+    <path android:pathData="M72,115 L83,115 L83,120 L72,120 Z" android:fillColor="#A5D6A7"/>
+    <path android:pathData="M32,130 L43,130 L43,135 L32,135 Z" android:fillColor="#A5D6A7"/>
+    <path android:pathData="M52,145 L63,145 L63,150 L52,150 Z" android:fillColor="#A5D6A7"/>
+    <!-- Köşede xlsx label -->
+    <path android:pathData="M50,55 L95,55 L95,65 L50,65 Z" android:fillColor="#1B5E20"/>
+
+    <!-- ORTA: Ok işareti (Excel'den telefona doğru) -->
+    <path android:pathData="M115,120 L165,120 M155,110 L165,120 L155,130" android:strokeColor="#E53935" android:strokeWidth="3.5" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"/>
+
+    <!-- "30sn" rozet -->
+    <path android:pathData="M140,100 m-15,0 a15,8 0 1,0 30,0 a15,8 0 1,0 -30,0" android:fillColor="#FFD54F"/>
+
+    <!-- SAĞ: Telefon -->
+    <path android:pathData="M175,50 L215,50 Q220,50 220,55 L220,195 Q220,200 215,200 L175,200 Q170,200 170,195 L170,55 Q170,50 175,50 Z" android:fillColor="#1565C0"/>
+    <path android:pathData="M175,60 L215,60 L215,190 L175,190 Z" android:fillColor="#FFFFFF"/>
+    <!-- Telefonda hoca listesi -->
+    <path android:pathData="M178,68 L212,68 L212,78 L178,78 Z" android:fillColor="#1976D2"/>
+    <path android:pathData="M180,82 L210,82 L210,90 L180,90 Z" android:fillColor="#E3F2FD"/>
+    <path android:pathData="M180,93 L210,93 L210,101 L180,101 Z" android:fillColor="#E3F2FD"/>
+    <path android:pathData="M180,104 L210,104 L210,112 L180,112 Z" android:fillColor="#E3F2FD"/>
+    <path android:pathData="M180,115 L210,115 L210,123 L180,123 Z" android:fillColor="#E3F2FD"/>
+    <path android:pathData="M180,126 L210,126 L210,134 L180,134 Z" android:fillColor="#E3F2FD"/>
+    <path android:pathData="M180,137 L210,137 L210,145 L180,145 Z" android:fillColor="#E3F2FD"/>
+    <path android:pathData="M180,148 L210,148 L210,156 L180,156 Z" android:fillColor="#E3F2FD"/>
+    <!-- + Ekle butonu -->
+    <path android:pathData="M195,175 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" android:fillColor="#43A047"/>
+</vector>

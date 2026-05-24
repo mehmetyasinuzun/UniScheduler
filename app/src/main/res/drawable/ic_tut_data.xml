@@ -1,0 +1,32 @@
+<!-- Data (courses + classrooms) — kitap + bina simgesi -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp" android:height="240dp"
+    android:viewportWidth="240" android:viewportHeight="240">
+    <!-- SOL: Kitap (course) -->
+    <path android:pathData="M30,60 L100,60 Q105,60 105,65 L105,180 Q105,185 100,185 L30,185 Q25,185 25,180 L25,65 Q25,60 30,60 Z" android:fillColor="#7E57C2"/>
+    <path android:pathData="M65,60 L65,185" android:strokeColor="#FFFFFF" android:strokeWidth="1.5"/>
+    <!-- Kitap sayfa çizgileri -->
+    <path android:pathData="M30,80 L60,80 M30,90 L60,90 M30,100 L60,100 M30,110 L60,110 M30,125 L60,125 M30,135 L60,135 M30,150 L60,150" android:strokeColor="#FFFFFF" android:strokeWidth="0.8" android:fillColor="#00000000"/>
+    <path android:pathData="M70,80 L100,80 M70,90 L100,90 M70,100 L100,100 M70,115 L100,115 M70,125 L100,125 M70,140 L100,140 M70,155 L100,155" android:strokeColor="#FFFFFF" android:strokeWidth="0.8" android:fillColor="#00000000"/>
+    <!-- Kitap etiketi -->
+    <path android:pathData="M40,165 L90,165 L90,175 L40,175 Z" android:fillColor="#5E35B1"/>
+
+    <!-- SAĞ: Bina (classroom) -->
+    <path android:pathData="M135,50 L215,50 L215,180 L135,180 Z" android:fillColor="#FF7043"/>
+    <!-- Pencereler -->
+    <path android:pathData="M145,65 L165,65 L165,85 L145,85 Z" android:fillColor="#FFCCBC"/>
+    <path android:pathData="M155,65 L155,85 M145,75 L165,75" android:strokeColor="#FF7043" android:strokeWidth="1"/>
+    <path android:pathData="M175,65 L195,65 L195,85 L175,85 Z" android:fillColor="#FFCCBC"/>
+    <path android:pathData="M185,65 L185,85 M175,75 L195,75" android:strokeColor="#FF7043" android:strokeWidth="1"/>
+    <path android:pathData="M145,95 L165,95 L165,115 L145,115 Z" android:fillColor="#FFCCBC"/>
+    <path android:pathData="M155,95 L155,115 M145,105 L165,105" android:strokeColor="#FF7043" android:strokeWidth="1"/>
+    <path android:pathData="M175,95 L195,95 L195,115 L175,115 Z" android:fillColor="#FFCCBC"/>
+    <path android:pathData="M185,95 L185,115 M175,105 L195,105" android:strokeColor="#FF7043" android:strokeWidth="1"/>
+    <!-- Kapı -->
+    <path android:pathData="M165,140 L185,140 L185,180 L165,180 Z" android:fillColor="#5D4037"/>
+    <path android:pathData="M180,160 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0" android:fillColor="#FFC107"/>
+    <!-- Çatı -->
+    <path android:pathData="M130,50 L175,30 L220,50 Z" android:fillColor="#BF360C"/>
+    <!-- Bina etiketi -->
+    <path android:pathData="M135,180 L215,180 L215,195 L135,195 Z" android:fillColor="#D84315"/>
+</vector>

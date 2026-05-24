@@ -1,0 +1,62 @@
+<!--
+  Welcome illustration — telefon mockup + takvim grid + spotlight kalp.
+  Sıfır-PNG, pure vector. Material 3 primary color uyumlu.
+  Boyut 240x240dp; ItemOnboardingPage layout'unda 200dp olarak ölçeklenir.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp"
+    android:height="240dp"
+    android:viewportWidth="240"
+    android:viewportHeight="240">
+
+    <!-- Telefon gövdesi (yuvarlatılmış dikdörtgen) -->
+    <path
+        android:pathData="M75,30 L165,30 Q175,30 175,40 L175,200 Q175,210 165,210 L75,210 Q65,210 65,200 L65,40 Q65,30 75,30 Z"
+        android:fillColor="#1565C0"
+        android:strokeColor="#0D47A1"
+        android:strokeWidth="2"/>
+
+    <!-- Ekran -->
+    <path
+        android:pathData="M75,50 L165,50 L165,190 L75,190 Z"
+        android:fillColor="#FFFFFF"/>
+
+    <!-- Üst bar (header) -->
+    <path
+        android:pathData="M75,50 L165,50 L165,68 L75,68 Z"
+        android:fillColor="#1565C0"/>
+
+    <!-- Takvim grid satır 1 -->
+    <path android:pathData="M85,80 L100,80 L100,95 L85,95 Z" android:fillColor="#E3F2FD"/>
+    <path android:pathData="M105,80 L120,80 L120,95 L105,95 Z" android:fillColor="#BBDEFB"/>
+    <path android:pathData="M125,80 L140,80 L140,95 L125,95 Z" android:fillColor="#E3F2FD"/>
+    <path android:pathData="M145,80 L160,80 L160,95 L145,95 Z" android:fillColor="#BBDEFB"/>
+
+    <!-- Takvim grid satır 2 — vurgu satırı (mevcut ders blokları) -->
+    <path android:pathData="M85,100 L120,100 L120,120 L85,120 Z" android:fillColor="#1976D2"/>
+    <path android:pathData="M125,100 L160,100 L160,120 L125,120 Z" android:fillColor="#43A047"/>
+
+    <!-- Takvim grid satır 3 -->
+    <path android:pathData="M85,125 L100,125 L100,150 L85,150 Z" android:fillColor="#FFA726"/>
+    <path android:pathData="M105,125 L140,125 L140,150 L105,150 Z" android:fillColor="#7E57C2"/>
+    <path android:pathData="M145,125 L160,125 L160,150 L145,150 Z" android:fillColor="#E3F2FD"/>
+
+    <!-- Alt bar (BottomNavigation tarzı) -->
+    <path android:pathData="M75,175 L165,175 L165,190 L75,190 Z" android:fillColor="#FAFAFA"/>
+    <path android:pathData="M88,180 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" android:fillColor="#1565C0"/>
+    <path android:pathData="M108,180 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" android:fillColor="#9E9E9E"/>
+    <path android:pathData="M128,180 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" android:fillColor="#9E9E9E"/>
+    <path android:pathData="M148,180 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" android:fillColor="#9E9E9E"/>
+
+    <!-- Spotlight bulutu / parıltı (sağ üst) -->
+    <path
+        android:pathData="M200,55 m-12,0 a12,12 0 1,0 24,0 a12,12 0 1,0 -24,0"
+        android:fillColor="#FFD54F"
+        android:fillAlpha="0.85"/>
+    <!-- Yıldız ışını -->
+    <path
+        android:pathData="M200,40 L200,30 M200,80 L200,70 M215,55 L225,55 M175,55 L185,55"
+        android:strokeColor="#FFB300"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"/>
+</vector>

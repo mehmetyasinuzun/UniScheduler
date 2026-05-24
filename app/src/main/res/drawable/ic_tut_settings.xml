@@ -1,0 +1,38 @@
+<!-- Settings (notification + theme + language icons) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp" android:height="240dp"
+    android:viewportWidth="240" android:viewportHeight="240">
+    <!-- Bildirim zili (sol üst) -->
+    <path android:pathData="M70,80 m-30,0 a30,30 0 1,0 60,0 a30,30 0 1,0 -60,0" android:fillColor="#FFA726"/>
+    <path android:pathData="M70,65 Q60,65 60,75 L60,90 L55,95 L85,95 L80,90 L80,75 Q80,65 70,65 Z" android:fillColor="#FFFFFF"/>
+    <path android:pathData="M65,98 Q70,103 75,98 Z" android:fillColor="#FFFFFF"/>
+    <!-- Bildirim ✓ rozeti -->
+    <path android:pathData="M88,68 m-8,0 a8,8 0 1,0 16,0 a8,8 0 1,0 -16,0" android:fillColor="#E53935"/>
+    <path android:pathData="M85,68 L88,71 L93,65" android:strokeColor="#FFFFFF" android:strokeWidth="2" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"/>
+
+    <!-- Tema (sağ üst) — yarım güneş yarım ay -->
+    <path android:pathData="M170,80 m-30,0 a30,30 0 1,0 60,0 a30,30 0 1,0 -60,0" android:fillColor="#5E35B1"/>
+    <!-- Güneş ışınları (sol yarım) -->
+    <path android:pathData="M170,55 L170,52 M155,60 L153,58 M150,70 L147,70 M150,90 L147,90 M155,100 L153,102 M170,105 L170,108" android:strokeColor="#FFD54F" android:strokeWidth="3" android:strokeLineCap="round" android:fillColor="#00000000"/>
+    <!-- Yarım güneş -->
+    <path android:pathData="M170,80 m-15,0 a15,15 0 1,1 0,0.01" android:fillColor="#FFD54F" android:strokeColor="#FFA000" android:strokeWidth="1"/>
+    <!-- Yarım ay (sağ taraf — koyu daire) -->
+    <path android:pathData="M170,80 m-15,0 L155,80 Q170,55 185,80 Q170,105 155,80 Z" android:fillColor="#283593"/>
+
+    <!-- Dil (alt orta) -->
+    <path android:pathData="M120,170 m-35,0 a35,35 0 1,0 70,0 a35,35 0 1,0 -70,0" android:fillColor="#43A047"/>
+    <!-- "T" -->
+    <path android:pathData="M100,150 L120,150 L120,154 L113,154 L113,180 L107,180 L107,154 L100,154 Z" android:fillColor="#FFFFFF"/>
+    <!-- "R" yaklaşığı -->
+    <path android:pathData="M125,150 L138,150 Q142,150 142,156 Q142,162 138,162 L131,162 L131,180 L125,180 Z M131,154 L138,154 L138,158 L131,158 Z" android:fillColor="#FFFFFF"/>
+
+    <!-- Şifre kilidi (alt sol) -->
+    <path android:pathData="M40,200 m-15,0 a15,15 0 1,0 30,0 a15,15 0 1,0 -30,0" android:fillColor="#90A4AE"/>
+    <path android:pathData="M33,194 L47,194 L47,205 L33,205 Z" android:fillColor="#FFFFFF"/>
+    <path android:pathData="M37,194 L37,189 Q37,184 40,184 Q43,184 43,189 L43,194" android:strokeColor="#FFFFFF" android:strokeWidth="1.5" android:fillColor="#00000000"/>
+
+    <!-- Backup ikonu (alt sağ) -->
+    <path android:pathData="M200,200 m-15,0 a15,15 0 1,0 30,0 a15,15 0 1,0 -30,0" android:fillColor="#26A69A"/>
+    <path android:pathData="M200,194 L200,200 M196,196 L200,200 L204,196" android:strokeColor="#FFFFFF" android:strokeWidth="2" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"/>
+    <path android:pathData="M192,204 L208,204 L208,208 L192,208 Z" android:fillColor="#FFFFFF"/>
+</vector>

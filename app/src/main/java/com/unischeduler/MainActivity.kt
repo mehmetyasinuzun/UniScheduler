@@ -50,6 +50,23 @@ class MainActivity : AppCompatActivity() {
             com.unischeduler.ui.onboarding.OnboardingActivity.start(this)
         }
 
+        // ROL-BAZLI TUTORIAL — login sonrası ilk kez. Welcome'dan ayrı; her
+        // rol için ayrı flag. Kullanıcı oturum açıkken APK güncellemesi
+        // sonrası ilk MainActivity açılışında tetiklenir; SharedPreferences
+        // ile bir kez gösterilir, Settings → "Tanıtımı Tekrar Göster"
+        // butonuyla kullanıcı manuel açabilir.
+        if (session.isLoggedIn && session.isHealthy()) {
+            if (session.isAdmin &&
+                com.unischeduler.ui.onboarding.AdminTutorialActivity.isPending(this)
+            ) {
+                com.unischeduler.ui.onboarding.AdminTutorialActivity.start(this)
+            } else if (session.isLecturer &&
+                com.unischeduler.ui.onboarding.LecturerTutorialActivity.isPending(this)
+            ) {
+                com.unischeduler.ui.onboarding.LecturerTutorialActivity.start(this)
+            }
+        }
+
         // Honor a pending logout from a previous activity instance: if we got here
         // via the FORCE_LOGOUT extra, ignore any persisted session and land on login.
         val forceLogout = intent?.getBooleanExtra(EXTRA_FORCE_LOGOUT, false) == true

@@ -1,14 +1,13 @@
-// OnboardingActivity — 4-page intro shown once, on first launch.
+// OnboardingActivity — login ÖNCESİ 3-sayfa genel hoş geldin akışı.
 //
-// We use ViewPager2 + a hand-rolled RecyclerView.Adapter (no extra
-// dependency for indicator dots — four <View>s tinted on/off in
-// onPageSelected). Total weight: ~3 KB of code, no Firebase, no
-// Lottie, no third-party indicator library.
+// (Mevcut sürüm 4 sayfalık admin-specific intro idi; admin akışı yeni
+// AdminTutorialActivity'ye taşındı — login sonrası rol bazlı tetiklenir.)
 //
-// Trigger: MainActivity decides whether to launch this on the FIRST
-// app launch (BuildConfig.VERSION_CODE first time) before the login
-// screen. After completion the flag is persisted to app_prefs so we
-// never show it again — even on app updates.
+// Bu activity sadece app-level "ne sunar" tanıtımı yapar. ViewPager2 +
+// el yapımı RecyclerView.Adapter — ekstra dependency yok.
+//
+// Trigger: MainActivity.onCreate sadece ilk app açılışında çağırır
+// (TutorialPrefs.welcomeDone flag'i ile bir kez gösterilir).
 package com.unischeduler.ui.onboarding
 
 import android.content.Context
@@ -31,11 +30,13 @@ class OnboardingActivity : AppCompatActivity() {
 
     private data class Page(val drawableRes: Int, val titleRes: Int, val bodyRes: Int)
 
+    // 3 sayfa: app tanıtımı + 2 rol vurgusu + "Hadi başla".
+    // T5'te custom telefon-mockup illustration'ları gelecek; şimdilik mevcut
+    // empty-state vector drawable'ları kullanılıyor (placeholder).
     private val pages = listOf(
-        Page(R.drawable.ic_empty_lecturers, R.string.onboarding_p1_title, R.string.onboarding_p1_body),
-        Page(R.drawable.ic_empty_classrooms, R.string.onboarding_p2_title, R.string.onboarding_p2_body),
-        Page(R.drawable.ic_empty_courses,    R.string.onboarding_p3_title, R.string.onboarding_p3_body),
-        Page(R.drawable.ic_empty_schedule,   R.string.onboarding_p4_title, R.string.onboarding_p4_body)
+        Page(R.drawable.ic_intro_welcome,    R.string.onboarding_p1_title, R.string.onboarding_p1_body),
+        Page(R.drawable.ic_intro_two_roles,  R.string.onboarding_p2_title, R.string.onboarding_p2_body),
+        Page(R.drawable.ic_intro_signin,     R.string.onboarding_p3_title, R.string.onboarding_p3_body)
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,17 +70,21 @@ class OnboardingActivity : AppCompatActivity() {
 
         val active   = ContextCompat.getColor(this, android.R.color.holo_blue_dark)
         val inactive = ContextCompat.getColor(this, android.R.color.darker_gray)
-        listOf(binding.dot1, binding.dot2, binding.dot3, binding.dot4)
+        // 3-dot indicator (welcome 3-page intro). Layout'ta dot4 kaldırıldı.
+        listOf(binding.dot1, binding.dot2, binding.dot3)
             .forEachIndexed { i, dot ->
                 dot.setBackgroundColor(if (i == position) active else inactive)
             }
     }
 
     private fun finishOnboarding() {
+        // Hem eski hem yeni flag — geriye dönük uyumluluk için her ikisi de
+        // set ediliyor. MainActivity.isPending() yine eski flag'i okuyor.
         getSharedPreferences(App.PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
             .putBoolean(KEY_ONBOARDING_DONE, true)
             .apply()
+        com.unischeduler.util.TutorialPrefs(this).welcomeDone = true
         setResult(RESULT_OK)
         finish()
     }

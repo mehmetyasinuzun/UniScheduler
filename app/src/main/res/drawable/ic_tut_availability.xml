@@ -1,0 +1,36 @@
+<!-- Availability — takvim üzerinde checkbox'lı slotlar -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp" android:height="240dp"
+    android:viewportWidth="240" android:viewportHeight="240">
+    <!-- Takvim grid -->
+    <path android:pathData="M30,40 L210,40 L210,210 L30,210 Z" android:fillColor="#FFFFFF" android:strokeColor="#BDBDBD" android:strokeWidth="1.5"/>
+    <path android:pathData="M30,40 L210,40 L210,60 L30,60 Z" android:fillColor="#1565C0"/>
+    <!-- Day header text simülasyonu -->
+    <path android:pathData="M40,48 L55,48 L55,52 L40,52 Z" android:fillColor="#FFFFFF"/>
+    <path android:pathData="M70,48 L85,48 L85,52 L70,52 Z" android:fillColor="#FFFFFF"/>
+    <path android:pathData="M100,48 L115,48 L115,52 L100,52 Z" android:fillColor="#FFFFFF"/>
+    <path android:pathData="M130,48 L145,48 L145,52 L130,52 Z" android:fillColor="#FFFFFF"/>
+    <path android:pathData="M160,48 L185,48 L185,52 L160,52 Z" android:fillColor="#FFFFFF"/>
+
+    <!-- Müsait olunan slotlar (yeşil) -->
+    <path android:pathData="M35,70 L65,70 L65,100 L35,100 Z" android:fillColor="#C8E6C9" android:strokeColor="#43A047" android:strokeWidth="1.5"/>
+    <path android:pathData="M40,80 L48,90 L60,75" android:strokeColor="#1B5E20" android:strokeWidth="3" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"/>
+    <path android:pathData="M95,70 L125,70 L125,100 L95,100 Z" android:fillColor="#C8E6C9" android:strokeColor="#43A047" android:strokeWidth="1.5"/>
+    <path android:pathData="M100,80 L108,90 L120,75" android:strokeColor="#1B5E20" android:strokeWidth="3" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"/>
+    <path android:pathData="M155,135 L185,135 L185,165 L155,165 Z" android:fillColor="#C8E6C9" android:strokeColor="#43A047" android:strokeWidth="1.5"/>
+    <path android:pathData="M160,145 L168,155 L180,140" android:strokeColor="#1B5E20" android:strokeWidth="3" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"/>
+
+    <!-- Müsait OLMAYAN slotlar (kırmızı X) -->
+    <path android:pathData="M125,105 L155,105 L155,135 L125,135 Z" android:fillColor="#FFCDD2" android:strokeColor="#E53935" android:strokeWidth="1.5"/>
+    <path android:pathData="M130,110 L150,130 M150,110 L130,130" android:strokeColor="#B71C1C" android:strokeWidth="3" android:strokeLineCap="round" android:fillColor="#00000000"/>
+    <path android:pathData="M65,140 L95,140 L95,170 L65,170 Z" android:fillColor="#FFCDD2" android:strokeColor="#E53935" android:strokeWidth="1.5"/>
+    <path android:pathData="M70,145 L90,165 M90,145 L70,165" android:strokeColor="#B71C1C" android:strokeWidth="3" android:strokeLineCap="round" android:fillColor="#00000000"/>
+
+    <!-- Boş slotlar (sade renk) -->
+    <path android:pathData="M155,70 L185,70 L185,100 L155,100 Z" android:fillColor="#F5F5F5" android:strokeColor="#E0E0E0" android:strokeWidth="1"/>
+    <path android:pathData="M35,105 L65,105 L65,135 L35,135 Z" android:fillColor="#F5F5F5" android:strokeColor="#E0E0E0" android:strokeWidth="1"/>
+    <path android:pathData="M95,140 L125,140 L125,170 L95,170 Z" android:fillColor="#F5F5F5" android:strokeColor="#E0E0E0" android:strokeWidth="1"/>
+    <path android:pathData="M125,170 L155,170 L155,200 L125,200 Z" android:fillColor="#F5F5F5" android:strokeColor="#E0E0E0" android:strokeWidth="1"/>
+    <path android:pathData="M35,170 L65,170 L65,200 L35,200 Z" android:fillColor="#F5F5F5" android:strokeColor="#E0E0E0" android:strokeWidth="1"/>
+    <path android:pathData="M155,170 L185,170 L185,200 L155,200 Z" android:fillColor="#F5F5F5" android:strokeColor="#E0E0E0" android:strokeWidth="1"/>
+</vector>
