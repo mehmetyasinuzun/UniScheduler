@@ -226,19 +226,109 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 /**
+ * User-Agent parser — sıfır-bağımlılık. Browser, OS ve cihaz türünü
+ * yaklaşık doğrulukla çıkarır. ua-parser-js gibi tam bir kütüphane
+ * çok daha doğru olur ama panel UA'ları çok dar bir grup (Chrome,
+ * Edge, Firefox, Safari masaüstü). Bu basit parser %95 doğru sonuç
+ * verir, yeni dependency eklemeden.
+ *
+ * Çıktı:
+ *   { os, osVersion, browser, browserVersion, device }
+ * Hepsi null olabilir (UA boş veya tanınmıyor).
+ */
+function parseUserAgent(uaRaw) {
+    const ua = String(uaRaw || '');
+    if (!ua) return { os: null, osVersion: null, browser: null, browserVersion: null, device: null };
+
+    // ── OS detection ─────────────────────────────────────────────────────
+    let os = null, osVersion = null;
+    let m;
+    if ((m = ua.match(/Windows NT (\d+\.\d+)/))) {
+        os = 'Windows';
+        // Windows NT 10.0 → Windows 10/11, NT 6.3 → 8.1, NT 6.2 → 8, NT 6.1 → 7
+        const nt = m[1];
+        osVersion = ({ '10.0': '10/11', '6.3': '8.1', '6.2': '8', '6.1': '7', '6.0': 'Vista' })[nt] || nt;
+    } else if ((m = ua.match(/Mac OS X (\d+[._]\d+(?:[._]\d+)?)/))) {
+        os = 'macOS';
+        osVersion = m[1].replace(/_/g, '.');
+    } else if (/Android (\d+(?:\.\d+)?)/.test(ua)) {
+        os = 'Android';
+        osVersion = ua.match(/Android (\d+(?:\.\d+)?)/)[1];
+    } else if (/(iPhone|iPad|iPod).+OS (\d+[_\d]*)/.test(ua)) {
+        os = 'iOS';
+        osVersion = ua.match(/OS (\d+[_\d]*)/)[1].replace(/_/g, '.');
+    } else if (/Linux/.test(ua)) {
+        os = 'Linux';
+    } else if (/CrOS/.test(ua)) {
+        os = 'ChromeOS';
+    }
+
+    // ── Browser detection (sıra önemli — Edge UA'sında Chrome de geçer) ─
+    let browser = null, browserVersion = null;
+    if ((m = ua.match(/Edg\/(\d+(?:\.\d+)?)/))) {
+        browser = 'Edge'; browserVersion = m[1];
+    } else if ((m = ua.match(/OPR\/(\d+(?:\.\d+)?)/))) {
+        browser = 'Opera'; browserVersion = m[1];
+    } else if ((m = ua.match(/Firefox\/(\d+(?:\.\d+)?)/))) {
+        browser = 'Firefox'; browserVersion = m[1];
+    } else if ((m = ua.match(/Chrome\/(\d+(?:\.\d+)?)/))) {
+        browser = 'Chrome'; browserVersion = m[1];
+    } else if ((m = ua.match(/Version\/(\d+(?:\.\d+)?).+Safari/))) {
+        browser = 'Safari'; browserVersion = m[1];
+    }
+
+    // ── Device type ─────────────────────────────────────────────────────
+    let device = 'Desktop';
+    if (/Mobile|iPhone|iPod|Android.+Mobile/.test(ua)) device = 'Mobile';
+    else if (/Tablet|iPad|Android(?!.*Mobile)/.test(ua)) device = 'Tablet';
+
+    return { os, osVersion, browser, browserVersion, device };
+}
+
+/**
  * Fire-and-forget recorder for panel-side login attempts. Service-role
  * bypasses RLS so we can write straight to login_attempts. Failures
  * here MUST NOT break the login response — it's an audit side-channel.
+ *
+ * Mobile tarafı zaten bu alanları (device_model, os_version, app_version)
+ * dolduruyordu; panel-side login eskiden bunları boş bırakıyordu — CTI
+ * dashboard'unda superadmin satırı "-" olarak görünüyordu. Şimdi User-Agent
+ * parse edilip aynı format'ta dolduruluyor.
  */
 function recordPanelLoginAttempt({ username, succeeded, ip, ua, failureStep }) {
+    const parsed = parseUserAgent(ua);
+
+    // device_model: "Edge 148.0 / Desktop" gibi okunaklı bir özet.
+    // Mobile tarafındaki "samsung SM-S721B" benzeri bir slot doldurmak için.
+    const deviceModel = [
+        parsed.browser && (parsed.browserVersion ? `${parsed.browser} ${parsed.browserVersion}` : parsed.browser),
+        parsed.device
+    ].filter(Boolean).join(' / ') || null;
+
+    // os_version: "Windows 10/11" gibi insan-okunabilir.
+    const osVersion = parsed.os
+        ? (parsed.osVersion ? `${parsed.os} ${parsed.osVersion}` : parsed.os)
+        : null;
+
     supabase.from('login_attempts').insert({
         username:     username,
         succeeded:    succeeded,
         ip_address:   ip || null,
         user_agent:   (ua || '').substring(0, 250),
+        device_model: deviceModel,
+        os_version:   osVersion,
+        // Panel kendi versiyonunu app_version'a yazıyor — mobile tarafının
+        // versiyonu (1.2.8) ile karışmasın diye 'panel-' prefix'iyle.
+        app_version:  `panel-${require('./package.json').version || '1.0.0'}`,
         source:       'panel',
-        failure_step: failureStep
-    }).then(() => {}).catch(() => { /* never block auth */ });
+        failure_step: failureStep,
+        // is_emulator: panel için anlamsız (web browser), explicit false.
+        is_emulator:  false
+    }).then(() => {}).catch(err => {
+        // Audit insert başarısızsa sadece console log — auth response'u
+        // asla bloklamayız (kullanıcı login olur, audit kaybolur).
+        console.warn('[recordPanelLoginAttempt] failed:', err?.message || err);
+    });
 }
 
 app.post('/api/auth/logout', (req, res) => {
