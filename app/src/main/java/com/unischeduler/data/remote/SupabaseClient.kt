@@ -31,7 +31,25 @@ object SupabaseClient {
         supabaseUrl = BuildConfig.SUPABASE_URL,
         supabaseKey = BuildConfig.SUPABASE_ANON_KEY
     ) {
-        install(Auth)
+        install(Auth) {
+            // SESSION PERSISTENCE — kullanıcı uygulamayı kapatıp açtığında
+            // veya JWT 1 saatte expire olduğunda otomatik refresh.
+            //
+            // Supabase-kt default'ları aslında bunları true; ama explicit
+            // yazmak iki güvence verir:
+            //   1. SDK güncellemesi default'u değiştirirse davranış sabit kalır
+            //   2. Code review okurken "session nereden yenileniyor" sorusuna
+            //      tek bakışta cevap görünür
+            //
+            // İçeride GoTrue refresh token'ı kullanarak yeni access_token alır;
+            // SessionManager EncryptedSharedPreferences'a paralel olarak
+            // tutulan kendi pref dosyamızla birlikte çift güvenli persistence.
+            // Kullanıcı sadece açık logout (settings butonu) ile session
+            // sonlanır.
+            alwaysAutoRefresh = true
+            autoLoadFromStorage = true
+            autoSaveToStorage = true
+        }
         install(Postgrest) {
             serializer = io.github.jan.supabase.serializer.KotlinXSerializer(laxJson)
         }

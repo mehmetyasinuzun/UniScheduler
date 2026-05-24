@@ -28,7 +28,9 @@ import com.unischeduler.util.ImportPreviewDialog
 import com.unischeduler.util.DropdownController
 import com.unischeduler.util.PendingDelete
 import com.unischeduler.util.UiState
+import com.unischeduler.util.dismissProgressDialog
 import com.unischeduler.util.showErrorSnackbar
+import com.unischeduler.util.showProgressDialog
 import com.unischeduler.util.showSnackbar
 import com.unischeduler.util.collectFlow
 import androidx.lifecycle.lifecycleScope
@@ -196,13 +198,18 @@ class ClassroomsFragment : Fragment() {
         collectFlow(viewModel.importState) { state ->
             when (state) {
                 is UiState.Idle    -> Unit
-                is UiState.Loading -> binding.btnImportClassrooms.isEnabled = false
+                is UiState.Loading -> {
+                    binding.btnImportClassrooms.isEnabled = false
+                    showProgressDialog(R.string.progress_importing_classrooms, R.string.progress_message_wait)
+                }
                 is UiState.Error   -> {
+                    dismissProgressDialog()
                     binding.btnImportClassrooms.isEnabled = true
                     showErrorSnackbar(state.message)
                     viewModel.resetImportState()
                 }
                 is UiState.Success -> {
+                    dismissProgressDialog()
                     binding.btnImportClassrooms.isEnabled = true
                     showSnackbar(getString(R.string.classroom_import_count, state.data))
                     viewModel.resetImportState()
@@ -463,7 +470,14 @@ class ClassroomsFragment : Fragment() {
         classroomAdapter.submitList(filtered)
     }
 
-    override fun onDestroyView() { super.onDestroyView(); _binding = null }
+    override fun onDestroyView() {
+        // Bulk import sırasında fragment destroy olursa progress dialog
+        // window leak yapardı. View'a tag ile bağlı olduğu için dismiss
+        // önce çağrılmalı.
+        dismissProgressDialog()
+        super.onDestroyView()
+        _binding = null
+    }
 }
 
 class ClassroomAdapter(

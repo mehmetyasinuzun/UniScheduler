@@ -37,7 +37,9 @@ import com.unischeduler.util.ImportPreviewDialog
 import com.unischeduler.util.DropdownController
 import com.unischeduler.util.UiState
 import com.unischeduler.util.collectFlow
+import com.unischeduler.util.dismissProgressDialog
 import com.unischeduler.util.showErrorSnackbar
+import com.unischeduler.util.showProgressDialog
 import com.unischeduler.util.showSnackbar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -319,13 +321,21 @@ class DataFragment : Fragment() {
         collectFlow(viewModel.lecturerImportState) { state ->
             when (state) {
                 is UiState.Idle    -> Unit
-                is UiState.Loading -> binding.btnImportLecturers.isEnabled = false
+                is UiState.Loading -> {
+                    binding.btnImportLecturers.isEnabled = false
+                    // Edge Function tek atış / fallback 1500ms throttle × N satır;
+                    // her durumda 30+ saniye sürebilir. Cancelable=false dialog
+                    // ile "uygulama dondu mu?" hissi engellenir.
+                    showProgressDialog(R.string.progress_importing_lecturers, R.string.progress_message_wait)
+                }
                 is UiState.Error   -> {
+                    dismissProgressDialog()
                     binding.btnImportLecturers.isEnabled = true
                     showErrorSnackbar(state.message)
                     viewModel.resetLecturerImportState()
                 }
                 is UiState.Success -> {
+                    dismissProgressDialog()
                     binding.btnImportLecturers.isEnabled = true
                     showLecturerImportResult(state.data)
                     viewModel.loadLecturers()
@@ -371,13 +381,18 @@ class DataFragment : Fragment() {
         collectFlow(viewModel.courseImportState) { state ->
             when (state) {
                 is UiState.Idle    -> Unit
-                is UiState.Loading -> binding.btnImportCourses.isEnabled = false
+                is UiState.Loading -> {
+                    binding.btnImportCourses.isEnabled = false
+                    showProgressDialog(R.string.progress_importing_courses, R.string.progress_message_wait)
+                }
                 is UiState.Error   -> {
+                    dismissProgressDialog()
                     binding.btnImportCourses.isEnabled = true
                     showErrorSnackbar(state.message)
                     viewModel.resetCourseImportState()
                 }
                 is UiState.Success -> {
+                    dismissProgressDialog()
                     binding.btnImportCourses.isEnabled = true
                     showSnackbar(getString(R.string.data_course_import_count, state.data))
                     viewModel.resetCourseImportState()
@@ -1288,7 +1303,15 @@ class DataFragment : Fragment() {
         viewModel.loadOfferings()
     }
 
-    override fun onDestroyView() { super.onDestroyView(); _binding = null }
+    override fun onDestroyView() {
+        // Bulk import sırasında fragment destroy olursa progress dialog
+        // window leak yapardı (Activity üzerinde asılı kalır). View'a tag
+        // ile bağlı olduğu için dismiss önce çağrılmalı, ardından
+        // _binding null'lanır.
+        dismissProgressDialog()
+        super.onDestroyView()
+        _binding = null
+    }
 }
 
 // ── Course Adapter ─────────���─────────────────────────────────────────────────

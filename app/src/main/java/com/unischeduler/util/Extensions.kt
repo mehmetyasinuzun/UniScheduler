@@ -112,6 +112,51 @@ fun Fragment.shareDocument(uri: Uri, mimeType: String) {
 }
 
 /**
+ * Reusable indeterminate progress dialog — bulk import / network ağır
+ * işlemlerde "uygulama dondu mu?" hissi engeller. Aynı Fragment'ta birden
+ * fazla çağrı tek dialog'u günceller; dismiss çağrılana kadar açık kalır.
+ *
+ * Title + message Türkçe/İngilizce için strings.xml'den geçirilebilir.
+ * cancelable=false — kullanıcı yanlışlıkla iptal etmesin; sadece işlem
+ * bittiğinde caller dismissProgressDialog() çağırır.
+ */
+private val PROGRESS_TAG = "progress_dialog_tag".hashCode()
+
+fun Fragment.showProgressDialog(@StringRes titleRes: Int, @StringRes messageRes: Int? = null) {
+    val existing = view?.getTag(PROGRESS_TAG) as? android.app.AlertDialog
+    val ctx = context ?: return
+    if (existing?.isShowing == true) {
+        // Mevcut dialog'u güncelle; yeni yaratma — flicker engelle.
+        val v = existing.findViewById<android.view.View>(android.R.id.content) ?: return
+        v.findViewById<android.widget.TextView>(com.unischeduler.R.id.tvProgressTitle)?.setText(titleRes)
+        val msgTv = v.findViewById<android.widget.TextView>(com.unischeduler.R.id.tvProgressMessage)
+        if (messageRes != null) { msgTv?.setText(messageRes); msgTv?.visibility = android.view.View.VISIBLE }
+        else                    { msgTv?.visibility = android.view.View.GONE }
+        return
+    }
+    val inflater = android.view.LayoutInflater.from(ctx)
+    val v = inflater.inflate(com.unischeduler.R.layout.dialog_progress, null)
+    v.findViewById<android.widget.TextView>(com.unischeduler.R.id.tvProgressTitle).setText(titleRes)
+    val msgTv = v.findViewById<android.widget.TextView>(com.unischeduler.R.id.tvProgressMessage)
+    if (messageRes != null) { msgTv.setText(messageRes); msgTv.visibility = android.view.View.VISIBLE }
+    else                    { msgTv.visibility = android.view.View.GONE }
+    val dialog = android.app.AlertDialog.Builder(ctx)
+        .setView(v)
+        .setCancelable(false)
+        .create()
+    // Arka plan opaklığını düşür ki kullanıcı hâlâ context'i görsün.
+    dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+    dialog.show()
+    view?.setTag(PROGRESS_TAG, dialog)
+}
+
+fun Fragment.dismissProgressDialog() {
+    val existing = view?.getTag(PROGRESS_TAG) as? android.app.AlertDialog ?: return
+    runCatching { if (existing.isShowing) existing.dismiss() }
+    view?.setTag(PROGRESS_TAG, null)
+}
+
+/**
  * Lifecycle-safe wrapper for findNavController().navigate(). Returns false (no-op)
  * if the fragment is detached or its NavController is unavailable. Eski pattern
  * `findNavController().navigate(...)` doğrudan çağırınca isAdded=false durumunda

@@ -552,6 +552,10 @@
     <string name="import_result_failed">Başarısız: %1$d</string>
     <string name="import_result_skipped_header">Atlanan kayıtlar (aynı isim mevcut):</string>
     <string name="import_result_more_rows">…ve %1$d satır daha.</string>
+    <string name="progress_importing_lecturers">Hocalar içe aktarılıyor</string>
+    <string name="progress_importing_courses">Dersler içe aktarılıyor</string>
+    <string name="progress_importing_classrooms">Derslikler içe aktarılıyor</string>
+    <string name="progress_message_wait">Lütfen bekleyin, bu işlem 30 saniyeye kadar sürebilir.</string>
     <string name="backup_availability_count">• Müsaitlik kaydı: %1$d</string>
     <string name="restore_summary_title">Geri yüklendi:</string>
     <string name="restore_org_settings_ok">• Org ayarları: ✓</string>

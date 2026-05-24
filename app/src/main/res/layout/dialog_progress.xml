@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Reusable indeterminate progress dialog. Import / bulk operasyonlarda
+  kullanıcı 5-30 saniye bekliyor; sadece butonun disable olması yetersiz —
+  "uygulama dondu mu?" hissi yaratıyordu. Bu layout:
+    • Material progress indicator (sürekli dönen)
+    • Başlık (caller setText ediyor)
+    • Açıklama (opsiyonel ikinci satır)
+  cancelable=false ile gösterilir; sadece işlem bitince dismiss edilir.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="32dp">
+
+    <com.google.android.material.progressindicator.CircularProgressIndicator
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:indeterminate="true"
+        app:indicatorSize="56dp"
+        app:trackThickness="4dp" />
+
+    <TextView
+        android:id="@+id/tvProgressTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:gravity="center"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        tools:text="İçe Aktarılıyor" />
+
+    <TextView
+        android:id="@+id/tvProgressMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:textSize="13sp"
+        android:alpha="0.7"
+        tools:text="Lütfen bekleyin, bu işlem 30 saniyeye kadar sürebilir." />
+</LinearLayout>

@@ -101,6 +101,20 @@ class MainActivity : AppCompatActivity() {
             updateNavVisibility(isAuthScreen)
         }
 
+        // ROTATION FIX — Activity recreate (configuration change) sonrası
+        // addOnDestinationChangedListener attach'ta otomatik tetiklenmediği
+        // için bottom nav görünürlüğü "stale" XML değerinde kalıyordu
+        // (bottomNavAdmin XML'de varsayılan android:visibility="gone"). Bu
+        // yüzden telefonu yan çevirip dik döndürünce alt bar kayboluyordu.
+        //
+        // Mevcut destination'a göre manuel olarak visibility'yi hesaplayıp
+        // uygulamak rotation senaryosunu kalıcı çözer. İlk açılışta da
+        // (savedInstanceState null) zararsız — destination=startDestination
+        // değerini doğru günceller.
+        navController.currentDestination?.let { dest ->
+            updateNavVisibility(dest.id in noNavDestinations)
+        }
+
         // Network monitor — offline banner
         networkMonitor = NetworkMonitor(this)
         networkMonitor.start()
