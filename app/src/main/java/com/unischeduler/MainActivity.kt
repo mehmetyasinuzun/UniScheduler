@@ -50,20 +50,35 @@ class MainActivity : AppCompatActivity() {
             com.unischeduler.ui.onboarding.OnboardingActivity.start(this)
         }
 
-        // ROL-BAZLI TUTORIAL — login sonrası ilk kez. Welcome'dan ayrı; her
-        // rol için ayrı flag. Kullanıcı oturum açıkken APK güncellemesi
-        // sonrası ilk MainActivity açılışında tetiklenir; SharedPreferences
-        // ile bir kez gösterilir, Settings → "Tanıtımı Tekrar Göster"
-        // butonuyla kullanıcı manuel açabilir.
-        if (session.isLoggedIn && session.isHealthy()) {
-            if (session.isAdmin &&
-                com.unischeduler.ui.onboarding.AdminTutorialActivity.isPending(this)
-            ) {
-                com.unischeduler.ui.onboarding.AdminTutorialActivity.start(this)
-            } else if (session.isLecturer &&
-                com.unischeduler.ui.onboarding.LecturerTutorialActivity.isPending(this)
-            ) {
-                com.unischeduler.ui.onboarding.LecturerTutorialActivity.start(this)
+        // ROL-BAZLI TUTORIAL — login sonrası ilk kez.
+        //
+        // savedInstanceState != null demek configuration change (rotation,
+        // night mode toggle, locale change) sonrası recreate olduk. O durumda
+        // tutorial activity'i ZATEN tetiklemiştik; tekrar çağırmak sonsuz
+        // döngü / üst üste açılma / window leak yaratır. Yalnız fresh launch'ta
+        // (savedInstanceState == null) kontrol et.
+        //
+        // forceLogout durumunda session.clear() yapıldı → isLoggedIn false →
+        // tutorial start etmez (zaten istenmez).
+        if (savedInstanceState == null && session.isLoggedIn && session.isHealthy()) {
+            runCatching {
+                if (session.isAdmin &&
+                    com.unischeduler.ui.onboarding.AdminTutorialActivity.isPending(this)
+                ) {
+                    com.unischeduler.ui.onboarding.AdminTutorialActivity.start(this)
+                } else if (session.isLecturer &&
+                    com.unischeduler.ui.onboarding.LecturerTutorialActivity.isPending(this)
+                ) {
+                    com.unischeduler.ui.onboarding.LecturerTutorialActivity.start(this)
+                }
+            }.onFailure { e ->
+                // Tutorial başlatma sırasında crash olursa app yine açılsın.
+                android.util.Log.e("MainActivity", "Tutorial start failed: ${e.message}", e)
+                runCatching {
+                    com.unischeduler.util.CrashHandler.appendPendingCrash(
+                        applicationContext, "MainActivity", "tutorial.start", e
+                    )
+                }
             }
         }
 

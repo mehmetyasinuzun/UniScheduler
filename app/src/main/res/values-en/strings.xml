@@ -425,37 +425,49 @@
     <string name="onboarding_p3_title">Sign In to Continue</string>
     <string name="onboarding_p3_body">After signing in we\'ll show you a tour tailored to your role — bulk-import hundreds of lecturers in 30 seconds, auto-generate schedules, export PDFs and more.</string>
 
-    <!-- Admin tutorial — first login, ~9 pages -->
-    <string name="admin_tut_p1_title">Welcome Administrator</string>
-    <string name="admin_tut_p1_body">This quick tour will get you running in 5 minutes. We\'ll walk through every screen — replay any time from Settings.</string>
-    <string name="admin_tut_p2_title">Dashboard — At a Glance</string>
-    <string name="admin_tut_p2_body">The home screen shows institution stats: lecturers, courses, classrooms, scheduled entries. Unassigned items are highlighted — tap to assign.</string>
-    <string name="admin_tut_p3_title">Define Departments</string>
-    <string name="admin_tut_p3_body">Everything is grouped by department (Computer Engineering, Electrical, etc.). Add via Settings → Departments. Lecturers and courses are auto-categorised.</string>
-    <string name="admin_tut_p4_title">Add Lecturers — Manually</string>
-    <string name="admin_tut_p4_body">Data tab → Lecturers → \"Add Lecturer\". Title, first/last name, department. The system generates a unique username and 6-digit password; share it with the lecturer, they\'ll change it on first login.</string>
-    <string name="admin_tut_p5_title">⚡ Bulk Excel Import</string>
-    <string name="admin_tut_p5_body">Import 350 lecturers in 30 seconds. Pick \"Import\" from the Excel button — duplicates are auto-resolved (farhan_adl, farhan_adl2…), passwords generated and downloaded as CSV. A dedicated cloud function bypasses rate limits.</string>
-    <string name="admin_tut_p6_title">Courses and Classrooms</string>
-    <string name="admin_tut_p6_body">Add courses (code, name, theory/lab hours) from the Data tab. Add classrooms (capacity, type) from the Classrooms tab. Both support bulk Excel import.</string>
-    <string name="admin_tut_p7_title">⚡ Auto-Schedule</string>
-    <string name="admin_tut_p7_body">Assignment screen → Auto. The system generates 5 alternative schedules, each preview-able. Lecturer availability, classroom capacity, conflict-free placement — all automatic. Approve the best one.</string>
-    <string name="admin_tut_p8_title">📄 PDF / Excel Export</string>
-    <string name="admin_tut_p8_body">On the weekly calendar, tap the menu (top right) to download as PDF or Excel. Full schedule, one lecturer only, or one classroom only — whichever filter you pick.</string>
-    <string name="admin_tut_p9_title">You\'re All Set 🎉</string>
-    <string name="admin_tut_p9_body">Don\'t forget to share each lecturer\'s password! They\'ll set their own on first login. Replay this tour from Settings any time. Tips will pop up the first time you visit key screens.</string>
+    <!-- Admin tutorial — guided tour, each page references a bottom-nav tab -->
+    <string name="admin_tut_p1_title">👋 Welcome Administrator</string>
+    <string name="admin_tut_p1_body">Welcome to UniScheduler! This quick tour walks through every tab in your admin panel (~5 min). Each page tells you which bottom-bar tab we\'re on. Ready?</string>
 
-    <!-- Lecturer tutorial — first login, ~5 pages -->
-    <string name="lect_tut_p1_title">Welcome</string>
-    <string name="lect_tut_p1_body">UniScheduler lets you view your weekly schedule, mark unavailable hours, and download your timetable. This 1-minute tour covers everything.</string>
-    <string name="lect_tut_p2_title">Your Weekly Schedule</string>
-    <string name="lect_tut_p2_body">The home screen shows your week — day, time, course code, classroom. When your admin generates a new schedule, it updates automatically — no refresh needed.</string>
-    <string name="lect_tut_p3_title">Mark Availability</string>
-    <string name="lect_tut_p3_body">Availability tab — mark days and times you\'re busy (e.g. Monday 10-12 meeting). Your admin will respect these when generating the next schedule — no conflicts for you.</string>
-    <string name="lect_tut_p4_title">📄 Download as PDF</string>
-    <string name="lect_tut_p4_body">The download icon (top right) saves your weekly schedule as a PDF to your phone. Print it, share it, keep it as backup.</string>
-    <string name="lect_tut_p5_title">Notifications &amp; Theme</string>
-    <string name="lect_tut_p5_body">Settings tab — class reminders (15-60 min before), theme (light/dark/auto), language (TR/EN), and password change.</string>
+    <string name="admin_tut_p2_title">🏠 Home Tab — At a Glance</string>
+    <string name="admin_tut_p2_body">📍 Bottom bar → \"Home\". A live snapshot: departments, lecturers, courses, classrooms, course offerings and schedule entries — all in one screen. Unassigned items are highlighted; tap to assign directly.</string>
+
+    <string name="admin_tut_p3_title">⚙️ Settings — Define Departments</string>
+    <string name="admin_tut_p3_body">📍 Bottom bar → \"Settings\" → Departments section. Everything is grouped by department (Computer Engineering, Electrical, Industrial). Add yours here first — subsequent steps depend on it.</string>
+
+    <string name="admin_tut_p4_title">📊 Data — Add Lecturers Manually</string>
+    <string name="admin_tut_p4_body">📍 Bottom bar → \"Data\" tab → Lecturers section. \"+ Add Lecturer\": title, first/last name, email, department. The system auto-generates a unique username (farhan_adl) and 6-digit password; share with the lecturer, they\'ll change it on first login.</string>
+
+    <string name="admin_tut_p5_title">⚡ Data — 350 Lecturers in 30s via Excel</string>
+    <string name="admin_tut_p5_body">📍 Same \"Data\" tab → Lecturers → \"📥 Import\" button. Pick your Excel file — the system processes 350 lecturers in one shot. Duplicate names are auto-resolved (farhan_adl, farhan_adl2, farhan_adl3…), passwords generated and downloaded as CSV. A dedicated cloud function bypasses the API rate limit — 9 minutes drops to 30 seconds.</string>
+
+    <string name="admin_tut_p6_title">📊 + 🏫 Courses and Classrooms</string>
+    <string name="admin_tut_p6_body">📍 In \"Data\" tab add courses (code, name, theory/lab hours, credits). Then bottom bar → \"Classrooms\" tab → add classrooms (capacity, type: theory/lab/mixed). Bulk Excel import works the same in both tabs.</string>
+
+    <string name="admin_tut_p7_title">⚡ Assign — Auto-Schedule (5 Alternatives)</string>
+    <string name="admin_tut_p7_body">📍 Bottom bar → \"Assign\" tab → \"🤖 Auto\" button. The system generates 5 valid alternative schedules; preview each one. Lecturer availability, classroom capacity, conflict-free placement — all checked automatically. Approve the best — it pushes to lecturers\' screens in real-time.</string>
+
+    <string name="admin_tut_p8_title">📅 Calendar — 📄 PDF / Excel Export</string>
+    <string name="admin_tut_p8_body">📍 Bottom bar → \"Calendar\" tab. On the weekly schedule, tap the download icon (top right) to export as PDF or Excel. Use filters: full schedule, one lecturer\'s schedule, one classroom\'s schedule, or one department — whichever view you need.</string>
+
+    <string name="admin_tut_p9_title">🎉 You\'re All Set!</string>
+    <string name="admin_tut_p9_body">Tour complete! 📌 Don\'t forget to share each lecturer\'s password — they\'ll change it on first login. 📌 Replay this tour anytime via bottom bar → Settings → \"Replay Tour\". 📌 First-visit tips will pop up on key screens as bubbles.</string>
+
+    <!-- Lecturer tutorial — guided tour -->
+    <string name="lect_tut_p1_title">👋 Welcome</string>
+    <string name="lect_tut_p1_body">Welcome to UniScheduler! This 1-minute tour walks through every tab. Each page tells you which bottom-bar tab we\'re on. Ready?</string>
+
+    <string name="lect_tut_p2_title">🏠 Home — Your Weekly Schedule</string>
+    <string name="lect_tut_p2_body">📍 Bottom bar → \"Home\". Your week — day, time, course code, classroom. When your admin generates a new schedule, it updates live — no refresh needed. Long-press a class for details.</string>
+
+    <string name="lect_tut_p3_title">🗓️ Availability — Mark Your Busy Slots</string>
+    <string name="lect_tut_p3_body">📍 Bottom bar → \"Availability\" tab. Mark days and times you\'re busy (e.g. Monday 10:00-12:00 meeting). Your admin respects these when generating the next schedule → no conflicts for you.</string>
+
+    <string name="lect_tut_p4_title">📄 Home — Export Your Week as PDF</string>
+    <string name="lect_tut_p4_body">📍 Top right of the \"Home\" tab — download icon. Saves your weekly schedule as a PDF. Print it, share via WhatsApp, keep as backup.</string>
+
+    <string name="lect_tut_p5_title">⚙️ Settings — Notifications, Theme, Language, Password</string>
+    <string name="lect_tut_p5_body">📍 Settings section below the \"Home\" tab: class reminders (15-60 min before), theme (light/dark/auto), language (TR/EN), and password change. Tour complete — replay anytime via \"Replay Tour\".</string>
 
     <!-- Settings: "Replay tutorial" button -->
     <string name="settings_replay_tutorial">Replay Tour</string>

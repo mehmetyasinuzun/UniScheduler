@@ -9,6 +9,12 @@
         <item name="colorOnSurface">@color/onSurface</item>
         <item name="android:colorBackground">@color/background</item>
         <item name="colorOnSurfaceVariant">@color/onSurfaceVariant</item>
+        <!-- Material 3 ile geriye doğru uyumluluk: bazı yeni component'lar
+             (ör. CircularProgressIndicator, LinearProgressIndicator) trackColor
+             için colorSurfaceVariant bekliyor. Theme.MaterialComponents'ta bu
+             attr tanımlı değil → InflateException. Açık temada hafif gri,
+             koyu temada koyu gri (values-night'ta override). -->
+        <item name="colorSurfaceVariant">#E7E0EC</item>
 
         <!-- Status bar: surface ile aynı renkte (edge-to-edge benzeri temiz görünüm).
              windowLightStatusBar=true → açık temada sistem ikonları (saat/sinyal/pil) koyu çizilir;

@@ -30,6 +30,7 @@ import com.unischeduler.util.SessionManager
 import com.unischeduler.util.UiState
 import com.unischeduler.util.collectFlow
 import com.unischeduler.util.shareDocument
+import com.unischeduler.util.showErrorSnackbar
 import com.unischeduler.util.writeBytesToUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -155,8 +156,18 @@ class LecturerHomeFragment : Fragment() {
             .onFailure { android.util.Log.e("LecturerHome", "Lang setup failed", it) }
 
         binding.btnReplayTutorial.setOnClickListener {
-            com.unischeduler.util.TutorialPrefs(requireContext()).resetLecturerTutorial()
-            com.unischeduler.ui.onboarding.LecturerTutorialActivity.start(requireContext())
+            runCatching {
+                com.unischeduler.util.TutorialPrefs(requireContext()).resetLecturerTutorial()
+                com.unischeduler.ui.onboarding.LecturerTutorialActivity.start(requireContext())
+            }.onFailure { e ->
+                android.util.Log.e("LecturerHome", "replayTutorial fail", e)
+                runCatching {
+                    com.unischeduler.util.CrashHandler.appendPendingCrash(
+                        requireContext().applicationContext, "LecturerHome", "replayTutorial", e
+                    )
+                }
+                showErrorSnackbar(e.message ?: "Tanıtım başlatılamadı")
+            }
         }
 
         binding.btnLogout.setOnClickListener {

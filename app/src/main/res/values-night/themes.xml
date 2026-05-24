@@ -9,6 +9,8 @@
         <item name="colorOnSurface">@color/onSurface</item>
         <item name="android:colorBackground">@color/background</item>
         <item name="colorOnSurfaceVariant">@color/onSurfaceVariant</item>
+        <!-- Karanlık modda colorSurfaceVariant: koyu gri -->
+        <item name="colorSurfaceVariant">#49454F</item>
 
         <!-- Karanlık tema: koyu surface + light status bar icons. -->
         <item name="android:statusBarColor">?attr/colorSurface</item>

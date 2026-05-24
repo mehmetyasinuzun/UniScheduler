@@ -438,37 +438,49 @@
     <string name="onboarding_p3_title">Giriş Yap, Devam Edelim</string>
     <string name="onboarding_p3_body">Hesabına giriş yaptıktan sonra sana özel bir tanıtım turu sunacağız — Excel ile yüzlerce hocayı 30 saniyede ekleme, otomatik program oluşturma, PDF çıktısı alma ve daha fazlası.</string>
 
-    <!-- Admin tutorial — login sonrası ilk kez, ~9 sayfa -->
-    <string name="admin_tut_p1_title">Hoş Geldin Yönetici</string>
-    <string name="admin_tut_p1_body">Bu hızlı tur ile UniScheduler\'ı 5 dakikada öğreneceksin. Her ekranı tek tek görelim — istediğin zaman Ayarlar\'dan tekrar açabilirsin.</string>
-    <string name="admin_tut_p2_title">Dashboard — Anlık Görünüm</string>
-    <string name="admin_tut_p2_body">Ana ekranda kurumun istatistikleri: kaç hoca, kaç ders, kaç sınıf, kaç program. Atanmamış dersleri görür, doğrudan atayabilirsin.</string>
-    <string name="admin_tut_p3_title">Departmanları Tanımla</string>
-    <string name="admin_tut_p3_body">Her şey bir bölüme bağlanır (Bilgisayar Mühendisliği, Elektrik vb.). Ayarlar → Departmanlar üzerinden ekle. Sistem hocaları ve dersleri otomatik gruplandırır.</string>
-    <string name="admin_tut_p4_title">Hoca Ekleme — Manuel</string>
-    <string name="admin_tut_p4_body">Veri sekmesi → Hocalar → \"Hoca Ekle\". Ünvan, ad, soyad, bölüm. Sistem benzersiz kullanıcı adı ve 6 haneli şifre üretir; hocaya iletirsin, ilk girişte değiştirir.</string>
-    <string name="admin_tut_p5_title">⚡ Excel ile Toplu Hoca İmportu</string>
-    <string name="admin_tut_p5_body">350 hocayı 30 saniyede ekle. Excel\'den \"İçe Aktar\" tıkla, dosyayı seç — sistem aynı isimleri otomatik ayırt eder (farhan_adl, farhan_adl2…), her birine şifre üretir, CSV olarak indirir. Süper admin için ayrı bir cloud fonksiyonu rate-limit\'i aşar.</string>
-    <string name="admin_tut_p6_title">Dersler ve Derslikler</string>
-    <string name="admin_tut_p6_body">Veri sekmesinden ders ekle (kod, ad, teori/lab saatleri). Sınıflar sekmesinden derslik ekle (kapasite, tip). Excel ile toplu import bu ikisinde de mevcut.</string>
-    <string name="admin_tut_p7_title">⚡ Otomatik Program Oluşturma</string>
-    <string name="admin_tut_p7_body">Atama ekranı → Otomatik. Sistem 5 alternatif program üretir, her birini önizleyebilirsin. Hoca müsaitliği, derslik kapasitesi, çakışmasız atama — hepsi otomatik. En iyi olanı onayla.</string>
-    <string name="admin_tut_p8_title">📄 PDF / Excel Çıktısı</string>
-    <string name="admin_tut_p8_body">Haftalık takvim ekranında sağ üstteki menüden PDF veya Excel olarak indir. Tüm program, sadece bir hocanın programı, ya da sadece bir dersliğinki — istediğin filtre ile.</string>
-    <string name="admin_tut_p9_title">Sen Hazırsın 🎉</string>
-    <string name="admin_tut_p9_body">Şifreyi hocaya iletmeyi unutma! Hoca ilk girişinde kendi şifresini belirler. Bu turu Ayarlar\'dan tekrar açabilirsin. Sorularda her sayfanın üstünde ipucu balonu görünür.</string>
+    <!-- Admin tutorial — sürükleyici tur, her sayfa alt bar sekmesini gösterir -->
+    <string name="admin_tut_p1_title">👋 Hoş Geldin Yönetici</string>
+    <string name="admin_tut_p1_body">UniScheduler\'a hoş geldin! Bu hızlı tur senin yönetici panelinin tüm sekmelerini sırayla gezdirecek (~5 dakika). Her sayfada uygulamanın alt barındaki hangi sekmede olduğumuzu net göstereceğim. Hazır mısın?</string>
 
-    <!-- Lecturer tutorial — login sonrası ilk kez, ~5 sayfa -->
-    <string name="lect_tut_p1_title">Hoş Geldin Hocam</string>
-    <string name="lect_tut_p1_body">UniScheduler hocaların haftalık programlarını dakikalar içinde gör, müsait olmadığın zamanları belirle, çıktısını al. Bu 1 dakikalık tur tüm özellikleri gösterecek.</string>
-    <string name="lect_tut_p2_title">Haftalık Programın</string>
-    <string name="lect_tut_p2_body">Ana ekranda haftanın tüm dersleri — gün, saat, ders kodu, derslik. Yöneticin yeni bir program oluşturduğunda otomatik güncellenir, sayfayı yenilemen gerekmez.</string>
-    <string name="lect_tut_p3_title">Müsaitlik Belirleme</string>
-    <string name="lect_tut_p3_body">Müsaitlik sekmesinden hangi gün ve saatlerde meşgul olduğunu belirt (örn. Pazartesi 10-12 toplantı). Yöneticin sonraki programı oluştururken bu bilgiyi dikkate alır — sana çakışma vermez.</string>
-    <string name="lect_tut_p4_title">📄 PDF Olarak İndir</string>
-    <string name="lect_tut_p4_body">Sağ üstteki indirme ikonundan haftalık programını PDF olarak telefonuna kaydet. Yazdırabilir, paylaşabilir, yedek olarak saklayabilirsin.</string>
-    <string name="lect_tut_p5_title">Bildirim ve Tema Ayarları</string>
-    <string name="lect_tut_p5_body">Ayarlar sekmesinden ders öncesi bildirim (15-60 dk öncesinden), tema (açık/koyu/otomatik), dil (TR/EN) ve şifre değiştirme seçeneklerine ulaşırsın.</string>
+    <string name="admin_tut_p2_title">🏠 Home Sekmesi — Anlık Görünüm</string>
+    <string name="admin_tut_p2_body">📍 Alt bardan \"Home\" sekmesi. Kurumun anlık fotoğrafı: bölüm sayısı, hoca, ders, derslik, açılan ders ve program sayısı — hepsi tek ekranda. Atanmamış dersler kırmızı vurgu ile gözükür, listeden tıklayıp doğrudan atamaya geçebilirsin.</string>
+
+    <string name="admin_tut_p3_title">⚙️ Settings — Departmanları Tanımla</string>
+    <string name="admin_tut_p3_body">📍 Alt bar → \"Settings\" → Departmanlar bölümü. Her hoca, ders ve derslik bir bölüme bağlanır (Bilgisayar Mühendisliği, Elektrik, Endüstri vb.). Önce buradan kurumunun bölümlerini ekle — sonraki adımlar buna bağlanacak.</string>
+
+    <string name="admin_tut_p4_title">📊 Data — Tek Tek Hoca Ekleme</string>
+    <string name="admin_tut_p4_body">📍 Alt bar → \"Data\" sekmesi → Hocalar başlığı. \"+ Hoca Ekle\" butonu: ünvan, ad, soyad, e-posta, bölüm. Sistem otomatik bir kullanıcı adı (farhan_adl) ve 6 haneli geçici şifre üretir; hocaya bu bilgileri iletirsin, ilk girişinde kendisi değiştirir.</string>
+
+    <string name="admin_tut_p5_title">⚡ Data — Excel ile 350 Hocayı 30sn\'de Ekle</string>
+    <string name="admin_tut_p5_body">📍 Aynı \"Data\" sekmesi → Hocalar → \"📥 İçe Aktar\" butonu. Excel dosyanı seç — sistem 350 hocayı tek seferde işler. Aynı isimleri otomatik ayırt eder (farhan_adl, farhan_adl2, farhan_adl3…), her birine şifre üretir, CSV olarak indirilir. Süper admin için ayrı bir cloud fonksiyonu API rate-limit\'i aşar — bu sayede 9 dakikalık import 30 saniyeye düşer.</string>
+
+    <string name="admin_tut_p6_title">📊 + 🏫 Dersler ve Derslikler</string>
+    <string name="admin_tut_p6_body">📍 \"Data\" sekmesinden ders ekle (kod, ad, teori saati, lab saati, kredi). Ardından alt bardan \"Classrooms\" sekmesine geç → derslik ekle (kapasite, tip: teori/lab/karma). Excel ile toplu import bu iki sekmede de aynı şekilde çalışır.</string>
+
+    <string name="admin_tut_p7_title">⚡ Assign — Otomatik Program (5 Alternatif)</string>
+    <string name="admin_tut_p7_body">📍 Alt bar → \"Assign\" sekmesi → \"🤖 Otomatik\" butonu. Sistem 5 farklı geçerli program üretir; her birini önizleyebilirsin. Hoca müsaitliği, derslik kapasitesi, çakışmasız atama — hepsi otomatik kontrol edilir. En iyi alternatifi seçip onayla, hocaların ekranına gerçek zamanlı düşer.</string>
+
+    <string name="admin_tut_p8_title">📅 Calendar — 📄 PDF / Excel Çıktısı</string>
+    <string name="admin_tut_p8_body">📍 Alt bar → \"Calendar\" sekmesi. Haftalık takvim ekranında sağ üstteki indirme ikonundan PDF veya Excel olarak dışa aktar. Filtre seçeneklerini kullanarak: tüm program, sadece bir hocanın programı, sadece bir dersliğin programı, ya da sadece bir bölümünki — istediğin görünüm.</string>
+
+    <string name="admin_tut_p9_title">🎉 Sen Hazırsın!</string>
+    <string name="admin_tut_p9_body">Tur tamamlandı! 📌 Şifreyi hocaya iletmeyi unutma — hoca ilk girişinde kendi şifresini belirleyecek. 📌 Bu turu istediğin zaman alt bar → Settings → \"Tanıtımı Tekrar Göster\" ile yeniden açabilirsin. 📌 Kritik sayfaların ilk ziyaretinde ekranda ipucu balonu çıkar.</string>
+
+    <!-- Lecturer tutorial — sürükleyici tur -->
+    <string name="lect_tut_p1_title">👋 Hoş Geldin Hocam</string>
+    <string name="lect_tut_p1_body">UniScheduler\'a hoş geldin! Bu 1 dakikalık tur senin uygulamanın tüm sekmelerini sırayla gezdirecek. Hangi alt bar sekmesinde olduğumuzu her sayfada net göstereceğim. Hazır mısın?</string>
+
+    <string name="lect_tut_p2_title">🏠 Home — Haftalık Programın</string>
+    <string name="lect_tut_p2_body">📍 Alt bar → \"Home\" sekmesi. Haftanın tüm dersleri — gün, saat, ders kodu, derslik. Yöneticin yeni bir program oluşturduğunda otomatik güncellenir, sayfayı yenilemen gerekmez. Bir derse uzun bas → detayları gör.</string>
+
+    <string name="lect_tut_p3_title">🗓️ Availability — Müsait Olmadığın Saatleri Belirt</string>
+    <string name="lect_tut_p3_body">📍 Alt bar → \"Availability\" sekmesi. Hangi gün ve saatlerde meşgul olduğunu işaretle (örn. Pazartesi 10:00-12:00 — toplantı). Yöneticin bir sonraki programı oluştururken bu bilgileri dikkate alır → sana çakışma çıkmaz.</string>
+
+    <string name="lect_tut_p4_title">📄 Home — Haftalık Programını PDF İndir</string>
+    <string name="lect_tut_p4_body">📍 \"Home\" sekmesinin sağ üstündeki indirme ikonu. Haftalık programını PDF olarak telefonuna kaydet. Yazdırabilir, WhatsApp\'tan paylaşabilir, yedek olarak saklayabilirsin.</string>
+
+    <string name="lect_tut_p5_title">⚙️ Ayarlar — Bildirim, Tema, Dil, Şifre</string>
+    <string name="lect_tut_p5_body">📍 \"Home\" sekmesinin altındaki Ayarlar bölümünden: ders öncesi bildirim (15-60 dk öncesinden), tema seçimi (açık/koyu/otomatik), dil değişimi (Türkçe/İngilizce) ve şifre değiştirme. Tur tamam — istediğin zaman bu turu \"Tanıtımı Tekrar Göster\" butonuyla yeniden açabilirsin.</string>
 
     <!-- Settings'te "Tanıtımı Tekrar Göster" butonu -->
     <string name="settings_replay_tutorial">Tanıtımı Tekrar Göster</string>

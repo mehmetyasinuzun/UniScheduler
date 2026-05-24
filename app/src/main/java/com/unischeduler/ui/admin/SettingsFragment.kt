@@ -284,10 +284,21 @@ class SettingsFragment : Fragment() {
 
         // Tanıtımı tekrar göster — admin tutorial + coach mark flag'lerini
         // sıfırlar, ardından AdminTutorialActivity'i başlatır. Kullanıcı
-        // tek tıkla rehbere geri dönebilir.
+        // tek tıkla rehbere geri dönebilir. Defensive try/catch — tutorial
+        // başlatma sırasında crash olursa app çökmesin, error log'a düşsün.
         binding.btnReplayTutorial.setOnClickListener {
-            com.unischeduler.util.TutorialPrefs(requireContext()).resetAdminTutorial()
-            com.unischeduler.ui.onboarding.AdminTutorialActivity.start(requireContext())
+            runCatching {
+                com.unischeduler.util.TutorialPrefs(requireContext()).resetAdminTutorial()
+                com.unischeduler.ui.onboarding.AdminTutorialActivity.start(requireContext())
+            }.onFailure { e ->
+                android.util.Log.e("SettingsFragment", "replayTutorial fail", e)
+                runCatching {
+                    com.unischeduler.util.CrashHandler.appendPendingCrash(
+                        requireContext().applicationContext, "Settings", "replayTutorial", e
+                    )
+                }
+                showErrorSnackbar(e.message ?: "Tanıtım başlatılamadı")
+            }
         }
 
         binding.btnLogout.setOnClickListener {

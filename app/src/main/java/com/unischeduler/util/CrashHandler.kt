@@ -36,6 +36,20 @@ object CrashHandler {
         }
     }
 
+    /**
+     * Aktif session olmadan ÇAĞRILABİLİR public crash logger. Tutorial activity
+     * gibi henüz session-aware olmayan veya kendi try/catch'i olan yerler bunu
+     * kullanır — dosyaya yazılır, flushPendingCrashes bir sonraki login'de
+     * client_error_logs'a düşürür. Tag parametresi (screen/action) crash
+     * dosyasına yazılır, panelde aranabilir.
+     */
+    fun appendPendingCrash(ctx: Context, screen: String, action: String, throwable: Throwable) {
+        runCatching {
+            val annotated = Exception("[$screen/$action] ${throwable.message ?: throwable::class.java.simpleName}", throwable)
+            writePendingCrash(ctx, Thread.currentThread(), annotated)
+        }.onFailure { Log.e(TAG, "appendPendingCrash failed: ${it.message}", it) }
+    }
+
     private fun writePendingCrash(ctx: Context, thread: Thread, throwable: Throwable) {
         val dir = File(ctx.cacheDir, DIR_NAME).apply { mkdirs() }
         val ts = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US).format(Date())

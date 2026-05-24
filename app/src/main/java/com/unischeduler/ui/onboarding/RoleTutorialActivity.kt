@@ -42,10 +42,19 @@ abstract class RoleTutorialActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityRoleTutorialBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        // DEFENSIVE — tutorial inflation veya adapter setup crash ederse:
+        //   • Logcat'a tam stack trace
+        //   • CrashHandler dosyasına yaz (Activity destroy olunca MainActivity
+        //     açılışında flush edilir → DB'ye düşer → süper admin panelinde görür)
+        //   • Tutorial flag'i true set et (tekrar açılıp döngüsel crash olmasın)
+        //   • finish() ile kapat (kullanıcı kullanıma devam edebilsin)
+        // Eski davranış: uncaught exception → siyah ekran → app öldü → kullanıcı
+        // ne olduğunu bilmedi.
+        try {
+            binding = ActivityRoleTutorialBinding.inflate(layoutInflater)
+            setContentView(binding.root)
 
-        binding.pager.adapter = PageAdapter(pages)
+            binding.pager.adapter = PageAdapter(pages)
         binding.pager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) = updateForPage(position)
         })
@@ -60,6 +69,26 @@ abstract class RoleTutorialActivity : AppCompatActivity() {
             val current = binding.pager.currentItem
             if (current == pages.lastIndex) finishTutorial()
             else binding.pager.setCurrentItem(current + 1, true)
+        }
+        } catch (t: Throwable) {
+            // Tutorial başlatılamadı — log + crash file + flag set + safe finish.
+            android.util.Log.e(
+                "RoleTutorial",
+                "Tutorial inflate/setup failed in ${this::class.java.simpleName}: ${t.message}",
+                t
+            )
+            runCatching {
+                com.unischeduler.util.CrashHandler.appendPendingCrash(
+                    applicationContext,
+                    "RoleTutorial/${this::class.java.simpleName}",
+                    "onCreate",
+                    t
+                )
+            }
+            // Re-loop önlemek için flag'i set et — başarısız tutorial'da
+            // kullanıcı yine sıkıştırılmasın.
+            runCatching { onTutorialCompleted() }
+            finish()
         }
     }
 
