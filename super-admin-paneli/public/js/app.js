@@ -171,12 +171,28 @@ async function doLogin() {
 
         // Public IP — best effort, login akışını bloklamaz
         const clientPublicIp = await fetchPublicIp();
-        console.log('[panel-auth] sending login with clientPublicIp =', clientPublicIp);
+
+        // Browser fingerprint — masaüstü için stable device_id (mobile pattern).
+        // localStorage'da cache → ~1ms maliyet. fingerprint.js global olarak
+        // window.getDeviceFingerprint() expose ediyor.
+        let clientDeviceId = null;
+        try {
+            if (typeof getDeviceFingerprint === 'function') {
+                clientDeviceId = getDeviceFingerprint();
+            }
+        } catch (e) {
+            console.warn('[panel-auth] fingerprint failed:', e);
+        }
+
+        console.log(
+            '[panel-auth] sending login with clientPublicIp=%s, clientDeviceId=%s',
+            clientPublicIp, clientDeviceId
+        );
 
         const r = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: u, password: p, clientPublicIp })
+            body: JSON.stringify({ username: u, password: p, clientPublicIp, clientDeviceId })
         });
         const d = await r.json();
         if (d.token) {
@@ -865,21 +881,55 @@ async function loadSecurityPage() {
         document.getElementById('secStats').innerHTML = `<div class="alert alert-danger">Ozet yuklenemedi: ${escapeHtml(e.message)}</div>`;
     }
 
-    // Detail attempts list
+    // Detail attempts list — server-side pagination + filtre
     try {
+        const pageSize = parseInt(document.getElementById('secPageSize')?.value || '50', 10);
+        const filterIp = document.getElementById('secFilterIp')?.value?.trim() || '';
+        const filterDevice = document.getElementById('secFilterDevice')?.value?.trim() || '';
+        const filterResult = document.getElementById('secFilterResult')?.value || '';
+
         const params = new URLSearchParams();
         params.set('since', win);
-        params.set('pageSize', '100');
+        params.set('page', String(_secCurrentPage));
+        params.set('pageSize', String(pageSize));
         params.set('failMid',   String(th.failMid));
         params.set('failHigh',  String(th.failHigh));
         params.set('churnMid',  String(th.churnMid));
         params.set('churnHigh', String(th.churnHigh));
         params.set('windowMin', String(th.windowMin));
         if (user) params.set('username', user);
-        if (onlyFailed) params.set('onlyFailed', '1');
+        if (onlyFailed || filterResult === 'fail') params.set('onlyFailed', '1');
+        // IP / device filtreleri server-side endpoint'te yok — frontend
+        // tarafında filter ediyoruz. Büyük dataset'te server'a query param
+        // eklemek daha doğru olur (ileride).
         const r = await apiFetch('/api/login-attempts?' + params.toString());
         const data = await r.json();
-        const rows = data.rows || [];
+        let rows = data.rows || [];
+
+        // Frontend filtreleri (IP substring + device prefix + result=ok)
+        if (filterIp)     rows = rows.filter(x => (x.ip_address || '').includes(filterIp));
+        if (filterDevice) rows = rows.filter(x => (x.device_id || '').startsWith(filterDevice));
+        if (filterResult === 'ok') rows = rows.filter(x => x.succeeded === true);
+
+        // Pagination footer'ı güncelle
+        const total = data.total || rows.length;
+        const summary = document.getElementById('secAttemptsSummary');
+        const prevBtn = document.getElementById('btnSecPrev');
+        const nextBtn = document.getElementById('btnSecNext');
+        const pageInfo = document.getElementById('btnSecPageInfo');
+        const paginationDiv = document.getElementById('secAttemptsPagination');
+        if (paginationDiv) {
+            paginationDiv.style.display = 'flex';
+            if (summary) {
+                const start = (_secCurrentPage - 1) * pageSize + 1;
+                const end = start + rows.length - 1;
+                summary.textContent = `${start}-${end} / ${total} (${win} pencere)`;
+            }
+            if (pageInfo) pageInfo.textContent = `Sayfa ${_secCurrentPage}`;
+            if (prevBtn) prevBtn.disabled = (_secCurrentPage <= 1);
+            if (nextBtn) nextBtn.disabled = !data.hasMore;
+        }
+
         if (rows.length === 0) {
             document.getElementById('secAttempts').innerHTML = renderEmpty('bi-shield-check','sec.no_attempts');
             return;
@@ -901,14 +951,34 @@ async function loadSecurityPage() {
                     ? ' <span class="badge bg-warning text-dark" title="Emülatör imzası">EMU</span>'
                     : '';
                 const riskColor = r.risk >= 60 ? 'bg-danger' : r.risk >= 30 ? 'bg-warning' : 'bg-secondary';
-                // Hesap dondurma butonu — sadece başarısız girişlerde anlamlı
-                // değil ama kullanıcı en azından bilinen bir kullanıcı adı
-                // aramışsa freeze edilebilir. Boş username değilse butonu göster.
-                const freezeBtn = r.username && r.username !== '(empty)' && r.username !== '(unknown)'
-                    ? `<button class="btn btn-sm btn-outline-danger" data-freeze-user="${escapeHtml(r.username)}" title="Bu kullanıcı adına ait hesabı geçici dondur">
-                         <i class="bi bi-snow"></i> Dondur
-                       </button>`
-                    : '<span class="text-muted small">—</span>';
+                // Eylem menüsü — kullanıcı/cihaz/IP bazlı ban dropdown'u.
+                // Tek satırdan ban edilebilecek tüm hedefler. Boş değerler
+                // disabled olur.
+                const safeUser = (r.username && r.username !== '(empty)' && r.username !== '(unknown)') ? r.username : null;
+                const safeDevice = r.device_id || null;
+                const safeIp = r.ip_address || null;
+                const menuId = 'banMenu_' + r.id;
+                const freezeBtn = `
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-danger dropdown-toggle" type="button"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-shield-x"></i> Banla
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" id="${menuId}">
+                            <li><button class="dropdown-item ${safeUser ? '' : 'disabled'}"
+                                    data-ban-kind="user" data-ban-value="${escapeHtml(safeUser || '')}">
+                                <i class="bi bi-person-slash"></i> Kullanıcıyı banla
+                            </button></li>
+                            <li><button class="dropdown-item ${safeDevice ? '' : 'disabled'}"
+                                    data-ban-kind="device" data-ban-value="${escapeHtml(safeDevice || '')}">
+                                <i class="bi bi-laptop"></i> Cihazı banla
+                            </button></li>
+                            <li><button class="dropdown-item ${safeIp ? '' : 'disabled'}"
+                                    data-ban-kind="ip" data-ban-value="${escapeHtml(safeIp || '')}">
+                                <i class="bi bi-globe2"></i> IP'yi banla
+                            </button></li>
+                        </ul>
+                    </div>`;
                 return `<tr>
                     <td>${t.toLocaleString('tr-TR')}</td>
                     <td><strong>${escapeHtml(r.username)}</strong>${emuBadge}</td>
@@ -919,15 +989,15 @@ async function loadSecurityPage() {
                     <td>${escapeHtml(r.app_version || '-')}</td>
                     <td><code style="font-size:0.7rem">${escapeHtml((r.device_id||'-').substring(0,10))}</code></td>
                     <td><code style="font-size:0.75rem">${escapeHtml(r.ip_address || '-')}</code>${window.geoBadge ? window.geoBadge(r.ip_address) : ''}</td>
-                    <td><span class="badge ${riskColor}">${r.risk}</span></td>
+                    <td><span class="badge ${riskColor}" title="${escapeHtml((r.riskReasons || []).join(', ') || 'low')}">${r.risk}</span></td>
                     <td>${freezeBtn}</td>
                 </tr>`;
             }).join('')
             + '</tbody></table></div>';
         document.getElementById('secAttempts').innerHTML = tbl;
-        // Freeze butonlarını event delegasyonu ile bağla
-        document.getElementById('secAttempts').querySelectorAll('[data-freeze-user]').forEach(btn => {
-            btn.addEventListener('click', () => freezeUserPrompt(btn.dataset.freezeUser));
+        // Ban dropdown item'larını event delegasyonu ile bağla
+        document.getElementById('secAttempts').querySelectorAll('[data-ban-kind]').forEach(btn => {
+            btn.addEventListener('click', () => banPrompt(btn.dataset.banKind, btn.dataset.banValue));
         });
     } catch (e) {
         document.getElementById('secAttempts').innerHTML = `<div class="alert alert-danger">Detay yuklenemedi: ${escapeHtml(e.message)}</div>`;
@@ -936,6 +1006,9 @@ async function loadSecurityPage() {
     // Saatlik dağılım + günlük trend grafikleri — pencere değişikliklerinde tekrar çiz
     loadHourlyHeatmap(win);
     loadDailyTrend();   // Daima son 30 gün — pencereden bağımsız
+
+    // Aktif bloklar listesini de güncelle (her security page load'unda)
+    loadActiveBlocks();
 }
 
 /* ── Saatlik dağılım grafiği (Chart.js) ─────────────────────────── */
@@ -1017,7 +1090,128 @@ async function loadDailyTrend() {
     }
 }
 
-/* ── Hesap dondurma (manuel) ───────────────────────────────────── */
+/* ── Pagination state (All Attempts) ───────────────────────────── */
+// Server-side pagination için sayfa numarası. Filtre / pencere değişikliğinde
+// 1'e dönülür; Önceki/Sonraki butonlarıyla artar/azalır.
+let _secCurrentPage = 1;
+
+/* ── BAN AKIŞI — kullanıcı / cihaz / IP için ortak prompt ───────── */
+// All Attempts satırından "Banla" dropdown item'larına bind edildi.
+// reason + süre alıyor, /api/blocks POST atıyor. Süre seçenekleri:
+//   "1h", "24h", "7d", "30d", "permanent" (kalıcı)
+async function banPrompt(kind, value) {
+    if (!kind || !value) {
+        alert('Geçersiz hedef.');
+        return;
+    }
+    const kindLabel = ({ user: 'kullanıcı', device: 'cihaz', ip: 'IP' })[kind] || kind;
+
+    const reason = prompt(
+        `"${value}" ${kindLabel}'i için BAN sebebi (kayıt için, isteğe bağlı):`
+    );
+    if (reason === null) return; // iptal
+
+    const duration = prompt(
+        `Süre seçin:\n` +
+        `  1h        → 1 saat\n` +
+        `  24h       → 1 gün\n` +
+        `  7d        → 1 hafta\n` +
+        `  30d       → 30 gün\n` +
+        `  permanent → kalıcı\n\n` +
+        `Sadece bu değerlerden biri:`,
+        '24h'
+    );
+    if (duration === null) return;
+    if (!/^(\d+[hd]|permanent)$/.test(duration)) {
+        alert('Geçersiz süre formatı. Örnek: 1h, 24h, 7d, 30d, permanent');
+        return;
+    }
+
+    if (!confirm(
+        `${value} ${kindLabel}'i ${duration === 'permanent' ? 'KALICI' : duration} süreyle banlanacak.\n\n` +
+        `Onaylıyor musunuz?`
+    )) return;
+
+    try {
+        const r = await apiFetch('/api/blocks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kind, value, reason: reason || null, duration })
+        });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+        alert(`✓ Ban kaydedildi (id=${j.id}).${j.updated ? ' (Mevcut aktif ban güncellendi.)' : ''}`);
+        if (typeof loadActiveBlocks === 'function') loadActiveBlocks();
+    } catch (e) {
+        alert('Ban başarısız: ' + e.message);
+    }
+}
+
+/* ── Aktif bloklar listesi (kart) ───────────────────────────────── */
+async function loadActiveBlocks() {
+    const el = document.getElementById('activeBlocksList');
+    if (!el) return;
+    el.innerHTML = '<div class="text-muted small">Yükleniyor…</div>';
+    try {
+        const kindFilter = document.getElementById('blocksFilterKind')?.value || '';
+        const url = '/api/blocks' + (kindFilter ? '?kind=' + encodeURIComponent(kindFilter) : '');
+        const r = await apiFetch(url);
+        const rows = await r.json();
+        if (!Array.isArray(rows) || rows.length === 0) {
+            el.innerHTML = '<div class="text-muted small">Aktif ban yok.</div>';
+            return;
+        }
+        const tbl = '<div class="table-responsive"><table class="table table-sm table-hover">'
+            + '<thead><tr><th>Tip</th><th>Değer</th><th>Sebep</th><th>Süre</th><th>Oluşturan</th><th>Tarih</th><th>İşlem</th></tr></thead>'
+            + '<tbody>'
+            + rows.map(b => {
+                const kindBadge = ({
+                    user:   '<span class="badge bg-info">Kullanıcı</span>',
+                    device: '<span class="badge bg-warning text-dark">Cihaz</span>',
+                    ip:     '<span class="badge bg-danger">IP</span>'
+                })[b.kind] || b.kind;
+                const expires = b.expires_at
+                    ? new Date(b.expires_at).toLocaleString('tr-TR')
+                    : '<span class="text-danger">Kalıcı</span>';
+                return `<tr>
+                    <td>${kindBadge}</td>
+                    <td><code style="font-size:0.8rem">${escapeHtml(b.value)}</code></td>
+                    <td>${escapeHtml(b.reason || '—')}</td>
+                    <td>${expires}</td>
+                    <td><small>${escapeHtml(b.created_by || '—')}</small></td>
+                    <td><small>${new Date(b.created_at).toLocaleString('tr-TR')}</small></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-success" data-unblock-id="${b.id}">
+                            <i class="bi bi-check-circle"></i> Kaldır
+                        </button>
+                    </td>
+                </tr>`;
+            }).join('')
+            + '</tbody></table></div>';
+        el.innerHTML = tbl;
+        el.querySelectorAll('[data-unblock-id]').forEach(btn => {
+            btn.addEventListener('click', () => unblockPrompt(btn.dataset.unblockId));
+        });
+    } catch (e) {
+        el.innerHTML = `<div class="alert alert-danger">Bloklar yüklenemedi: ${escapeHtml(e.message)}</div>`;
+    }
+}
+
+async function unblockPrompt(id) {
+    if (!confirm('Bu engellemeyi kaldırmak istediğinize emin misiniz?\n\nKaldırılan engelden sonra ilgili kullanıcı/cihaz/IP tekrar login yapabilecek. Audit trail tutulur — engelleme geçmişten silinmez.')) return;
+    try {
+        const r = await apiFetch('/api/blocks/' + id, { method: 'DELETE' });
+        if (!r.ok) {
+            const j = await r.json().catch(() => ({}));
+            throw new Error(j.error || `HTTP ${r.status}`);
+        }
+        loadActiveBlocks();
+    } catch (e) {
+        alert('Kaldırma başarısız: ' + e.message);
+    }
+}
+
+/* ── Hesap dondurma (manuel — eski API, geriye uyumluluk için tutuluyor) ───────── */
 async function freezeUserPrompt(username) {
     if (!username) return;
     if (!confirm(`"${username}" kullanıcısının hesabı geçici olarak dondurulsun mu?\n\nDondurulan hesap login yapamaz; aynı butondan istediğiniz zaman aktive edebilirsiniz. Otomatik blok yok — bu manuel bir işlemdir.`)) return;
@@ -1081,10 +1275,42 @@ if (btnSecExportCsv) {
     });
 }
 document.getElementById('btnSecResetThresholds').addEventListener('click', resetThresholds);
-['secWindow','secUser','secOnlyFailed'].forEach(id => {
+// Filter/pencere değişikliklerinde sayfayı 1'e döndür + yeniden yükle
+['secWindow','secUser','secOnlyFailed','secPageSize','secFilterResult'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.addEventListener('change', loadSecurityPage);
+    if (el) el.addEventListener('change', () => { _secCurrentPage = 1; loadSecurityPage(); });
 });
+
+// Filtre butonu — input alanları (IP, device) değişiminde otomatik tetik
+// yapmıyoruz (yazarken her keystroke'ta API çağrısı verimsiz olur). Apply
+// butonu net deneyim.
+const btnSecApplyFilter = document.getElementById('btnSecApplyFilter');
+if (btnSecApplyFilter) {
+    btnSecApplyFilter.addEventListener('click', () => { _secCurrentPage = 1; loadSecurityPage(); });
+}
+// Enter ile de filtre uygula
+['secFilterIp','secFilterDevice'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { _secCurrentPage = 1; loadSecurityPage(); }
+    });
+});
+
+// Pagination butonları — server'a yeni page numarasıyla istek at
+const btnSecPrev = document.getElementById('btnSecPrev');
+if (btnSecPrev) btnSecPrev.addEventListener('click', () => {
+    if (_secCurrentPage > 1) { _secCurrentPage--; loadSecurityPage(); }
+});
+const btnSecNext = document.getElementById('btnSecNext');
+if (btnSecNext) btnSecNext.addEventListener('click', () => {
+    _secCurrentPage++; loadSecurityPage();
+});
+
+// Aktif bloklar kartı — security sayfası açılınca + filtre/yenile butonu ile
+const btnRefreshBlocks = document.getElementById('btnRefreshBlocks');
+if (btnRefreshBlocks) btnRefreshBlocks.addEventListener('click', loadActiveBlocks);
+const blocksFilterKind = document.getElementById('blocksFilterKind');
+if (blocksFilterKind) blocksFilterKind.addEventListener('change', loadActiveBlocks);
 
 const btnCleanupOld = document.getElementById('btnCleanupOld');
 if (btnCleanupOld) {

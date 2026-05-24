@@ -573,7 +573,82 @@
 
             <div class="card">
                 <h3 data-i18n="sec.all_attempts">Tüm Denemeler</h3>
+
+                <!-- Filtre paneli — server-side pagination + arama -->
+                <div class="row g-2 mb-3">
+                    <div class="col-md-3">
+                        <input type="text" class="form-control form-control-sm"
+                               id="secFilterIp" placeholder="IP içeren (örn. 88.245)" />
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" class="form-control form-control-sm"
+                               id="secFilterDevice" placeholder="Cihaz hash (16-hex)" />
+                    </div>
+                    <div class="col-md-2">
+                        <select id="secFilterResult" class="form-select form-select-sm">
+                            <option value="">Tüm Sonuçlar</option>
+                            <option value="ok">Sadece Başarılı</option>
+                            <option value="fail">Sadece Başarısız</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select id="secPageSize" class="form-select form-select-sm">
+                            <option value="25">25 / sayfa</option>
+                            <option value="50" selected>50 / sayfa</option>
+                            <option value="100">100 / sayfa</option>
+                            <option value="200">200 / sayfa</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-sm btn-primary w-100" id="btnSecApplyFilter">
+                            <i class="bi bi-funnel"></i> Filtrele
+                        </button>
+                    </div>
+                </div>
+
                 <div id="secAttempts"><div class="skeleton skeleton-row full"></div><div class="skeleton skeleton-row medium"></div><div class="skeleton skeleton-row short"></div></div>
+
+                <!-- Pagination footer — sayfa numaraları + prev/next -->
+                <div id="secAttemptsPagination" class="d-flex justify-content-between align-items-center mt-3" style="display:none !important;">
+                    <small class="text-muted" id="secAttemptsSummary">—</small>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button class="btn btn-outline-secondary" id="btnSecPrev" disabled>
+                            <i class="bi bi-chevron-left"></i> Önceki
+                        </button>
+                        <button class="btn btn-outline-secondary" disabled id="btnSecPageInfo">Sayfa 1</button>
+                        <button class="btn btn-outline-secondary" id="btnSecNext" disabled>
+                            Sonraki <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ Aktif Bloklar ═══════════════════════════════════════ -->
+            <div class="card" id="cardActiveBlocks">
+                <h3><i class="bi bi-slash-circle"></i> Aktif Bloklar</h3>
+                <small class="text-muted d-block mb-2">
+                    Kullanıcı / cihaz / IP bazlı aktif engellemeler. "Kaldır" tıklayınca
+                    hemen pasif olur, bir daha login engellenmez. Geçmiş audit trail'i
+                    korunur.
+                </small>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-3">
+                        <select id="blocksFilterKind" class="form-select form-select-sm">
+                            <option value="">Tüm Tipler</option>
+                            <option value="user">Kullanıcı</option>
+                            <option value="device">Cihaz</option>
+                            <option value="ip">IP</option>
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-sm btn-outline-secondary" id="btnRefreshBlocks">
+                            <i class="bi bi-arrow-clockwise"></i> Yenile
+                        </button>
+                    </div>
+                </div>
+                <div id="activeBlocksList">
+                    <div class="text-muted small">Yükleniyor…</div>
+                </div>
             </div>
 
             <div class="card">
@@ -710,6 +785,7 @@
       Her sunucu restart'ında değer değişir → tarayıcı cache otomatik invalid.
       Sıralı script load garantili (browser native, async/defer yok).
     -->
+    <script src="js/fingerprint.js?v=__BUST__"></script>
     <script src="js/i18n.js?v=__BUST__"></script>
     <script src="js/geo.js?v=__BUST__"></script>
     <script src="js/app.js?v=__BUST__"></script>

@@ -270,6 +270,41 @@ app.post('/api/auth/login', async (req, res) => {
         return res.status(429).json({ error: 'Too many login attempts. Try again later.' });
     }
     const { username, password } = req.body;
+    const clientDeviceId = req.body?.clientDeviceId || null;
+
+    // ── BLOCK CHECK — kullanıcı, cihaz veya IP bazlı ban kontrolü ─────
+    // Auth'tan ÖNCE: doğru şifreyi bile vermiş olsa banlıysa içeri sokma.
+    // check_login_blocked RPC üçlü kontrolü tek sorguda yapar.
+    let blockedRow = null;
+    try {
+        const { data: blockRows, error: blockErr } = await supabase.rpc('check_login_blocked', {
+            p_username: username || null,
+            p_device:   clientDeviceId,
+            p_ip:       ip
+        });
+        if (blockErr) {
+            console.warn('[panel-auth] block check failed:', blockErr.message);
+        } else if (blockRows && blockRows[0] && blockRows[0].blocked) {
+            blockedRow = blockRows[0];
+        }
+    } catch (e) {
+        console.warn('[panel-auth] block check threw:', e.message);
+    }
+
+    if (blockedRow) {
+        recordPanelLoginAttempt({
+            username: username || '(empty)',
+            succeeded: false,
+            ip,
+            ua: req.headers['user-agent'],
+            chPlatformVer,
+            deviceId: clientDeviceId,
+            failureStep: 'blocked:' + blockedRow.kind
+        });
+        // Kasıtlı belirsiz mesaj — saldırgan "hangi tip ban" çıkarımı yapmasın
+        return res.status(403).json({ error: 'Bu hesap, cihaz veya IP geçici olarak engellenmiştir.' });
+    }
+
     const ok = (username === ADMIN_USERNAME && password === ADMIN_PASSWORD);
 
     recordPanelLoginAttempt({
@@ -278,6 +313,7 @@ app.post('/api/auth/login', async (req, res) => {
         ip,
         ua: req.headers['user-agent'],
         chPlatformVer,
+        deviceId: clientDeviceId,
         failureStep: ok ? null : 'auth'
     });
 
@@ -376,7 +412,7 @@ function parseUserAgent(uaRaw, chPlatformVer) {
  * dashboard'unda superadmin satırı "-" olarak görünüyordu. Şimdi User-Agent
  * parse edilip aynı format'ta dolduruluyor.
  */
-function recordPanelLoginAttempt({ username, succeeded, ip, ua, chPlatformVer, failureStep }) {
+function recordPanelLoginAttempt({ username, succeeded, ip, ua, chPlatformVer, deviceId, failureStep }) {
     const parsed = parseUserAgent(ua, chPlatformVer);
 
     // device_model: "Edge 148.0 / Desktop" gibi okunaklı bir özet.
@@ -396,6 +432,7 @@ function recordPanelLoginAttempt({ username, succeeded, ip, ua, chPlatformVer, f
         succeeded:    succeeded,
         ip_address:   ip || null,
         user_agent:   (ua || '').substring(0, 250),
+        device_id:    deviceId,                  // browser fingerprint (mobile pattern)
         device_model: deviceModel,
         os_version:   osVersion,
         // Panel kendi versiyonunu app_version'a yazıyor — mobile tarafının
@@ -1750,6 +1787,93 @@ app.get('/api/audit/:orgId', wrap(async (req, res) => {
 //   ?since=24h | 7d | 30d    — only recent (default 7d)
 //   ?page=&pageSize=         — pagination
 //
+// ═══ Block Rules API ════════════════════════════════════════════════════
+// Kullanıcı / cihaz / IP bazlı ban yönetimi. Tek tablo (block_rules) +
+// tek RPC (check_login_blocked) ile mobile login akışı korunuyor.
+//
+// Süre seçenekleri:
+//   1h, 24h, 7d, 30d, permanent (null expires_at)
+// Süreyi expires_at olarak hesaplıyoruz; null = kalıcı.
+function durationToExpiresAt(duration) {
+    if (!duration || duration === 'permanent') return null;
+    const m = /^(\d+)([hd])$/.exec(duration);
+    if (!m) return null;
+    const n = parseInt(m[1], 10);
+    const ms = n * (m[2] === 'h' ? 3_600_000 : 86_400_000);
+    return new Date(Date.now() + ms).toISOString();
+}
+
+// POST /api/blocks — yeni ban oluştur
+app.post('/api/blocks', wrap(async (req, res) => {
+    const { kind, value, reason, duration } = req.body || {};
+    if (!['user', 'device', 'ip'].includes(kind)) {
+        return res.status(400).json({ error: 'kind must be user/device/ip' });
+    }
+    if (!value || typeof value !== 'string' || value.length > 200) {
+        return res.status(400).json({ error: 'value required (max 200 chars)' });
+    }
+    // Aynı aktif ban varsa idempotent — sadece reason/expires güncelle.
+    const { data: existing } = await supabase
+        .from('block_rules')
+        .select('id')
+        .eq('kind', kind)
+        .eq('value', value)
+        .eq('is_active', true)
+        .maybeSingle();
+
+    if (existing) {
+        const { error } = await supabase
+            .from('block_rules')
+            .update({
+                reason: reason || null,
+                expires_at: durationToExpiresAt(duration)
+            })
+            .eq('id', existing.id);
+        if (error) return res.status(500).json({ error: error.message });
+        return res.json({ id: existing.id, updated: true });
+    }
+
+    const { data, error } = await supabase
+        .from('block_rules')
+        .insert({
+            kind,
+            value: kind === 'user' ? value.toLowerCase() : value,
+            reason: reason || null,
+            expires_at: durationToExpiresAt(duration),
+            created_by: ADMIN_USERNAME    // şu an tek panel kullanıcısı; multi-admin'e geçince req.session.username
+        })
+        .select()
+        .single();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+}));
+
+// GET /api/blocks — aktif tüm banlar
+app.get('/api/blocks', wrap(async (req, res) => {
+    let q = supabase.from('block_rules')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+    if (req.query.kind) q = q.eq('kind', req.query.kind);
+    const { data, error } = await q;
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+}));
+
+// DELETE /api/blocks/:id — banı kaldır (is_active=false, audit trail kalır)
+app.delete('/api/blocks/:id', wrap(async (req, res) => {
+    const { error } = await supabase
+        .from('block_rules')
+        .update({
+            is_active: false,
+            unblocked_at: new Date().toISOString(),
+            unblocked_by: ADMIN_USERNAME
+        })
+        .eq('id', req.params.id);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ ok: true });
+}));
+
 // Each row is enriched with a basic "risk" score (0-100) based on:
 //   • per-username failure burst (>=5 fails in last 15 min → +40)
 //   • per-device username churn (one device, many usernames → +30)
@@ -1805,6 +1929,15 @@ app.get('/api/login-attempts', wrap(async (req, res) => {
 
     const failsByUser = new Map();      // username  → failure count last `windowMin` min
     const usersByDevice = new Map();    // device_id → Set<username>
+
+    // ── PER-USER "ilk görüldü" map'leri ──────────────────────────────────
+    // Aynı kullanıcının pencere içinde gördüğü device_id'ler ve IP'ler.
+    // İlk kez görülen device/IP → "yeni cihaz/IP" risk sinyali.
+    // Örn: Ahmet hep 88.245.x.x'ten girerken aniden 192.168.x.x'ten gelirse
+    // bu sinyal "env çalındı, başka cihazdan giriliyor" senaryosunu yakalar.
+    const devicesByUser = new Map();    // username → Set<device_id>
+    const ipsByUser = new Map();        // username → Set<ip_address>
+
     for (const r of data) {
         if (!r.succeeded && new Date(r.created_at).getTime() > windowStart) {
             failsByUser.set(r.username, (failsByUser.get(r.username) || 0) + 1);
@@ -1813,21 +1946,98 @@ app.get('/api/login-attempts', wrap(async (req, res) => {
             if (!usersByDevice.has(r.device_id)) usersByDevice.set(r.device_id, new Set());
             usersByDevice.get(r.device_id).add(r.username);
         }
+        if (r.username) {
+            if (r.device_id) {
+                if (!devicesByUser.has(r.username)) devicesByUser.set(r.username, new Set());
+                devicesByUser.get(r.username).add(r.device_id);
+            }
+            if (r.ip_address) {
+                if (!ipsByUser.has(r.username)) ipsByUser.set(r.username, new Set());
+                ipsByUser.get(r.username).add(r.ip_address);
+            }
+        }
+    }
+
+    // İlk görüldü tarihini bulmak için: aynı user+device veya user+ip
+    // kombosunun pencere içindeki en eski created_at'i. Bu satır o tarihte
+    // mi yoksa daha sonra mı geldi — "yeni mi?" sorusu.
+    const firstSeenDevice = new Map();  // "user|device" → en eski ts
+    const firstSeenIp = new Map();      // "user|ip"     → en eski ts
+    for (const r of data) {
+        if (r.username && r.device_id) {
+            const key = r.username + '|' + r.device_id;
+            const ts = new Date(r.created_at).getTime();
+            if (!firstSeenDevice.has(key) || firstSeenDevice.get(key) > ts) {
+                firstSeenDevice.set(key, ts);
+            }
+        }
+        if (r.username && r.ip_address) {
+            const key = r.username + '|' + r.ip_address;
+            const ts = new Date(r.created_at).getTime();
+            if (!firstSeenIp.has(key) || firstSeenIp.get(key) > ts) {
+                firstSeenIp.set(key, ts);
+            }
+        }
     }
 
     const enriched = data.map(r => {
         let risk = 0;
+        const reasons = [];   // hangi sinyallerin tetiklediği — UI'da gösterilir
+
         const userFails = failsByUser.get(r.username) || 0;
-        if (userFails >= failHigh) risk += 40;
-        else if (userFails >= failMid) risk += 20;
+        if (userFails >= failHigh)     { risk += 40; reasons.push(`burst:${userFails}×fail`); }
+        else if (userFails >= failMid) { risk += 20; reasons.push(`fail:${userFails}`); }
+
         const deviceChurn = r.device_id ? (usersByDevice.get(r.device_id)?.size || 1) : 1;
-        if (deviceChurn >= churnHigh) risk += 30;
-        else if (deviceChurn >= churnMid) risk += 15;
-        if (!r.succeeded && r.failure_step === 'signIn') risk += 5;
+        if (deviceChurn >= churnHigh)     { risk += 30; reasons.push(`device-churn:${deviceChurn}×user`); }
+        else if (deviceChurn >= churnMid) { risk += 15; reasons.push(`device-churn:${deviceChurn}`); }
+
+        if (!r.succeeded && r.failure_step === 'signIn') {
+            risk += 5;
+            reasons.push('signIn-fail');
+        }
         // Emülatörden gelen istek: production app'i emülatörde açma legitim
         // değil, otomasyon imzası. Skoru +25 — orta seviye uyarı.
-        if (r.is_emulator === true) risk += 25;
-        return { ...r, risk: Math.min(100, risk) };
+        if (r.is_emulator === true) {
+            risk += 25;
+            reasons.push('emulator');
+        }
+
+        // YENİ DEVICE — bu kullanıcının pencere içinde gördüğü 2+ device'tan
+        // biri ise ve bu satır en yeni (en eski değil) ise: "ilk kez bu
+        // cihazdan giriş" → "env çalındı?" sinyali.
+        if (r.username && r.device_id) {
+            const devCount = devicesByUser.get(r.username)?.size || 1;
+            if (devCount >= 2) {
+                const key = r.username + '|' + r.device_id;
+                const isFirstSeen = firstSeenDevice.get(key) === new Date(r.created_at).getTime();
+                // İlk görüldüğü satır VE pencerede başka cihazlar da var → şüphe
+                if (isFirstSeen) {
+                    risk += 15;
+                    reasons.push('new-device');
+                }
+            }
+        }
+        // YENİ IP — aynı mantık IP için. Aynı kullanıcı genelde sabit bir
+        // ağdan giriyorsa, yeni bir IP "VPN değiştirdi" veya "başka cihaza
+        // geçti" işareti.
+        if (r.username && r.ip_address) {
+            const ipCount = ipsByUser.get(r.username)?.size || 1;
+            if (ipCount >= 2) {
+                const key = r.username + '|' + r.ip_address;
+                const isFirstSeen = firstSeenIp.get(key) === new Date(r.created_at).getTime();
+                if (isFirstSeen) {
+                    risk += 10;
+                    reasons.push('new-ip');
+                }
+            }
+        }
+
+        return {
+            ...r,
+            risk: Math.min(100, risk),
+            riskReasons: reasons   // UI tooltip: "+40 burst, +15 new-device" gibi
+        };
     });
 
     res.json({

@@ -47,6 +47,8 @@ DROP FUNCTION IF EXISTS public.auto_lockout_on_failed_attempts() CASCADE;
 DROP TABLE IF EXISTS account_lockouts       CASCADE;
 DROP TABLE IF EXISTS audit_log              CASCADE;
 DROP TABLE IF EXISTS login_attempts         CASCADE;
+DROP TABLE IF EXISTS block_rules            CASCADE;
+DROP FUNCTION IF EXISTS public.check_login_blocked(TEXT, TEXT, TEXT) CASCADE;
 DROP TABLE IF EXISTS schedule_entries       CASCADE;
 DROP TABLE IF EXISTS lecturer_availability  CASCADE;
 DROP TABLE IF EXISTS offerings              CASCADE;
@@ -461,6 +463,76 @@ CREATE INDEX idx_login_attempts_failed   ON login_attempts(created_at DESC) WHER
 CREATE INDEX idx_login_attempts_emu      ON login_attempts(created_at DESC) WHERE is_emulator IS TRUE;
 
 -- ──────────────────────────────────────────────────────────────────────────
+-- 16b. Block Rules — kullanıcı / cihaz / IP bazlı erişim engelleme
+-- ──────────────────────────────────────────────────────────────────────────
+-- CTI dashboard'undan süper admin bir login_attempt satırını seçip
+-- "kullanıcıyı dondur" / "cihazı banla" / "IP'yi banla" diyebiliyor.
+-- Hepsi tek tabloda toplandı (kind sütunu ile ayrıştırılıyor) çünkü:
+--   • Login check tek bir SQL ile yapılabiliyor (3 IN sorgusu yerine)
+--   • Pano UI tek bir liste gösterip "Kaldır" butonu sunabiliyor
+--   • Audit trail tek tablo üzerinden filtrelenebiliyor
+--
+-- expires_at NULL = kalıcı ban; değer varsa o tarihte otomatik düşer
+-- (login check WHERE expires_at IS NULL OR expires_at > NOW()).
+-- unblocked_at + unblocked_by — manuel kaldırma audit trail'i; row
+-- silinmiyor, sadece is_active=FALSE oluyor.
+CREATE TABLE block_rules (
+    id            BIGSERIAL PRIMARY KEY,
+    kind          TEXT NOT NULL CHECK (kind IN ('user', 'device', 'ip')),
+    value         TEXT NOT NULL,
+    reason        TEXT,
+    expires_at    TIMESTAMPTZ,
+    is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by    TEXT,                    -- super_admin username
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    unblocked_at  TIMESTAMPTZ,
+    unblocked_by  TEXT,
+    UNIQUE (kind, value, is_active) DEFERRABLE INITIALLY IMMEDIATE
+);
+CREATE INDEX idx_block_rules_lookup
+    ON block_rules(kind, value)
+    WHERE is_active = TRUE;
+CREATE INDEX idx_block_rules_active
+    ON block_rules(created_at DESC)
+    WHERE is_active = TRUE;
+
+-- check_login_blocked: tek RPC ile (user, device, ip) üçlüsünü kontrol
+-- eder. NULL parametre o kontrolü atlar (panel sadece username kullanıyor
+-- olabilir). Dönüş: { blocked: bool, reason: text, expires_at: ts }
+CREATE OR REPLACE FUNCTION public.check_login_blocked(
+    p_username TEXT,
+    p_device   TEXT,
+    p_ip       TEXT
+) RETURNS TABLE (blocked BOOLEAN, kind TEXT, reason TEXT, expires_at TIMESTAMPTZ)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT TRUE, b.kind, b.reason, b.expires_at
+      FROM block_rules b
+     WHERE b.is_active = TRUE
+       AND (b.expires_at IS NULL OR b.expires_at > NOW())
+       AND (
+            (b.kind = 'user'   AND p_username IS NOT NULL AND lower(b.value) = lower(p_username))
+         OR (b.kind = 'device' AND p_device   IS NOT NULL AND b.value = p_device)
+         OR (b.kind = 'ip'     AND p_ip       IS NOT NULL AND b.value = p_ip)
+       )
+     ORDER BY
+       -- En spesifik kuralı önce dön: device > ip > user
+       CASE b.kind WHEN 'device' THEN 1 WHEN 'ip' THEN 2 ELSE 3 END
+     LIMIT 1;
+
+    -- Hiç satır yoksa "blocked=FALSE" tek satır dön
+    IF NOT FOUND THEN
+        blocked := FALSE; kind := NULL; reason := NULL; expires_at := NULL;
+        RETURN NEXT;
+    END IF;
+END;
+$$;
+REVOKE ALL    ON FUNCTION public.check_login_blocked(TEXT, TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.check_login_blocked(TEXT, TEXT, TEXT) TO authenticated, service_role;
+
+-- ──────────────────────────────────────────────────────────────────────────
 -- 17. RLS — turn it on everywhere
 -- ──────────────────────────────────────────────────────────────────────────
 ALTER TABLE organizations         ENABLE ROW LEVEL SECURITY;
@@ -477,6 +549,11 @@ ALTER TABLE client_error_logs     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_log             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE login_attempts        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE super_admins          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE block_rules           ENABLE ROW LEVEL SECURITY;
+
+-- block_rules: sadece service_role yazıp okuyor (panel/Edge). Anon ve
+-- authenticated için policy tanımlanmıyor → varsayılan DENY. Mobile
+-- uygulamalar dışarıda görmüyor.
 
 -- ──────────────────────────────────────────────────────────────────────────
 -- 18. Realtime publication
