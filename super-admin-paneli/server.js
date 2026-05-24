@@ -188,20 +188,36 @@ const supabase = createClient(supabaseUrl, serviceKey, {
 
 // ── Auth Endpoints ───────────────────────────────────────────────────
 app.post('/api/auth/login', async (req, res) => {
-    const ip = normalizeIp(
+    // IP öncelik sırası:
+    //  1. body.clientPublicIp — tarayıcı api.ipify.org'dan aldığı public IP
+    //     (mobile pattern ile aynı). Localhost'ta gerçek dış IP'yi gösterir,
+    //     production'da da reverse-proxy gizleme dert değil.
+    //  2. X-Forwarded-For — nginx/Cloudflare arkasındaysa orijinal client
+    //  3. req.ip — Express'in trust-proxy değerlendirmesi
+    //  4. socket.remoteAddress — son çare (her zaman dolu)
+    //
+    // (1)'in dezavantajı: tarayıcı keyfi bir IP gönderebilir (spoof). Yine
+    // de CTI için "kullanıcı kendi raporladığı IP" değerli. Server-detected
+    // IP'yi loglara da ekliyoruz ki forensic gerekirse iki kaynak da var.
+    const serverIp = normalizeIp(
         req.headers['x-forwarded-for']
         || req.ip
-        || req.connection.remoteAddress
+        || req.connection?.remoteAddress
     );
-    if (!checkRateLimit(ip)) {
-        // Even rate-limit hits go to login_attempts so the CTI dashboard
-        // surfaces "this IP is hammering us" without us having to grep
-        // the application logs.
+    const reportedIp = normalizeIp(req.body?.clientPublicIp);
+    const ip = reportedIp || serverIp;
+
+    // Sec-CH-UA-Platform-Version: Chromium-based browser'ların gönderdiği
+    // ek header — Windows 10 vs 11 ayrımı için tek güvenilir kaynak.
+    const chPlatformVer = req.headers['sec-ch-ua-platform-version'];
+
+    if (!checkRateLimit(serverIp /* rate limit'te server IP daha güvenli */)) {
         recordPanelLoginAttempt({
             username: req.body?.username || '(unknown)',
             succeeded: false,
             ip,
             ua: req.headers['user-agent'],
+            chPlatformVer,
             failureStep: 'rateLimit'
         });
         return res.status(429).json({ error: 'Too many login attempts. Try again later.' });
@@ -214,6 +230,7 @@ app.post('/api/auth/login', async (req, res) => {
         succeeded: ok,
         ip,
         ua: req.headers['user-agent'],
+        chPlatformVer,
         failureStep: ok ? null : 'auth'
     });
 
@@ -232,11 +249,16 @@ app.post('/api/auth/login', async (req, res) => {
  * Edge, Firefox, Safari masaüstü). Bu basit parser %95 doğru sonuç
  * verir, yeni dependency eklemeden.
  *
- * Çıktı:
- *   { os, osVersion, browser, browserVersion, device }
+ * @param {string} uaRaw           User-Agent header'ı
+ * @param {string} chPlatformVer   Sec-CH-UA-Platform-Version header'ı
+ *   (Chromium-based browser'lar gönderir; Windows 10 vs 11 ayrımı için
+ *   tek güvenilir kaynak — Microsoft her ikisi için de UA'da
+ *   "Windows NT 10.0" yolluyor.)
+ *
+ * Çıktı: { os, osVersion, browser, browserVersion, device }
  * Hepsi null olabilir (UA boş veya tanınmıyor).
  */
-function parseUserAgent(uaRaw) {
+function parseUserAgent(uaRaw, chPlatformVer) {
     const ua = String(uaRaw || '');
     if (!ua) return { os: null, osVersion: null, browser: null, browserVersion: null, device: null };
 
@@ -245,9 +267,21 @@ function parseUserAgent(uaRaw) {
     let m;
     if ((m = ua.match(/Windows NT (\d+\.\d+)/))) {
         os = 'Windows';
-        // Windows NT 10.0 → Windows 10/11, NT 6.3 → 8.1, NT 6.2 → 8, NT 6.1 → 7
         const nt = m[1];
-        osVersion = ({ '10.0': '10/11', '6.3': '8.1', '6.2': '8', '6.1': '7', '6.0': 'Vista' })[nt] || nt;
+        // Windows 10 ve 11 her ikisi de "NT 10.0" yolluyor — UA-CH header'ı
+        // ayırt eder: Sec-CH-UA-Platform-Version "13.0.0+" → Windows 11,
+        // "10.0.0" → Windows 10. Header yoksa "10+" yazıp belirsizliği
+        // dürüstçe göster (eskiden "10/11" yazıyordu, yanıltıcıydı).
+        if (nt === '10.0') {
+            if (chPlatformVer) {
+                const major = parseInt(String(chPlatformVer).split('.')[0], 10);
+                osVersion = (major >= 13) ? '11' : '10';
+            } else {
+                osVersion = '10+'; // UA-CH yok — bilinmiyor, sadece 10 veya üzeri
+            }
+        } else {
+            osVersion = ({ '6.3': '8.1', '6.2': '8', '6.1': '7', '6.0': 'Vista' })[nt] || nt;
+        }
     } else if ((m = ua.match(/Mac OS X (\d+[._]\d+(?:[._]\d+)?)/))) {
         os = 'macOS';
         osVersion = m[1].replace(/_/g, '.');
@@ -295,8 +329,8 @@ function parseUserAgent(uaRaw) {
  * dashboard'unda superadmin satırı "-" olarak görünüyordu. Şimdi User-Agent
  * parse edilip aynı format'ta dolduruluyor.
  */
-function recordPanelLoginAttempt({ username, succeeded, ip, ua, failureStep }) {
-    const parsed = parseUserAgent(ua);
+function recordPanelLoginAttempt({ username, succeeded, ip, ua, chPlatformVer, failureStep }) {
+    const parsed = parseUserAgent(ua, chPlatformVer);
 
     // device_model: "Edge 148.0 / Desktop" gibi okunaklı bir özet.
     // Mobile tarafındaki "samsung SM-S721B" benzeri bir slot doldurmak için.

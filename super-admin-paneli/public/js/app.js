@@ -121,7 +121,51 @@ function getCurrentOrgId(){return document.getElementById('globalOrg').value||''
 function setCurrentOrgId(id){if(!id)return;localStorage.setItem('currentOrgId',String(id));const el=document.getElementById('globalOrg');if(el)el.value=id;['dashOrg','schedOrg','availOrg','offOrg','logOrg','adminOrg'].forEach(sid=>{const s=document.getElementById(sid);if(s)s.value=id})}
 
 // ── Auth
-async function doLogin(){const errEl=document.getElementById('loginError');errEl.textContent='';try{const u=document.getElementById('loginUser').value.trim(),p=document.getElementById('loginPass').value;if(!u||!p){errEl.textContent='Giris bilgilerini doldurun.';return}const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});const d=await r.json();if(d.token){authToken=d.token;localStorage.setItem('adminToken',authToken);hideLoginScreen();loadOrganizations()}else errEl.textContent=d.error||'Giris basarisiz.'}catch(e){errEl.textContent='Baglanti hatasi.'}}
+// Login öncesi public IP fetch — mobile uygulamayla aynı pattern
+// (api.ipify.org). Server-side req.ip localhost'ta 127.0.0.1 dönüyordu;
+// burası login_attempts.ip_address'e gerçek dış IP'yi yazar.
+// 1.5sn timeout — fail olursa null geç, server-side IP fallback olur.
+async function fetchPublicIp() {
+    try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 1500);
+        const r = await fetch('https://api.ipify.org?format=text', { signal: ctrl.signal });
+        clearTimeout(timer);
+        const ip = (await r.text()).trim();
+        if (ip && ip.length <= 45) return ip;
+    } catch (_) { /* offline / firewall / timeout — sessiz */ }
+    return null;
+}
+
+async function doLogin() {
+    const errEl = document.getElementById('loginError');
+    errEl.textContent = '';
+    try {
+        const u = document.getElementById('loginUser').value.trim();
+        const p = document.getElementById('loginPass').value;
+        if (!u || !p) { errEl.textContent = 'Giris bilgilerini doldurun.'; return; }
+
+        // Public IP — best effort, login akışını bloklamaz
+        const clientPublicIp = await fetchPublicIp();
+
+        const r = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: u, password: p, clientPublicIp })
+        });
+        const d = await r.json();
+        if (d.token) {
+            authToken = d.token;
+            localStorage.setItem('adminToken', authToken);
+            hideLoginScreen();
+            loadOrganizations();
+        } else {
+            errEl.textContent = d.error || 'Giris basarisiz.';
+        }
+    } catch (e) {
+        errEl.textContent = 'Baglanti hatasi.';
+    }
+}
 function resetClientCaches(){orgs=[];allSchedule=[];allOfferings=[];allLecturers=[];allClassrooms=[];allDepts=[];currentAvailability=[];allAvailability=[];currentEditType=null;currentEditId=null;editingEntryId=null;currentDetailEntry=null;}
 function doLogout(){resetClientCaches();authToken='';localStorage.removeItem('adminToken');showLoginScreen()}
 // Org seçici değişim handler — DOĞRU yeni değer event.target'tan gelir.
