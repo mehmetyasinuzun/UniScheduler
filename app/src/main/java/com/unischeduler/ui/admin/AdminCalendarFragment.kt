@@ -34,6 +34,9 @@ class AdminCalendarFragment : Fragment() {
     private var allEntries: List<ScheduleEntry> = emptyList()
     private var currentSettings: OrgSettings? = null
 
+    // Tour MockStore — admin tour aktifken eklenen ders Calendar grid'inde görünür
+    private val tourMockListener: () -> Unit = { if (_binding != null) refreshView() }
+
     private data class FilterCriteria(
         val lecturerName: String? = null,
         val classroomCode: String? = null,
@@ -81,12 +84,13 @@ class AdminCalendarFragment : Fragment() {
     }
 
     /**
-     * Tek doğruluk kaynağı: criteria + allEntries → görünen liste.
-     * Hem ekran hem PDF buradan beslenir; senkron kalır garanti.
+     * Tek doğruluk kaynağı: criteria + allEntries (+ tour mock) → görünen liste.
      */
     private fun filteredEntries(): List<ScheduleEntry> {
-        if (criteria.isEmpty) return allEntries
-        return allEntries.filter { e ->
+        // Tour MockStore union — admin tour aktifken eklenen mock schedule görünür
+        val effective = allEntries + com.unischeduler.util.TourMockStore.schedules
+        if (criteria.isEmpty) return effective
+        return effective.filter { e ->
             (criteria.lecturerName == null || e.lecturerName == criteria.lecturerName) &&
             (criteria.classroomCode == null || e.classroomCode == criteria.classroomCode) &&
             (criteria.departmentName == null || e.offerings?.courses?.departments?.name == criteria.departmentName) &&
@@ -162,6 +166,8 @@ class AdminCalendarFragment : Fragment() {
         binding.weeklySchedule.setOnEntryClickListener { entry ->
             showEntryDetail(entry)
         }
+
+        com.unischeduler.util.TourMockStore.subscribe(tourMockListener)
 
         collectFlow(viewModel.state) { state ->
             when (state) {
@@ -355,5 +361,8 @@ class AdminCalendarFragment : Fragment() {
         viewModel.loadAllEntries()
     }
 
-    override fun onDestroyView() { super.onDestroyView(); _binding = null }
+    override fun onDestroyView() {
+        com.unischeduler.util.TourMockStore.unsubscribe(tourMockListener)
+        super.onDestroyView(); _binding = null
+    }
 }

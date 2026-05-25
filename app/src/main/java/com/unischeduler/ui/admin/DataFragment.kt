@@ -59,6 +59,7 @@ class DataFragment : Fragment() {
     private var lecturers: List<Lecturer>     = emptyList()
 
     private var selectedDeptId: Int? = null
+    private val tourMockListener: () -> Unit = { if (_binding != null) applyDeptFilter() }
     // Tab değişikliklerinden sonra arka plandaki verinin de güncel kalması için
     // onResume'da yeniden yüklüyoruz. İlk açılışta ViewModel zaten Idle->load
     // tetikliyor, çift yüklemeyi önlemek için flag'liyoruz.
@@ -234,6 +235,10 @@ class DataFragment : Fragment() {
         binding.btnImportCourses.setOnClickListener     { courseImportLauncher.launch("*/*") }
         binding.btnExportCourses.setOnClickListener     { courseExportLauncher.launch("courses.xlsx") }
         binding.btnAddOffering.setOnClickListener       { onAddOfferingClicked() }
+
+        // Tour MockStore subscribe — admin tour aktifken mock veriler eklenir,
+        // applyDeptFilter union ile adapter'a yazılır.
+        com.unischeduler.util.TourMockStore.subscribe(tourMockListener)
 
         observeStates()
     }
@@ -1067,8 +1072,13 @@ class DataFragment : Fragment() {
     private fun applyDeptFilter() {
         val deptId = selectedDeptId
 
+        // Tour MockStore union — admin tour aktifken mock veriler eklenir
+        val effectiveLecturers = allLecturers + com.unischeduler.util.TourMockStore.lecturers
+        val effectiveCourses = allCourses + com.unischeduler.util.TourMockStore.courses
+        val effectiveOfferings = allOfferings + com.unischeduler.util.TourMockStore.offerings
+
         // ── Lecturers: dept filter → search filter ──
-        val deptScopedLecturers = if (deptId != null) allLecturers.filter { it.departmentId == deptId } else allLecturers
+        val deptScopedLecturers = if (deptId != null) effectiveLecturers.filter { it.departmentId == deptId } else effectiveLecturers
         val filteredLecturers = if (lecturerQuery.isBlank()) deptScopedLecturers else deptScopedLecturers.filter {
             it.firstName.lowercase().contains(lecturerQuery) ||
             it.lastName.lowercase().contains(lecturerQuery) ||
@@ -1084,7 +1094,7 @@ class DataFragment : Fragment() {
         populateLecturerList(filteredLecturers)
 
         // ── Courses ──
-        val deptScopedCourses = if (deptId != null) allCourses.filter { it.departmentId == deptId } else allCourses
+        val deptScopedCourses = if (deptId != null) effectiveCourses.filter { it.departmentId == deptId } else effectiveCourses
         val filteredCourses = if (courseQuery.isBlank()) deptScopedCourses else deptScopedCourses.filter {
             it.code.lowercase().contains(courseQuery) ||
             it.name.lowercase().contains(courseQuery)
@@ -1098,8 +1108,8 @@ class DataFragment : Fragment() {
 
         // ── Offerings ──
         val deptScopedOfferings = if (deptId != null) {
-            allOfferings.filter { it.courses?.departmentId == deptId }
-        } else allOfferings
+            effectiveOfferings.filter { it.courses?.departmentId == deptId }
+        } else effectiveOfferings
         val filteredOfferings = if (offeringQuery.isBlank()) deptScopedOfferings else deptScopedOfferings.filter {
             (it.courses?.code?.lowercase()?.contains(offeringQuery) == true) ||
             (it.courses?.name?.lowercase()?.contains(offeringQuery) == true) ||
@@ -1314,6 +1324,7 @@ class DataFragment : Fragment() {
         // ile bağlı olduğu için dismiss önce çağrılmalı, ardından
         // _binding null'lanır.
         dismissProgressDialog()
+        com.unischeduler.util.TourMockStore.unsubscribe(tourMockListener)
         super.onDestroyView()
         _binding = null
     }

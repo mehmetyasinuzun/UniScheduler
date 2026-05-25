@@ -43,6 +43,14 @@ class AssignmentFragment : Fragment() {
     private lateinit var scheduleEntryAdapter: ScheduleEntryAdapter
     private var dayDropdown: DropdownController<String>? = null
 
+    // Tour MockStore — admin tour aktifken mock schedule entry burada görünür
+    private var realEntries: List<ScheduleEntry> = emptyList()
+    private val tourMockListener: () -> Unit = { refreshAdapterWithMockUnion() }
+    private fun refreshAdapterWithMockUnion() {
+        if (_binding == null) return
+        scheduleEntryAdapter.submitList(realEntries + com.unischeduler.util.TourMockStore.schedules)
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentAssignmentBinding.inflate(inflater, container, false)
         return binding.root
@@ -115,6 +123,8 @@ class AssignmentFragment : Fragment() {
                 showWarningDialog(warnings)
             }
         }
+
+        com.unischeduler.util.TourMockStore.subscribe(tourMockListener)
     }
 
     private fun populateForm(data: AssignmentFormData) {
@@ -152,7 +162,8 @@ class AssignmentFragment : Fragment() {
             }
         }
 
-        scheduleEntryAdapter.submitList(data.entries)
+        realEntries = data.entries
+        refreshAdapterWithMockUnion()
     }
 
     private fun onAssignClicked(force: Boolean) {
@@ -357,7 +368,10 @@ class AssignmentFragment : Fragment() {
         viewModel.loadForm()
     }
 
-    override fun onDestroyView() { super.onDestroyView(); _binding = null }
+    override fun onDestroyView() {
+        com.unischeduler.util.TourMockStore.unsubscribe(tourMockListener)
+        super.onDestroyView(); _binding = null
+    }
 }
 
 class ScheduleEntryAdapter(

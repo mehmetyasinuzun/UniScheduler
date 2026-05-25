@@ -60,6 +60,13 @@ class SettingsFragment : Fragment() {
     private var isFirstResume = true
 
     private lateinit var departmentAdapter: DepartmentAdapter
+    private var realDepts: List<Department> = emptyList()
+    private val mockListener: () -> Unit = { refreshAdapterWithMockUnion() }
+
+    private fun refreshAdapterWithMockUnion() {
+        if (_binding == null) return
+        departmentAdapter.submitList(realDepts + com.unischeduler.util.TourMockStore.departments)
+    }
 
     // Pending sample kind, captured at click time so the SAF callback knows
     // which asset to copy once the user picks the destination URI.
@@ -282,22 +289,28 @@ class SettingsFragment : Fragment() {
             restoreOpenLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
         }
 
-        // Tanıtımı tekrar göster — Spotlight Tour'u yeniden başlatır.
-        // TourCoordinator MainActivity'nin NavController'ına ihtiyaç duyar.
+        // Tanıtımı tekrar göster — admin için MainActivity'de tour başlatılır.
+        // TourMockStore mock veri ile fragment adapter'larını union eder.
         binding.btnReplayTutorial.setOnClickListener {
             runCatching {
                 val mainAct = requireActivity() as? MainActivity ?: return@runCatching
                 com.unischeduler.util.TutorialPrefs(requireContext()).resetAdminTutorial()
+                com.unischeduler.util.TourMockStore.clear()
                 val navController = androidx.navigation.fragment.NavHostFragment
                     .findNavController(this)
                 com.unischeduler.util.TourCoordinator.start(
-                    mainAct, navController, com.unischeduler.util.TourCoordinator.Type.ADMIN
+                    mainAct, navController,
+                    com.unischeduler.util.TourCoordinator.Type.ADMIN,
+                    onCompleted = { com.unischeduler.util.TourMockStore.clear() }
                 )
             }.onFailure { e ->
                 android.util.Log.e("SettingsFragment", "replayTour fail", e)
                 runCatching {
                     com.unischeduler.util.CrashHandler.appendPendingCrash(
                         requireContext().applicationContext, "Settings", "replayTour", e
+                    )
+                    com.unischeduler.util.CrashHandler.flushPendingCrashes(
+                        requireActivity().application
                     )
                 }
                 showErrorSnackbar(e.message ?: "Tanıtım başlatılamadı")
@@ -326,10 +339,14 @@ class SettingsFragment : Fragment() {
                 is UiState.Success -> {
                     binding.swipeRefresh.isRefreshing = false
                     showLoading(false)
-                    departmentAdapter.submitList(state.data)
+                    realDepts = state.data
+                    refreshAdapterWithMockUnion()
                 }
             }
         }
+
+        // Tour MockStore subscribe: tour aktif → mock dept eklenir → liste union
+        com.unischeduler.util.TourMockStore.subscribe(mockListener)
 
         collectFlow(viewModel.addState) { state ->
             when (state) {
@@ -481,7 +498,10 @@ class SettingsFragment : Fragment() {
         viewModel.loadDepartments()
     }
 
-    override fun onDestroyView() { super.onDestroyView(); _binding = null }
+    override fun onDestroyView() {
+        com.unischeduler.util.TourMockStore.unsubscribe(mockListener)
+        super.onDestroyView(); _binding = null
+    }
 }
 
 class DepartmentAdapter(

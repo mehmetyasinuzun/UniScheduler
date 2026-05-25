@@ -164,6 +164,10 @@ class LecturerHomeFragment : Fragment() {
                     com.unischeduler.util.CrashHandler.appendPendingCrash(
                         requireContext().applicationContext, "LecturerHome", "replayTour", e
                     )
+                    // ANINDA flush — destination change beklemeden panele düşsün
+                    com.unischeduler.util.CrashHandler.flushPendingCrashes(
+                        requireActivity().application
+                    )
                 }
                 showErrorSnackbar(e.message ?: "Tanıtım başlatılamadı")
             }

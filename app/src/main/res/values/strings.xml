@@ -529,7 +529,256 @@
     <string name="tour_l_set_title">⚙️ Ayarlar</string>
     <string name="tour_l_set_body">Ana sayfanın altındaki ayarlar bölümünden: ders öncesi bildirim (15-60 dk öncesinden), tema (açık/koyu/otomatik), dil (TR/EN) ve şifre değiştirme. 🎯 Bu turu istediğin zaman \"Tanıtımı Tekrar Göster\" ile yeniden açabilirsin.</string>
 
+    <!-- Interactive spotlight — kullanıcı sekme butonuna basarak ilerler -->
+    <string name="tour_a_data_nav_title">👉 Data Sekmesine Bas</string>
+    <string name="tour_a_data_nav_body">Alttaki \"Data\" sekmesine bas. Burada hoca, ders ve dönem açılımlarını yöneteceğiz.</string>
+    <string name="tour_a_class_nav_title">👉 Classrooms Sekmesine Bas</string>
+    <string name="tour_a_class_nav_body">Şimdi alttaki \"Classrooms\" sekmesine bas. Derslikleri tanıtacağım.</string>
+    <string name="tour_a_assign_nav_title">👉 Assign Sekmesine Bas</string>
+    <string name="tour_a_assign_nav_body">Alttaki \"Assign\" sekmesine bas. Atama ve otomatik program özelliği burada.</string>
+    <string name="tour_a_cal_nav_title">👉 Calendar Sekmesine Bas</string>
+    <string name="tour_a_cal_nav_body">Son olarak alttaki \"Calendar\" sekmesine bas. Haftalık takvimi gösteriyorum.</string>
+
+    <string name="tour_l_avail_nav_title">👉 Müsaitlik Sekmesine Bas</string>
+    <string name="tour_l_avail_nav_body">Alttaki \"Availability\" sekmesine bas. Müsaitlik takviminizi gösteriyorum.</string>
+
+    <string name="tour_a_final_title">🎉 Tur Tamamlandı!</string>
+    <string name="tour_a_final_body">Bu turu istediğin zaman Ayarlar → \"Tanıtımı Tekrar Göster\" butonuyla yeniden başlatabilirsin. Önemli: Bu tur sırasında ekleme/silme/kaydetme yapsan bile veritabanına hiçbir şey yazılmadı — istediğin gibi denedin demektir. İyi kullanımlar!</string>
+
+    <string name="tour_l_final_title">🎉 Tur Tamamlandı!</string>
+    <string name="tour_l_final_body">Bu turu istediğin zaman ana sayfandaki \"Tanıtımı Tekrar Göster\" butonuyla yeniden açabilirsin. Önemli: Tur sırasında yapılan işlemler veritabanına yazılmaz. İyi kullanımlar!</string>
+
+    <string name="tour_action_got_it">Anladım</string>
+    <string name="tour_action_finish">Tamamla</string>
+    <string name="tour_sandbox_save_blocked">🛡️ Tur modu: bu kaydetme veritabanına yansımadı (sadece tanıtım)</string>
+
+    <!-- Bottom card içindeki sayaç chip formatı: "Adım 7/16" -->
+    <string name="tour_counter_fmt">Adım %1$d/%2$d</string>
+    <!-- Bottom-nav adımlarında "Vurgulu sekmeye basın" ipucu -->
+    <string name="tour_tap_hint_nav">👇 Vurgulu sekmeye basın</string>
+    <!-- Eski format — yeni tasarımda title artık sade. Eski kullanım için bırakıldı. -->
+    <string name="tour_step_title_fmt">Adım %1$d/%2$d — %3$s</string>
+
+    <!-- ADMIN tour — 17 adım. Senior IA + UX:
+         Bölüm A (1-6):  Kurulum — Settings'te bölüm yönetimi + Excel toplu yükleme
+         Bölüm B (7-9):  Veri Tanımı — Hoca → Ders → Offering (mantıksal sıra)
+         Bölüm C (10-11):Fiziksel Kaynak — Derslikler
+         Bölüm D (12-13):Planlama — Manuel & otomatik atama
+         Bölüm E (14-15):Çıktı — Takvim + PDF
+         Bölüm F (16-17):Yaşam Döngüsü — Replay + Logout
+
+         Body şablonu:
+           [HOOK]  Şu an nerede + neden bu sayfa
+           [WHAT]  Bu ekran/buton ne yapıyor
+           [HOW]   Nasıl kullanılır (somut)
+           💡 [Pro tip — opsiyonel] -->
+
+    <!-- ─── A. Kurulum (Setup) ─── -->
+    <string name="tour_admin_s1_title">Veri Yönetimine Geç</string>
+    <string name="tour_admin_s1_body">Ana Sayfa\'dasın. Kurumunun anlık özeti burada: bölüm, hoca, ders ve derslik sayıları + atanmamış kayıtlar.\n\nAlt baradaki ışıklı \"Data\" sekmesine bas — sistemin ekosistemini birlikte gezelim.</string>
+
+    <string name="tour_admin_s2_title">Önce Bölümler Gerekli</string>
+    <string name="tour_admin_s2_body">Data sayfasındayız. Ama burada bir şey eklemeden önce bölümler tanımlı olmalı — çünkü her hoca, ders ve derslik bir bölüme bağlanır.\n\nBölüm yönetimi Ayarlar\'da. Sağ üstteki ışıklı \"Ayarlar\" butonuna bas; seni oraya götüreyim.\n\n💡 Sıra: Bölüm → Hoca / Ders → Offering → Derslik → Atama.</string>
+
+    <string name="tour_admin_s3_title">Bölüm Ekleme</string>
+    <string name="tour_admin_s3_body">Ayarlar\'a geldik. Üstteki bu alan bölüm yönetimi: \"Bilgisayar Mühendisliği\", \"Endüstri\" gibi bölümler buradan eklenir.\n\nAd yaz → ışıklı \"Ekle\" butonuna bas. Tur boyunca denemek zorunda değilsin — şimdi sadece yerleri öğreniyoruz.</string>
+
+    <string name="tour_admin_s4_title">Mevcut Bölümler</string>
+    <string name="tour_admin_s4_body">Eklediğin bölümler bu listede görünür. Sağdaki kalem ikonu düzenler, çöp ikonu siler.\n\n💡 Bir bölümü silersen ona bağlı hoca/ders/dersliklerin bölüm alanı boşa çıkar — kayıtlar silinmez ama yetim kalır. Önce kontrol et.</string>
+
+    <string name="tour_admin_s5_title">Excel Toplu Yükleme</string>
+    <string name="tour_admin_s5_body">Çok sayıda hoca/ders/derslik girilecekse Excel ile toplu yükleme yapabilirsin.\n\nBu kartta üç hazır şablon var. Birine bas → dosyayı indir → kendi verinle doldur → Data sekmesindeki \"İçe Aktar\" ile yükle. Yüzlerce kaydı tek seferde aktarırsın.</string>
+
+    <string name="tour_admin_s6_title">Data\'ya Geri Dön</string>
+    <string name="tour_admin_s6_body">Bölüm yönetimini ve Excel şablonlarını gördün. Şimdi Data sekmesine dönüp hoca, ders ve offering yönetimini gösterelim.\n\nAlt baradaki ışıklı \"Data\" sekmesine bas.</string>
+
+    <!-- ─── B. Veri Tanımı (Data Definition) ─── -->
+    <string name="tour_admin_s7_title">Hoca Ekleme</string>
+    <string name="tour_admin_s7_body">Hocalar bölümünü senin için açtım. Işıklı \"Ekle\" butonunun üstündeki form: ünvan + ad + soyad + bölüm.\n\nKaydet dediğinde sistem hocaya otomatik kullanıcı adı + şifre üretir; hoca ilk girişte şifresini değiştirir.\n\n💡 Yandaki \"İçe Aktar\" ile az önce gördüğün Excel şablonundan çok sayıda hoca yükleyebilirsin.</string>
+
+    <string name="tour_admin_s8_title">Ders Ekleme</string>
+    <string name="tour_admin_s8_body">Dersler bölümünü açtım. Işıklı \"Ekle\" butonunun üstündeki form ile ders havuzunu kurarsın: kod (örn. CSE101) + ad + teori saati + lab saati + kredi + bölüm.\n\n💡 Önemli: Ders eklemek henüz \"şu hoca verecek\" demek değil. Hoca-ders eşleştirmesi bir sonraki adımda — Offerings\'te.</string>
+
+    <string name="tour_admin_s9_title">Offering — Hoca-Ders Eşleştirme</string>
+    <string name="tour_admin_s9_body">Ekosistemin can damarı. Bir offering = ders + hoca + yarıyıl + sınıf + şube.\n\nÖrnek: CSE101 → Dr. Demo Hoca → 2024 Güz → 2. sınıf → A şube.\n\n💡 Otomatik planlayıcı tam olarak bu eşleştirmelerle çalışır. Önce ders ve hoca eklenmiş olmalı, sonra burada birleştirilir.</string>
+
+    <!-- ─── C. Fiziksel Kaynak (Physical Resources) ─── -->
+    <string name="tour_admin_s10_title">Derslikler Sekmesine Geç</string>
+    <string name="tour_admin_s10_body">Hoca, ders ve offering tarafını gördün. Sırada fiziksel kaynak: derslikler.\n\nAlt baradaki ışıklı \"Classrooms\" sekmesine bas.</string>
+
+    <string name="tour_admin_s11_title">Derslik Ekleme</string>
+    <string name="tour_admin_s11_body">Işıklı \"Ekle\" butonunun üstündeki form ile derslik tanımlarsın: kod (A101) + kapasite + tip (teori/lab) + bölüm.\n\n💡 Otomatik planlayıcı şunları kontrol eder: ders öğrenci sayısı ≤ derslik kapasitesi, teori dersi teori sınıfına, lab dersi laboratuvara. Toplu yükleme için Excel şablonu yine var.</string>
+
+    <!-- ─── D. Planlama (Scheduling) ─── -->
+    <string name="tour_admin_s12_title">Atama Sekmesine Geç</string>
+    <string name="tour_admin_s12_body">Bölüm, hoca, ders, offering, derslik — hepsi hazır. Şimdi sistemin en güçlü kısmı: atama.\n\nAlt baradaki ışıklı \"Assign\" sekmesine bas.</string>
+
+    <string name="tour_admin_s13_title">Otomatik Planlayıcı</string>
+    <string name="tour_admin_s13_body">Sistemin sihri — ışıklı 🤖 \"Otomatik Planla\" butonu. Tek tuşla tüm offering\'leri çözer, 5 farklı geçerli takvim alternatifi sunar.\n\nÇakışma + hoca müsaitliği + derslik kapasitesi + teori/lab kuralları otomatik uygulanır. En uygunu seçip onayla.\n\n💡 Manuel atama: üstteki form ile offering + hoca + derslik + gün/saat seçip tek tek de yapabilirsin.</string>
+
+    <!-- ─── E. Çıktı (Output) ─── -->
+    <string name="tour_admin_s14_title">Takvim Sekmesine Geç</string>
+    <string name="tour_admin_s14_body">Atama tamamlandı. Son durak: oluşan haftalık takvimi görelim.\n\nAlt baradaki ışıklı \"Calendar\" sekmesine bas.</string>
+
+    <string name="tour_admin_s15_title">PDF Dışa Aktarma</string>
+    <string name="tour_admin_s15_body">Haftanın tüm programı görsel grid halinde önünde. Üstteki çiplerle filtrele: hoca, sınıf seviyesi, bölüm veya derslik bazında.\n\nIşıklı \"PDF Dışa Aktar\" butonu seçili filtreye göre PDF üretir — dosya adı otomatik (örn. \"program-bilgisayar-2sinif.pdf\"). Yazdırılabilir, paylaşılabilir.</string>
+
+    <!-- ─── F. Yaşam Döngüsü (Lifecycle) ─── -->
+    <string name="tour_admin_s16_title">Tanıtımı Tekrar Göster</string>
+    <string name="tour_admin_s16_body">Bu turu istediğin zaman Ayarlar\'daki ışıklı bu butondan yeniden başlatabilirsin.\n\nSon adıma — çıkış butonunun yerini öğrenmeye — geçelim.</string>
+
+    <string name="tour_admin_s17_title">Çıkış Yap</string>
+    <string name="tour_admin_s17_body">Oturumdan güvenli çıkış burada. Bu butona şu an basma — sadece yerini öğreniyoruz, çıkışı sen istediğinde yaparsın.\n\n🎯 Tur tamamlandı. Veritabanına hiçbir şey yazılmadı — kendi gerçek verilerinle başlayabilirsin. \"Tamamla\" ile bitir, iyi kullanımlar!</string>
+
+    <!-- LECTURER tour — 7 adım. Sade akış: Home → Availability (grid + form)
+         → Home (PDF + replay + logout).
+         Hocanın işi admin\'den daha basit: müsaitlik işaretle, programı gör. -->
+    <string name="tour_lect_s1_title">Müsaitliğine Geç</string>
+    <string name="tour_lect_s1_body">Ana Sayfa\'dasın. Bu haftaki derslerin burada, aşağı kaydırınca PDF/iCal export ve ayarlar (bildirim, tema, dil, şifre) var.\n\nÖnce müsaitlik takvimini tanıtalım — alt baradaki ışıklı \"Availability\" sekmesine bas.</string>
+
+    <string name="tour_lect_s2_title">Müsaitlik Grid\'i</string>
+    <string name="tour_lect_s2_body">Bu grid\'de haftanın tüm günleri + saat dilimleri var. Boş bir hücreye dokunarak meşgul saat aralığını işaretlersin — örn. Salı 14:00-16:00 toplantı.\n\nİşaretlediklerin admin\'in planlamasına otomatik gider: o saatlere ders konmaz.\n\n💡 Hâlihazırda derste olduğun saatler kırmızıyla görünür, değiştirilemez.</string>
+
+    <string name="tour_lect_s3_title">Manuel Form ile Ekleme</string>
+    <string name="tour_lect_s3_body">Grid\'e dokunmak yerine forma da girebilirsin: gün dropdown\'u + başlangıç/bitiş saati picker → Ekle.\n\n💡 Grid daha hızlı; form ise hassas saat aralığı (örn. 13:25-14:05) gerektiğinde işine yarar.</string>
+
+    <string name="tour_lect_s4_title">Ana Sayfa\'ya Dön</string>
+    <string name="tour_lect_s4_body">Müsaitlik tarafını gördün. Şimdi Ana Sayfa\'da PDF dışa aktarma ve diğer önemli butonları gösterelim.\n\nAlt baradaki ışıklı \"Home\" sekmesine bas.</string>
+
+    <string name="tour_lect_s5_title">PDF / iCal Dışa Aktarma</string>
+    <string name="tour_lect_s5_body">Işıklı \"PDF Dışa Aktar\" butonu ile haftalık programını PDF olarak telefonuna kaydedersin.\n\n💡 Yandaki \"iCal Dışa Aktar\" Google/Apple Takvim\'e eklemek için .ics dosyası üretir.</string>
+
+    <string name="tour_lect_s6_title">Tanıtımı Tekrar Göster</string>
+    <string name="tour_lect_s6_body">Bu turu istediğin zaman Ana Sayfa\'daki ışıklı bu butondan yeniden başlatabilirsin.\n\nSon adıma — çıkış butonunun yerini öğrenmeye — geçelim.</string>
+
+    <string name="tour_lect_s7_title">Çıkış Yap</string>
+    <string name="tour_lect_s7_body">Oturumdan güvenli çıkış burada. Bu butona şu an basma — sadece yerini öğreniyoruz.\n\n🎯 Tur tamamlandı. Veritabanına hiçbir şey yazılmadı. \"Tamamla\" ile bitir, iyi kullanımlar!</string>
+
     <string name="tour_completed">🎉 Tur tamamlandı — iyi kullanımlar!</string>
+
+    <!-- ═══ TOUR DEMO — TourDemoActivity (admin için interaktif mock akış) ═══ -->
+    <string name="tour_demo_toolbar_title">Tanıtım Modu — Demo</string>
+    <string name="tour_tap_hint_add">👇 Vurgulu \"Ekle\" butonuna bas</string>
+
+    <string name="tour_demo_tab_data">Veri</string>
+    <string name="tour_demo_tab_classrooms">Derslikler</string>
+    <string name="tour_demo_tab_assign">Atama</string>
+    <string name="tour_demo_tab_calendar">Takvim</string>
+
+    <string name="tour_demo_dept_header">Bölüm Yönetimi (önce bu)</string>
+    <string name="tour_demo_dept_hint">Bölüm adı</string>
+    <string name="tour_demo_lecturers_header">Hocalar</string>
+    <string name="tour_demo_courses_header">Dersler</string>
+    <string name="tour_demo_offerings_header">Ders Açımları (Offerings)</string>
+    <string name="tour_demo_manual_assign_header">Manuel Atama</string>
+
+    <string name="tour_demo_empty_dept">Henüz bölüm eklenmedi</string>
+    <string name="tour_demo_empty_lecturers">Henüz hoca eklenmedi</string>
+    <string name="tour_demo_empty_courses">Henüz ders eklenmedi</string>
+    <string name="tour_demo_empty_offerings">Henüz açım eklenmedi</string>
+    <string name="tour_demo_empty_classrooms">Henüz derslik eklenmedi</string>
+    <string name="tour_demo_empty_schedules">Henüz ders atanmadı</string>
+    <string name="tour_demo_no_classes_day">— Ders yok —</string>
+
+    <string name="tour_demo_offering_hint">Açım (Offering)</string>
+    <string name="tour_demo_lecturer_hint">Hoca</string>
+    <string name="tour_demo_classroom_hint">Derslik</string>
+    <string name="tour_demo_day_hint">Gün</string>
+    <string name="tour_demo_start_hint">Başlangıç</string>
+    <string name="tour_demo_end_hint">Bitiş</string>
+    <string name="tour_demo_assign_btn">Manuel Ata</string>
+    <string name="tour_demo_auto_schedule_btn">🤖 Otomatik Planla</string>
+    <string name="tour_demo_calendar_hint">Aşağıda haftalık programını görürsün. Az önce attığın ders Pazartesi sütununda belirir.</string>
+
+    <string name="tour_demo_exit_title">Tanıtımı Sonlandır</string>
+    <string name="tour_demo_exit_message">Tanıtım modundan çıkıyorsun. Tüm demo veriler kaybolur. Gerçek uygulamaya dönmek istediğine emin misin?</string>
+    <string name="tour_demo_exit_confirm">Evet, çık</string>
+
+    <!-- 13 adım body metinleri — senin verdiğin spesifik veriyle -->
+    <string name="tour_demo_s1_title">Bölüm Ekle</string>
+    <string name="tour_demo_s1_body">Sistemin ekosistemine giriyoruz. Önce bir bölüm tanımlamak gerek — çünkü hoca, ders ve derslikler bölüme bağlanır.\n\nForma \"Bilgisayar Mühendisliği\" yazdım. Vurgulu Ekle butonuna basıp ilk bölümü oluştur.</string>
+
+    <string name="tour_demo_s2_title">Hoca Ekle: Farhan Adl</string>
+    <string name="tour_demo_s2_body">Bölüm hazır. Şimdi hoca ekleyelim.\n\nFormu Dr. Farhan Adl ile doldurdum. Vurgulu Ekle butonuna bas, hocayı sisteme tanıt.</string>
+
+    <string name="tour_demo_s3_title">İlk Ders: Programming Language</string>
+    <string name="tour_demo_s3_body">PL101 — Programming Language dersini hazırladım: 3 teori + 0 lab + 3 kredi.\n\nVurgulu Ekle butonuna bas, dersi havuza al.</string>
+
+    <string name="tour_demo_s4_title">İkinci Ders: Mobile Programming</string>
+    <string name="tour_demo_s4_body">MP101 — Mobile Programming dersi: 2 teori + 2 lab + 4 kredi. Formu yine doldurdum.\n\nEkle butonuna basıp 2. dersi de havuza ekle. Artık 2 dersin var.</string>
+
+    <string name="tour_demo_s5_title">İlk Açım: PL101 + Farhan Adl</string>
+    <string name="tour_demo_s5_body">Ekosistemin can damarı: Offering — \"şu ders bu hoca tarafından verilecek\" bilgisi.\n\nPL101 dersini Dr. Farhan Adl\'ya bağladım (2024-2025 Güz, 2. sınıf, A şubesi). Ekle butonuna basıp birleştir.</string>
+
+    <string name="tour_demo_s6_title">İkinci Açım: MP101 + Farhan Adl</string>
+    <string name="tour_demo_s6_body">Mobile Programming için de aynı eşleştirme. Form hazır.\n\nEkle butonuna basıp 2. offering\'i tamamla — Dr. Farhan Adl artık iki ders veriyor.</string>
+
+    <string name="tour_demo_s7_title">Derslikler Sekmesi</string>
+    <string name="tour_demo_s7_body">Hoca, ders ve açım tarafı hazır. Sırada fiziksel kaynak: derslik.\n\nAlt baradaki vurgulu Derslikler sekmesine bas.</string>
+
+    <string name="tour_demo_s8_title">Derslik Ekle: L101</string>
+    <string name="tour_demo_s8_body">L101 isimli teorik bir dersliği hazırladım: 30 kapasite, Bilgisayar Mühendisliği.\n\nVurgulu Ekle butonuna bas, dersliği tanıt.</string>
+
+    <string name="tour_demo_s9_title">Atama Sekmesi</string>
+    <string name="tour_demo_s9_body">Tüm parçalar hazır: bölüm, hoca, 2 ders, 2 açım, derslik. Şimdi atama zamanı.\n\nAlt baradaki vurgulu Atama sekmesine bas.</string>
+
+    <string name="tour_demo_s10_title">Manuel Atama: Pazartesi 09:00-12:00</string>
+    <string name="tour_demo_s10_body">PL101 dersini Dr. Farhan Adl + L101 dersliğine, Pazartesi 09:00-12:00 saatlerine yerleştirdim.\n\nVurgulu \"Manuel Ata\" butonuna basıp atamayı tamamla.\n\n💡 Üstteki 🤖 \"Otomatik Planla\" gerçek uygulamada tüm açımları tek tıkla 5 alternatif olarak çözer.</string>
+
+    <string name="tour_demo_s11_title">Takvim Sekmesi</string>
+    <string name="tour_demo_s11_body">Atama tamam. Şimdi sonucu görmenin zamanı: haftalık takvim.\n\nVurgulu Takvim sekmesine bas.</string>
+
+    <string name="tour_demo_s12_title">İşte Eklediğin Ders!</string>
+    <string name="tour_demo_s12_body">Pazartesi sütununda PL101 — Programming Language görüyor musun? 09:00-12:00, Dr. Farhan Adl, L101 dersliği.\n\nGerçek uygulamada filtrele, PDF olarak indir, paylaş.</string>
+
+    <string name="tour_demo_s13_title">Çıkış — Tur Bitti</string>
+    <string name="tour_demo_s13_body">🎯 Uçtan uca tüm akışı gördün: bölüm → hoca → ders → açım → derslik → atama → takvim.\n\nSağ üstteki X butonu tanıtımdan çıkış. Veritabanına HİÇBİR ŞEY yazılmadı — gerçek uygulamada kendi verilerinle başlayabilirsin.\n\n\"Tamamla\" butonuna bas, gerçek uygulamaya dönelim. İyi kullanımlar!</string>
+
+    <!-- ═══ Tour Demo (mevcut MainActivity'de mock akış) 15 adım ═══ -->
+    <string name="tour_demo_s_data_title">Data Sekmesi</string>
+    <string name="tour_demo_s_data_body">Sistemin ekosistemine giriyoruz. Alt baradaki vurgulu \"Data\" sekmesine bas — birlikte gezeceğiz.</string>
+
+    <string name="tour_demo_s_settings_title">Önce Bölüm Gerekli</string>
+    <string name="tour_demo_s_settings_body">Hoca/ders eklemeden önce bölüm tanımlanmış olmalı. Sağ üstteki vurgulu \"Ayarlar\" butonuna bas, bölüm yönetimini gösterelim.</string>
+
+    <string name="tour_demo_s_dept_title">Bölüm Ekle: Bilgisayar Mühendisliği</string>
+    <string name="tour_demo_s_dept_body">Formu \"Bilgisayar Mühendisliği\" ile doldurdum. Vurgulu Ekle butonuna basıp bölümü oluştur.\n\n💡 Mock veri — gerçek veritabanına yazılmayacak.</string>
+
+    <string name="tour_demo_s_back_data_title">Data\'ya Dön</string>
+    <string name="tour_demo_s_back_data_body">Bölüm hazır. Şimdi Data sekmesine dönüp hoca ve ders ekleyelim.\n\nAlt baradaki vurgulu \"Data\" sekmesine bas.</string>
+
+    <string name="tour_demo_s_lecturer_title">Hoca Ekle: Dr. Farhan Adl</string>
+    <string name="tour_demo_s_lecturer_body">Hocalar bölümünü açtım. Formu Dr. Farhan Adl ile doldurdum.\n\nVurgulu Ekle butonuna bas, hocayı listede gör.</string>
+
+    <string name="tour_demo_s_course1_title">İlk Ders: Programming Language</string>
+    <string name="tour_demo_s_course1_body">Dersler bölümünü açtım. PL101 — Programming Language hazır (3 teori + 0 lab + 3 kredi).\n\nVurgulu Ekle butonuna bas.</string>
+
+    <string name="tour_demo_s_course2_title">İkinci Ders: Mobile Programming</string>
+    <string name="tour_demo_s_course2_body">MP101 — Mobile Programming hazır (2 teori + 2 lab + 4 kredi).\n\nVurgulu Ekle butonuna basıp 2. dersi de ekle.</string>
+
+    <string name="tour_demo_s_offering1_title">İlk Açım: PL101 + Farhan</string>
+    <string name="tour_demo_s_offering1_body">Offerings ekosistemin can damarı — \"hangi ders, hangi hoca\". Formu doldurdum (2024-2025 Güz, 2. sınıf, A şubesi).\n\nVurgulu Ekle butonuna bas.</string>
+
+    <string name="tour_demo_s_offering2_title">İkinci Açım: MP101 + Farhan</string>
+    <string name="tour_demo_s_offering2_body">Mobile Programming için de aynı eşleştirme.\n\nVurgulu Ekle butonuna basıp 2. offering\'i tamamla.</string>
+
+    <string name="tour_demo_s_classrooms_title">Derslikler Sekmesi</string>
+    <string name="tour_demo_s_classrooms_body">Hoca, ders, açım hazır. Sırada fiziksel kaynak: derslik.\n\nAlt baradaki vurgulu \"Classrooms\" sekmesine bas.</string>
+
+    <string name="tour_demo_s_classroom_add_title">Derslik Ekle: L101</string>
+    <string name="tour_demo_s_classroom_add_body">L101 hazır: 30 kapasite, teori.\n\nVurgulu Ekle butonuna bas.</string>
+
+    <string name="tour_demo_s_assign_title">Atama Sekmesi</string>
+    <string name="tour_demo_s_assign_body">Tüm parçalar hazır. Şimdi atama zamanı.\n\nAlt baradaki vurgulu \"Assign\" sekmesine bas.</string>
+
+    <string name="tour_demo_s_manual_title">Manuel Atama: Pzt 09:00-12:00</string>
+    <string name="tour_demo_s_manual_body">PL101 dersini Farhan + L101 + Pazartesi 09:00-12:00 olarak yerleştirdim.\n\nVurgulu Ata butonuna bas.\n\n💡 Üstteki 🤖 Otomatik Planla, tüm açımları tek tıkla çözer.</string>
+
+    <string name="tour_demo_s_calendar_title">Takvim Sekmesi</string>
+    <string name="tour_demo_s_calendar_body">Sonucu görelim: haftalık takvim.\n\nAlt baradaki vurgulu \"Calendar\" sekmesine bas.</string>
+
+    <string name="tour_demo_s_done_title">İşte Eklediğin Ders!</string>
+    <string name="tour_demo_s_done_body">Pazartesi sütununda PL101 — Programming Language görüyor musun? Farhan + L101 + 09:00-12:00.\n\n🎯 Tur bitti! Veritabanına hiçbir şey yazılmadı — kendi verilerinle başlayabilirsin. \"Tamamla\" ile bitir.</string>
 
     <!-- ─── Notifications (Sprint B2 + B3) ──────────────────────────────────── -->
     <string name="notif_card_title">Bildirim Tercihleri</string>

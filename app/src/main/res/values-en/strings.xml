@@ -514,7 +514,244 @@
     <string name="tour_l_set_title">⚙️ Settings</string>
     <string name="tour_l_set_body">The settings section below your home tab: class reminders (15-60 min before), theme (light/dark/auto), language (TR/EN), password change. 🎯 Replay this tour anytime via \"Replay Tour\".</string>
 
+    <!-- Interactive spotlight — user taps the bottom-nav target to advance -->
+    <string name="tour_a_data_nav_title">👉 Tap the Data Tab</string>
+    <string name="tour_a_data_nav_body">Tap the \"Data\" tab at the bottom. We\'ll manage lecturers, courses, and offerings here.</string>
+    <string name="tour_a_class_nav_title">👉 Tap the Classrooms Tab</string>
+    <string name="tour_a_class_nav_body">Now tap the \"Classrooms\" tab at the bottom. I\'ll introduce classrooms.</string>
+    <string name="tour_a_assign_nav_title">👉 Tap the Assign Tab</string>
+    <string name="tour_a_assign_nav_body">Tap the \"Assign\" tab at the bottom. Assignments and auto-schedule live here.</string>
+    <string name="tour_a_cal_nav_title">👉 Tap the Calendar Tab</string>
+    <string name="tour_a_cal_nav_body">Finally tap the \"Calendar\" tab at the bottom. I\'ll show the weekly schedule.</string>
+
+    <string name="tour_l_avail_nav_title">👉 Tap the Availability Tab</string>
+    <string name="tour_l_avail_nav_body">Tap the \"Availability\" tab at the bottom. I\'ll show your availability grid.</string>
+
+    <string name="tour_a_final_title">🎉 Tour Complete!</string>
+    <string name="tour_a_final_body">Replay this tour anytime from Settings → \"Replay Tour\". Note: anything you added, deleted, or saved during the tour was NOT written to the database — you were free to experiment. Enjoy!</string>
+
+    <string name="tour_l_final_title">🎉 Tour Complete!</string>
+    <string name="tour_l_final_body">Replay this tour anytime from the \"Replay Tour\" button on your home screen. Note: nothing you did during the tour was saved to the database. Enjoy!</string>
+
+    <string name="tour_action_got_it">Got it</string>
+    <string name="tour_action_finish">Finish</string>
+    <string name="tour_sandbox_save_blocked">🛡️ Tour mode: this save was not committed to the database (preview only)</string>
+
+    <string name="tour_counter_fmt">Step %1$d/%2$d</string>
+    <string name="tour_tap_hint_nav">👇 Tap the highlighted tab</string>
+    <string name="tour_step_title_fmt">Step %1$d/%2$d — %3$s</string>
+
+    <!-- ADMIN tour — 17 steps. Senior IA + UX:
+         Section A (1-6):  Setup — Settings dept management + Excel templates
+         Section B (7-9):  Data Definition — Lecturer → Course → Offering
+         Section C (10-11):Physical Resources — Classrooms
+         Section D (12-13):Scheduling — Manual & auto assignment
+         Section E (14-15):Output — Calendar + PDF
+         Section F (16-17):Lifecycle — Replay + Logout -->
+
+    <!-- ─── A. Setup ─── -->
+    <string name="tour_admin_s1_title">Go to Data Management</string>
+    <string name="tour_admin_s1_body">You\'re on the Home screen. A live snapshot of your institution: counts of departments, lecturers, courses and classrooms + unassigned items.\n\nTap the highlighted \"Data\" tab at the bottom — let\'s walk through the system\'s ecosystem together.</string>
+
+    <string name="tour_admin_s2_title">Departments First</string>
+    <string name="tour_admin_s2_body">We\'re on the Data page. But before adding anything here, departments must exist — every lecturer, course and classroom is tied to one.\n\nDepartment management lives in Settings. Tap the highlighted \"Settings\" button in the top-right; I\'ll take you there.\n\n💡 Order: Department → Lecturer / Course → Offering → Classroom → Assignment.</string>
+
+    <string name="tour_admin_s3_title">Add a Department</string>
+    <string name="tour_admin_s3_body">We\'re in Settings. The top section is department management: \"Computer Science\", \"Industrial\" etc. are added here.\n\nType a name → tap the highlighted \"Add\" button. You don\'t need to try anything during the tour — we\'re just learning locations.</string>
+
+    <string name="tour_admin_s4_title">Existing Departments</string>
+    <string name="tour_admin_s4_body">Departments you\'ve added are listed here. Pencil icon to edit, trash icon to delete.\n\n💡 Deleting a department leaves its lecturers/courses/classrooms with an empty department field — the records aren\'t removed, just orphaned. Double-check first.</string>
+
+    <string name="tour_admin_s5_title">Bulk Excel Upload</string>
+    <string name="tour_admin_s5_body">Onboarding lots of lecturers/courses/classrooms? Use bulk Excel upload.\n\nThis card has three ready templates. Tap one → download → fill with your data → use \"Import\" on the Data tab to upload. Hundreds of rows in one go.</string>
+
+    <string name="tour_admin_s6_title">Back to Data</string>
+    <string name="tour_admin_s6_body">You\'ve seen department management and the Excel templates. Now back to Data for lecturer, course and offering management.\n\nTap the highlighted \"Data\" tab at the bottom.</string>
+
+    <!-- ─── B. Data Definition ─── -->
+    <string name="tour_admin_s7_title">Add a Lecturer</string>
+    <string name="tour_admin_s7_body">I\'ve opened the Lecturers section. The form above the highlighted \"Add\" button: title + first name + last name + department.\n\nOn Save, the system auto-generates a username + password; the lecturer changes it on first login.\n\n💡 The \"Import\" button next to it loads many lecturers at once using the Excel template you saw earlier.</string>
+
+    <string name="tour_admin_s8_title">Add a Course</string>
+    <string name="tour_admin_s8_body">I\'ve opened the Courses section. The form above the highlighted \"Add\" button builds your course pool: code (e.g. CSE101) + name + theory hours + lab hours + credits + department.\n\n💡 Adding a course does NOT yet say \"lecturer X teaches it\". That matching is the next step — Offerings.</string>
+
+    <string name="tour_admin_s9_title">Offering — Lecturer-Course Match</string>
+    <string name="tour_admin_s9_body">The heart of the ecosystem. An offering = course + lecturer + term + class year + section.\n\nExample: CSE101 → Dr. Demo → 2024 Fall → year 2 → section A.\n\n💡 The auto-scheduler works exactly on these matchings. Courses and lecturers must exist first, then combined here.</string>
+
+    <!-- ─── C. Physical Resources ─── -->
+    <string name="tour_admin_s10_title">Go to Classrooms</string>
+    <string name="tour_admin_s10_body">You\'ve seen the lecturer, course and offering side. Next: physical resources — classrooms.\n\nTap the highlighted \"Classrooms\" tab at the bottom.</string>
+
+    <string name="tour_admin_s11_title">Add a Classroom</string>
+    <string name="tour_admin_s11_body">The form above the highlighted \"Add\" button defines a classroom: code (A101) + capacity + type (theory/lab) + department.\n\n💡 The auto-scheduler enforces: course enrollment ≤ classroom capacity, theory courses → theory rooms, lab courses → labs. Excel bulk import here too.</string>
+
+    <!-- ─── D. Scheduling ─── -->
+    <string name="tour_admin_s12_title">Go to Assign</string>
+    <string name="tour_admin_s12_body">Department, lecturer, course, offering, classroom — all ready. Now the most powerful part: assignment.\n\nTap the highlighted \"Assign\" tab at the bottom.</string>
+
+    <string name="tour_admin_s13_title">Auto-Scheduler</string>
+    <string name="tour_admin_s13_body">The magic — the highlighted 🤖 \"Auto-Schedule\" button. One tap solves all offerings and gives you 5 valid alternative schedules.\n\nConflict + lecturer availability + classroom capacity + theory/lab rules all applied automatically. Pick the best and approve.\n\n💡 Manual: use the form above to pick offering + lecturer + classroom + day/time one at a time.</string>
+
+    <!-- ─── E. Output ─── -->
+    <string name="tour_admin_s14_title">Go to Calendar</string>
+    <string name="tour_admin_s14_body">Assignment done. Last stop: the resulting weekly schedule.\n\nTap the highlighted \"Calendar\" tab at the bottom.</string>
+
+    <string name="tour_admin_s15_title">PDF Export</string>
+    <string name="tour_admin_s15_body">The full weekly schedule is in front of you as a visual grid. Use the chips on top to filter: by lecturer, class year, department or classroom.\n\nThe highlighted \"Export PDF\" button generates a PDF matching the active filter — filename auto-built (e.g. \"schedule-cs-year2.pdf\"). Printable, shareable.</string>
+
+    <!-- ─── F. Lifecycle ─── -->
+    <string name="tour_admin_s16_title">Replay Tour</string>
+    <string name="tour_admin_s16_body">You can restart this tour anytime from this highlighted button in Settings.\n\nLet\'s go to the last step — learning where the logout button is.</string>
+
+    <string name="tour_admin_s17_title">Logout</string>
+    <string name="tour_admin_s17_body">Safe sign-out lives here. Don\'t tap this now — we\'re just learning its location; sign out whenever you want.\n\n🎯 Tour complete. Nothing was written to the database — you can start with your real data. Tap \"Finish\" to end. Enjoy!</string>
+
+    <!-- LECTURER tour — 7 steps. Simpler flow than admin -->
+    <string name="tour_lect_s1_title">Go to Availability</string>
+    <string name="tour_lect_s1_body">You\'re on your Home screen. This week\'s classes are here; scroll down for PDF/iCal export and settings (notifications, theme, language, password).\n\nLet\'s start with availability — tap the highlighted \"Availability\" tab at the bottom.</string>
+
+    <string name="tour_lect_s2_title">Availability Grid</string>
+    <string name="tour_lect_s2_body">This grid shows every day + time slot in your week. Tap an empty cell to mark a busy range — e.g. Tuesday 14:00-16:00 meeting.\n\nThese go straight to the admin\'s scheduler: no classes placed there.\n\n💡 Slots you already teach are red and can\'t be edited.</string>
+
+    <string name="tour_lect_s3_title">Manual Form Entry</string>
+    <string name="tour_lect_s3_body">Instead of tapping the grid, you can also use the form: day dropdown + start/end time picker → Add.\n\n💡 Grid is faster; the form helps when you need precise time ranges (e.g. 13:25-14:05).</string>
+
+    <string name="tour_lect_s4_title">Back to Home</string>
+    <string name="tour_lect_s4_body">You\'ve seen the availability side. Now back to Home to show PDF export and other important buttons.\n\nTap the highlighted \"Home\" tab at the bottom.</string>
+
+    <string name="tour_lect_s5_title">PDF / iCal Export</string>
+    <string name="tour_lect_s5_body">The highlighted \"Export PDF\" button saves your weekly schedule as a PDF to your phone.\n\n💡 The \"Export iCal\" button next to it produces an .ics file for Google/Apple Calendar import.</string>
+
+    <string name="tour_lect_s6_title">Replay Tour</string>
+    <string name="tour_lect_s6_body">You can restart this tour anytime from this highlighted button on your Home screen.\n\nLet\'s go to the last step — learning where the logout button is.</string>
+
+    <string name="tour_lect_s7_title">Logout</string>
+    <string name="tour_lect_s7_body">Safe sign-out lives here. Don\'t tap this now — we\'re just learning its location.\n\n🎯 Tour complete. Nothing was written to the database. Tap \"Finish\" to end. Enjoy!</string>
+
     <string name="tour_completed">🎉 Tour complete — enjoy!</string>
+
+    <!-- ═══ TOUR DEMO — TourDemoActivity (admin interactive mock flow) ═══ -->
+    <string name="tour_demo_toolbar_title">Tour Mode — Demo</string>
+    <string name="tour_tap_hint_add">👇 Tap the highlighted \"Add\" button</string>
+
+    <string name="tour_demo_tab_data">Data</string>
+    <string name="tour_demo_tab_classrooms">Classrooms</string>
+    <string name="tour_demo_tab_assign">Assign</string>
+    <string name="tour_demo_tab_calendar">Calendar</string>
+
+    <string name="tour_demo_dept_header">Department Management (start here)</string>
+    <string name="tour_demo_dept_hint">Department name</string>
+    <string name="tour_demo_lecturers_header">Lecturers</string>
+    <string name="tour_demo_courses_header">Courses</string>
+    <string name="tour_demo_offerings_header">Offerings</string>
+    <string name="tour_demo_manual_assign_header">Manual Assignment</string>
+
+    <string name="tour_demo_empty_dept">No departments yet</string>
+    <string name="tour_demo_empty_lecturers">No lecturers yet</string>
+    <string name="tour_demo_empty_courses">No courses yet</string>
+    <string name="tour_demo_empty_offerings">No offerings yet</string>
+    <string name="tour_demo_empty_classrooms">No classrooms yet</string>
+    <string name="tour_demo_empty_schedules">No assignments yet</string>
+    <string name="tour_demo_no_classes_day">— No classes —</string>
+
+    <string name="tour_demo_offering_hint">Offering</string>
+    <string name="tour_demo_lecturer_hint">Lecturer</string>
+    <string name="tour_demo_classroom_hint">Classroom</string>
+    <string name="tour_demo_day_hint">Day</string>
+    <string name="tour_demo_start_hint">Start</string>
+    <string name="tour_demo_end_hint">End</string>
+    <string name="tour_demo_assign_btn">Assign Manually</string>
+    <string name="tour_demo_auto_schedule_btn">🤖 Auto-Schedule</string>
+    <string name="tour_demo_calendar_hint">Your weekly schedule appears below. The class you just assigned shows up in Monday\'s column.</string>
+
+    <string name="tour_demo_exit_title">Exit Tour</string>
+    <string name="tour_demo_exit_message">You\'re leaving tour mode. All demo data will be cleared. Return to the real app?</string>
+    <string name="tour_demo_exit_confirm">Yes, exit</string>
+
+    <string name="tour_demo_s1_title">Add a Department</string>
+    <string name="tour_demo_s1_body">Welcome to the ecosystem. First, a department — every lecturer, course and classroom is tied to one.\n\nI typed \"Computer Engineering\" for you. Tap the highlighted Add button to create your first department.</string>
+
+    <string name="tour_demo_s2_title">Add a Lecturer: Farhan Adl</string>
+    <string name="tour_demo_s2_body">Department done. Now a lecturer.\n\nI filled the form with Dr. Farhan Adl. Tap the highlighted Add button.</string>
+
+    <string name="tour_demo_s3_title">First Course: Programming Language</string>
+    <string name="tour_demo_s3_body">I prepared PL101 — Programming Language: 3 theory + 0 lab + 3 credits.\n\nTap the highlighted Add button to add it to the course pool.</string>
+
+    <string name="tour_demo_s4_title">Second Course: Mobile Programming</string>
+    <string name="tour_demo_s4_body">MP101 — Mobile Programming: 2 theory + 2 lab + 4 credits. Form is filled.\n\nTap Add to also add the second course. You now have 2 courses.</string>
+
+    <string name="tour_demo_s5_title">First Offering: PL101 + Farhan</string>
+    <string name="tour_demo_s5_body">The heart of the ecosystem: Offering — \"this course is taught by this lecturer\".\n\nI matched PL101 to Dr. Farhan Adl (2024-2025 Fall, year 2, section A). Tap Add to combine them.</string>
+
+    <string name="tour_demo_s6_title">Second Offering: MP101 + Farhan</string>
+    <string name="tour_demo_s6_body">Same pairing for Mobile Programming. Form ready.\n\nTap Add for the 2nd offering — Dr. Farhan Adl now teaches both courses.</string>
+
+    <string name="tour_demo_s7_title">Classrooms Tab</string>
+    <string name="tour_demo_s7_body">Lecturer, course and offering side done. Next: physical resource — classroom.\n\nTap the highlighted Classrooms tab at the bottom.</string>
+
+    <string name="tour_demo_s8_title">Add a Classroom: L101</string>
+    <string name="tour_demo_s8_body">I prepared L101: theory room, 30 capacity, Computer Engineering.\n\nTap the highlighted Add button.</string>
+
+    <string name="tour_demo_s9_title">Assign Tab</string>
+    <string name="tour_demo_s9_body">All pieces ready: department, lecturer, 2 courses, 2 offerings, classroom. Now assignment time.\n\nTap the highlighted Assign tab at the bottom.</string>
+
+    <string name="tour_demo_s10_title">Manual Assignment: Monday 09:00-12:00</string>
+    <string name="tour_demo_s10_body">I placed PL101 with Dr. Farhan Adl in L101, Monday 09:00-12:00.\n\nTap the highlighted \"Assign Manually\" button.\n\n💡 The top 🤖 \"Auto-Schedule\" button solves all offerings into 5 conflict-free alternatives in one tap.</string>
+
+    <string name="tour_demo_s11_title">Calendar Tab</string>
+    <string name="tour_demo_s11_body">Assignment done. Now see the result: the weekly schedule.\n\nTap the highlighted Calendar tab at the bottom.</string>
+
+    <string name="tour_demo_s12_title">Your Assigned Class Is Here!</string>
+    <string name="tour_demo_s12_body">See PL101 — Programming Language in Monday\'s column? 09:00-12:00, Dr. Farhan Adl, L101.\n\nIn the real app you can filter, export as PDF, and share.</string>
+
+    <string name="tour_demo_s13_title">Exit — Tour Complete</string>
+    <string name="tour_demo_s13_body">🎯 You\'ve seen the full flow end-to-end: department → lecturer → course → offering → classroom → assignment → calendar.\n\nThe top-right X is the exit. NOTHING was written to the database — start with your real data in the actual app.\n\nTap \"Finish\" to return to the real app. Enjoy!</string>
+
+    <!-- ═══ Tour Demo (in real MainActivity, mock data) 15 steps ═══ -->
+    <string name="tour_demo_s_data_title">Data Tab</string>
+    <string name="tour_demo_s_data_body">We\'re entering the ecosystem. Tap the highlighted \"Data\" tab at the bottom — let\'s walk through it.</string>
+
+    <string name="tour_demo_s_settings_title">Department First</string>
+    <string name="tour_demo_s_settings_body">Before adding lecturers/courses, departments must exist. Tap the highlighted \"Settings\" button in the top-right.</string>
+
+    <string name="tour_demo_s_dept_title">Add Department: Computer Engineering</string>
+    <string name="tour_demo_s_dept_body">I filled the form with \"Computer Engineering\". Tap the highlighted Add button.\n\n💡 Mock data — nothing written to the real database.</string>
+
+    <string name="tour_demo_s_back_data_title">Back to Data</string>
+    <string name="tour_demo_s_back_data_body">Department ready. Now back to Data for lecturers and courses.\n\nTap the highlighted \"Data\" tab at the bottom.</string>
+
+    <string name="tour_demo_s_lecturer_title">Add Lecturer: Dr. Farhan Adl</string>
+    <string name="tour_demo_s_lecturer_body">I opened the Lecturers section and filled the form with Dr. Farhan Adl.\n\nTap the highlighted Add button.</string>
+
+    <string name="tour_demo_s_course1_title">First Course: Programming Language</string>
+    <string name="tour_demo_s_course1_body">Courses section is open. PL101 — Programming Language ready (3 theory + 0 lab + 3 credits).\n\nTap the highlighted Add button.</string>
+
+    <string name="tour_demo_s_course2_title">Second Course: Mobile Programming</string>
+    <string name="tour_demo_s_course2_body">MP101 — Mobile Programming ready (2 theory + 2 lab + 4 credits).\n\nTap Add for the 2nd course too.</string>
+
+    <string name="tour_demo_s_offering1_title">First Offering: PL101 + Farhan</string>
+    <string name="tour_demo_s_offering1_body">Offerings is the heart — \"which course, which lecturer\". Form filled (2024-2025 Fall, year 2, section A).\n\nTap the highlighted Add button.</string>
+
+    <string name="tour_demo_s_offering2_title">Second Offering: MP101 + Farhan</string>
+    <string name="tour_demo_s_offering2_body">Same pairing for Mobile Programming.\n\nTap Add for the 2nd offering.</string>
+
+    <string name="tour_demo_s_classrooms_title">Classrooms Tab</string>
+    <string name="tour_demo_s_classrooms_body">Lecturer, course, offering ready. Next: physical resource — classroom.\n\nTap the highlighted \"Classrooms\" tab.</string>
+
+    <string name="tour_demo_s_classroom_add_title">Add Classroom: L101</string>
+    <string name="tour_demo_s_classroom_add_body">L101 ready: 30 capacity, theory.\n\nTap the highlighted Add button.</string>
+
+    <string name="tour_demo_s_assign_title">Assign Tab</string>
+    <string name="tour_demo_s_assign_body">All pieces ready. Now assignment time.\n\nTap the highlighted \"Assign\" tab.</string>
+
+    <string name="tour_demo_s_manual_title">Manual Assign: Mon 09:00-12:00</string>
+    <string name="tour_demo_s_manual_body">I placed PL101 with Farhan in L101 on Monday 09:00-12:00.\n\nTap the highlighted Assign button.\n\n💡 The 🤖 Auto-Schedule above solves all offerings in one tap.</string>
+
+    <string name="tour_demo_s_calendar_title">Calendar Tab</string>
+    <string name="tour_demo_s_calendar_body">Let\'s see the result: weekly schedule.\n\nTap the highlighted \"Calendar\" tab.</string>
+
+    <string name="tour_demo_s_done_title">There\'s Your Class!</string>
+    <string name="tour_demo_s_done_body">See PL101 — Programming Language in Monday\'s column? Farhan + L101 + 09:00-12:00.\n\n🎯 Tour complete! Nothing written to the database — start with your real data. Tap \"Finish\" to end.</string>
 
     <!-- ─── Notifications (Sprint B2 + B3) ──────────────────────────────────── -->
     <string name="notif_card_title">Notification Preferences</string>

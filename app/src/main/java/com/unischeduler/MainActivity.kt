@@ -50,55 +50,17 @@ class MainActivity : AppCompatActivity() {
             com.unischeduler.ui.onboarding.OnboardingActivity.start(this)
         }
 
-        // SPOTLIGHT TOUR — login sonrası ilk kez. Statik slayt yerine
-        // gerçek uygulama içinde sekme sekme rehberli gezinme.
+        // SPOTLIGHT TOUR tetikleme — destination listener'da (aşağıda) yapılıyor.
         //
-        // ÖNEMLİ: Bottom nav + NavController henüz setupWithNavController
-        // edilmemiş olabilir bu noktada. ensureNavSetup() onCreate sonrası
-        // çağrılıyor. Tour'u BottomSheet ile başlatmak için NavController
-        // ve fragment-hazır state'in bitmesini beklemeliyiz → postDelayed.
+        // ESKİ KOD (kaldırıldı) onCreate içinden tek seferlik start() çağırıyordu.
+        // BUG: kullanıcı LoginFragment'tan Home'a navigate olduğunda MainActivity
+        // recreate olmuyor → onCreate tekrar çalışmıyor → tur hiç başlamıyor.
+        // Kullanıcı bunu "ilk girişte göremedim" diye raporladı.
         //
-        // savedInstanceState != null → configuration change recreate;
-        // tour zaten devam ediyor olabilir, yeniden başlatma.
-        if (savedInstanceState == null && session.isLoggedIn && session.isHealthy()) {
-            val tutorialPrefs = com.unischeduler.util.TutorialPrefs(this)
-            val tourType = when {
-                session.isAdmin && !tutorialPrefs.adminTutorialDone ->
-                    com.unischeduler.util.TourCoordinator.Type.ADMIN
-                session.isLecturer && !tutorialPrefs.lecturerTutorialDone ->
-                    com.unischeduler.util.TourCoordinator.Type.LECTURER
-                else -> null
-            }
-            if (tourType != null) {
-                // Nav setup + fragment render için kısa bir bekleme. 800ms
-                // BottomNav'ın setupWithNavController'ı çağrıldıktan sonra
-                // ilk destination render olması için yeterli marj.
-                //
-                // ÖNEMLİ: Tour başlatmadan önce CrashHandler.flushPendingCrashes
-                // çağrılıyor. Aksi takdirde önceki turda tour crash dosyaları
-                // beklemede kalırdı (sonraki destination change'i bekleyecekti).
-                // Erken flush → super admin paneli Error Logs anında günceller.
-                binding.root.postDelayed({
-                    runCatching {
-                        if (!isFinishing && !isDestroyed) {
-                            // Eski tour crash'lerini DB'ye gönder
-                            com.unischeduler.util.CrashHandler.flushPendingCrashes(application)
-                            // Tour başlat
-                            com.unischeduler.util.TourCoordinator.start(
-                                this, navController, tourType
-                            )
-                        }
-                    }.onFailure { e ->
-                        android.util.Log.e("MainActivity", "Tour start failed: ${e.message}", e)
-                        runCatching {
-                            com.unischeduler.util.CrashHandler.appendPendingCrash(
-                                applicationContext, "MainActivity", "tour.start", e
-                            )
-                        }
-                    }
-                }, 800L)
-            }
-        }
+        // YENİ: navController.addOnDestinationChangedListener içinde Home
+        // destination'a varıldığında maybeStartTour() çağrılıyor. Hem cold
+        // start (logged-in startDestination=Home) hem login submit sonrası
+        // (LoginFragment → Home) tek noktadan kapsanır.
 
         // Honor a pending logout from a previous activity instance: if we got here
         // via the FORCE_LOGOUT extra, ignore any persisted session and land on login.
@@ -149,6 +111,9 @@ class MainActivity : AppCompatActivity() {
             ensureNavSetup()
             val isAuthScreen = destination.id in noNavDestinations
             updateNavVisibility(isAuthScreen)
+            // Spotlight tour — Home destination'a ilk varışta (cold-start veya
+            // login submit sonrası) flag'e bakarak başlatır. Idempotent.
+            maybeStartTour(destination.id)
         }
 
         // ROTATION FIX — Activity recreate (configuration change) sonrası
@@ -178,6 +143,69 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         networkMonitor.stop()
+    }
+
+    /**
+     * Spotlight tour'u Home destination'a varıldığında — eğer kullanıcının
+     * rolü için ilk kez ise — başlatır. Idempotent: aktif bir tur varsa
+     * (selectedItemId değişimi sonrası tetiklenen destination change) erken
+     * çıkar; flag (adminTutorialDone/lecturerTutorialDone) true ise atlanır.
+     *
+     * 600 ms gecikme: bottom-nav setupWithNavController + fragment ilk render
+     * için marj. Daha kısa olursa TapTargetView "target view not laid out
+     * yet" hatasıyla skip edebilir.
+     */
+    @androidx.annotation.UiThread
+    private fun maybeStartTour(@androidx.annotation.IdRes destinationId: Int) {
+        val running = com.unischeduler.util.TourCoordinator.isRunning
+        val prefs = com.unischeduler.util.TutorialPrefs(this)
+        android.util.Log.d(
+            "MainActivity.tour",
+            "maybeStartTour dest=$destinationId running=$running loggedIn=${session.isLoggedIn} " +
+            "healthy=${session.isHealthy()} isAdmin=${session.isAdmin} isLect=${session.isLecturer} " +
+            "adminDone=${prefs.adminTutorialDone} lectDone=${prefs.lecturerTutorialDone}"
+        )
+        if (running) return
+        if (!session.isLoggedIn || !session.isHealthy()) return
+        val isHomeDest = destinationId == R.id.adminHomeFragment ||
+                         destinationId == R.id.lecturerHomeFragment
+        if (!isHomeDest) return
+        val tourType = when {
+            session.isAdmin && !prefs.adminTutorialDone ->
+                com.unischeduler.util.TourCoordinator.Type.ADMIN
+            session.isLecturer && !prefs.lecturerTutorialDone ->
+                com.unischeduler.util.TourCoordinator.Type.LECTURER
+            else -> null
+        } ?: return
+        // ADMIN tour'da MockStore aktifleştirilir; fragment'lar mock veriyi
+        // adapter'a union eder. LECTURER için mock yok (sade bilgilendirici).
+        if (tourType == com.unischeduler.util.TourCoordinator.Type.ADMIN) {
+            com.unischeduler.util.TourMockStore.clear()
+        }
+        binding.root.postDelayed({
+            runCatching {
+                if (isFinishing || isDestroyed) return@runCatching
+                com.unischeduler.util.CrashHandler.flushPendingCrashes(application)
+                com.unischeduler.util.TourCoordinator.start(
+                    this, navController, tourType,
+                    onCompleted = {
+                        // Tur bitti — mock veriler temizlenir, fragment listener'ları
+                        // adapter'ı gerçek liste ile yeniden submit eder.
+                        if (tourType == com.unischeduler.util.TourCoordinator.Type.ADMIN) {
+                            com.unischeduler.util.TourMockStore.clear()
+                        }
+                    }
+                )
+            }.onFailure { e ->
+                android.util.Log.e("MainActivity", "Tour start failed: ${e.message}", e)
+                runCatching {
+                    com.unischeduler.util.CrashHandler.appendPendingCrash(
+                        applicationContext, "MainActivity", "tour.start", e
+                    )
+                    com.unischeduler.util.CrashHandler.flushPendingCrashes(application)
+                }
+            }
+        }, 600L)
     }
 
     /** Called on every destination change and after login/logout.

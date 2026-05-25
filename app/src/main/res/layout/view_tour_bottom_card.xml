@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Tour Bottom Card — ekranın alt kısmına sabitlenir.
+  Asıl içeriği (hedef view + sayfa) gölgelemez, sadece bilgi+kontrol bandı.
+  Title + body üstte, progress + butonlar altta. Mavi solid arka plan.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_tour_card"
+    android:paddingHorizontal="20dp"
+    android:paddingTop="18dp"
+    android:paddingBottom="16dp"
+    android:elevation="24dp"
+    android:clickable="true"
+    android:focusable="true">
+
+    <!-- Üst satır: adım sayacı chip + title -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tvTourCounter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_tour_chip"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="3dp"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            tools:text="Adım 7/16" />
+
+        <TextView
+            android:id="@+id/tvTourTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="10dp"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            tools:text="Hoca Ekleme" />
+    </LinearLayout>
+
+    <!-- Body — açıklama metni -->
+    <TextView
+        android:id="@+id/tvTourBody"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:textColor="#F5F5F5"
+        android:textSize="15sp"
+        android:lineSpacingExtra="3dp"
+        tools:text="Hocalar bölümünü açtım. Vurgulu Ekle butonunun üstündeki forma bak: ünvan + ad + soyad + bölüm seçimi." />
+
+    <!-- Progress bar — adım ilerlemesi -->
+    <com.google.android.material.progressindicator.LinearProgressIndicator
+        android:id="@+id/tourProgress"
+        android:layout_width="match_parent"
+        android:layout_height="5dp"
+        android:layout_marginTop="14dp"
+        app:indicatorColor="#FFFFFF"
+        app:trackColor="#4DFFFFFF"
+        app:trackThickness="5dp" />
+
+    <!-- Alt satır: Atla + İleri/Anladım butonları -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTourSkip"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/onboarding_skip"
+            android:textColor="#E0E0E0" />
+
+        <!-- Spacer -->
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- Bottom-nav adımlarında "Vurgulu sekmeye basın" ipucu görünür,
+             button gizli. Info adımlarında button görünür, ipucu gizli. -->
+        <TextView
+            android:id="@+id/tvTourTapHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#E0E0E0"
+            android:textSize="13sp"
+            android:textStyle="italic"
+            android:visibility="gone"
+            tools:text="👇 Vurgulu butona basın" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTourNext"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/onboarding_next"
+            android:textColor="#1976D2"
+            android:backgroundTint="#FFFFFF"
+            app:iconGravity="end"
+            app:iconTint="#1976D2"
+            app:icon="@drawable/ic_arrow_forward" />
+    </LinearLayout>
+</LinearLayout>

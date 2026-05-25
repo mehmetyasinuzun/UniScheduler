@@ -132,6 +132,8 @@ class ClassroomsFragment : Fragment() {
         binding.btnImportClassrooms.setOnClickListener { classroomImportLauncher.launch("*/*") }
         binding.btnExportClassrooms.setOnClickListener { classroomExportLauncher.launch("classrooms.xlsx") }
 
+        com.unischeduler.util.TourMockStore.subscribe(tourMockListener)
+
         collectFlow(viewModel.departments) { depts ->
             departments = depts
             val names = listOf(getString(R.string.common_none_option)) + depts.map { it.name }
@@ -480,7 +482,9 @@ class ClassroomsFragment : Fragment() {
 
     /** Apply the current search query to the in-memory list. */
     private fun refreshClassroomList() {
-        val filtered = if (classroomQuery.isBlank()) classrooms else classrooms.filter {
+        // Tour MockStore union — admin tour aktifken mock derslik adapter'a eklenir
+        val effective = classrooms + com.unischeduler.util.TourMockStore.classrooms
+        val filtered = if (classroomQuery.isBlank()) effective else effective.filter {
             it.roomCode.lowercase().contains(classroomQuery) ||
             it.type.lowercase().contains(classroomQuery) ||
             (it.departmentName.lowercase().contains(classroomQuery))
@@ -488,11 +492,14 @@ class ClassroomsFragment : Fragment() {
         classroomAdapter.submitList(filtered)
     }
 
+    private val tourMockListener: () -> Unit = { if (_binding != null) refreshClassroomList() }
+
     override fun onDestroyView() {
         // Bulk import sırasında fragment destroy olursa progress dialog
         // window leak yapardı. View'a tag ile bağlı olduğu için dismiss
         // önce çağrılmalı.
         dismissProgressDialog()
+        com.unischeduler.util.TourMockStore.unsubscribe(tourMockListener)
         super.onDestroyView()
         _binding = null
     }
